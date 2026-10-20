@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <clipPath id="body"><ellipse cx="25" cy="25" rx="14.5" ry="18"/></clipPath>
+  </defs>
+  <g transform="translate(48 0) scale(-1 1)">
+  <ellipse cx="24" cy="44.5" rx="14" ry="2.5" fill="#2a2140" opacity="0.15"/>
+  <ellipse cx="25" cy="42.5" rx="6" ry="2.8" fill="#f2953a" stroke="#2a2140" stroke-width="2"/>
+  <ellipse cx="18" cy="42.5" rx="6.5" ry="3" fill="#ffa94d" stroke="#2a2140" stroke-width="2"/>
+  <ellipse cx="25" cy="25" rx="14.5" ry="18" fill="#3d4d78"/>
+  <g clip-path="url(#body)">
+    <path d="M17 11 C11 16 10.5 24 11 30 C11.5 37 15.5 42 22 43.5 C17.5 37 16.5 29 17.5 22 C18 17 19 14 22 12 Z" fill="#fbfcff"/>
+    <path d="M34 45 C42 38 42 24 37 12 L46 12 L46 46 Z" fill="#2f3c62"/>
+    <ellipse cx="21" cy="11.5" rx="3.6" ry="1.9" fill="#ffffff" opacity="0.28" transform="rotate(-30 21 11.5)"/>
+  </g>
+  <ellipse cx="25" cy="25" rx="14.5" ry="18" fill="none" stroke="#2a2140" stroke-width="2.5"/>
+  <path d="M30 21 Q40 25 37.5 34 Q31.5 33 29 27 Z" fill="#33426a" stroke="#2a2140" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M24 7.3 Q25 3 29 4 Q26.5 5.2 27 7.4" fill="#3d4d78" stroke="#2a2140" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M12.2 19 L4.5 21.4 Q4 22.4 4.8 23 L12.5 24.4 Z" fill="#ffa94d" stroke="#2a2140" stroke-width="1.7" stroke-linejoin="round"/>
+  <ellipse cx="17.5" cy="18" rx="2.6" ry="3.2" fill="#2a2140"/>
+  <circle cx="18.4" cy="16.8" r="1.15" fill="#ffffff"/>
+  <circle cx="16.8" cy="19.3" r="0.5" fill="#ffffff"/>
+  <ellipse cx="20" cy="24" rx="2.5" ry="1.5" fill="#ff8fab" opacity="0.6"/>
+  </g>
+</svg>

@@ -1,0 +1,1579 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Firefly Flash</title>
+    <meta name="description" content="Build a cozy chain-reaction game in JavaScript with js-game-zero — a hands-on tutorial for total beginners." />
+    <link rel="stylesheet" href="lib/tutorial.css" />
+    <style>
+      /* ---- Page-only styles for Firefly Flash's widgets ---- */
+      .coord-label {
+        position: absolute;
+        z-index: 3;
+        padding: 4px 9px;
+        border-radius: 99px;
+        background: rgba(13, 10, 36, 0.86);
+        color: #fff;
+        font: 600 12px/1 var(--font-code);
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(12px, 12px);
+        white-space: nowrap;
+      }
+      .coord-line {
+        position: absolute;
+        z-index: 2;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(124, 240, 197, 0.55);
+      }
+      .coord-line.v {
+        top: 0;
+        bottom: 0;
+        width: 1px;
+      }
+      .coord-line.h {
+        left: 0;
+        right: 0;
+        height: 1px;
+      }
+      .stage.show-coords .coord-label,
+      .stage.show-coords .coord-line {
+        opacity: 1;
+      }
+
+      .lane-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 18px;
+        font-size: 0.88rem;
+        margin-top: 10px;
+      }
+      .lane-legend span::before {
+        content: "";
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 6px;
+        background: var(--swatch);
+      }
+
+      .keys {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .key {
+        flex: 1 0 52px;
+        min-height: 92px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 10px;
+        border: 2px solid var(--line);
+        border-radius: 12px 12px 16px 16px;
+        background: linear-gradient(#fffdf2, #f1e9ff);
+        color: #2a2140;
+        font: 700 0.85rem/1 var(--font-display);
+        cursor: pointer;
+        box-shadow: 0 5px 0 #b9a6ff;
+        transition:
+          transform 0.08s,
+          box-shadow 0.08s,
+          background 0.2s;
+      }
+      .key.is-playing,
+      .key:active {
+        transform: translateY(4px);
+        box-shadow: 0 1px 0 #b9a6ff;
+        background: linear-gradient(#fff6b0, #ffd34d);
+      }
+      .scale-picks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 14px 0 4px;
+      }
+      .scale-picks .btn[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+
+      .state-svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .state-svg .node rect {
+        fill: var(--card-2);
+        stroke: var(--line);
+        stroke-width: 2;
+        transition:
+          fill 0.25s,
+          stroke 0.25s;
+      }
+      .state-svg .node text {
+        fill: var(--ink);
+        font: 600 15px var(--font-display);
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .state-svg .node.is-on rect {
+        fill: var(--accent);
+        stroke: #fff6b0;
+      }
+      .state-svg .node.is-on text {
+        fill: var(--accent-ink);
+      }
+      .state-svg .edge {
+        fill: none;
+        stroke: var(--muted);
+        stroke-width: 2;
+        opacity: 0.6;
+      }
+      .state-svg .edge-label {
+        fill: var(--muted);
+        font: 600 11.5px var(--font-body);
+        text-anchor: middle;
+      }
+      .state-svg marker path {
+        fill: var(--muted);
+      }
+      .state-now {
+        font-weight: 800;
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body class="theme-night" data-game="firefly_flash" data-tutorial="Firefly Flash">
+    <main class="page">
+      <!-- ============================================================ -->
+      <section class="hero">
+        <div class="hero-kicker">✨ Tutorial 1 of 3 · Your very first game</div>
+        <h1>Firefly <span class="pop">Flash</span></h1>
+        <p class="hero-lede">
+          Build a cozy chain-reaction game from a completely empty screen, one small step at a time. No experience
+          needed: if you can click and type, you can make this.
+        </p>
+        <ul class="hero-meta">
+          <li>⏱ About 90 minutes</li>
+          <li>🌱 Total beginners welcome</li>
+          <li>💻 Nothing to install — the code runs right on this page</li>
+        </ul>
+
+        <h3>Play it first</h3>
+        <p class="prose">
+          Press <strong>Play</strong>, then click once somewhere in the night sky. Your click sends out a flash of light.
+          Every firefly the light touches flashes too, and <em>their</em> light can catch more fireflies. One click, one
+          chain reaction. Light up enough fireflies to clear the night!
+        </p>
+        <div class="cell" id="hero-game" data-step="final" data-play-only></div>
+
+        <div class="learn-grid">
+          <div class="learn-card"><span class="emoji">🎨</span><b>Drawing with code</b>Shapes, colours and pictures, placed by numbers.</div>
+          <div class="learn-card"><span class="emoji">🔁</span><b>The game loop</b>How games move: update, draw, repeat 60 times a second.</div>
+          <div class="learn-card"><span class="emoji">📦</span><b>Variables &amp; lists</b>Remembering things — one firefly, then a whole swarm.</div>
+          <div class="learn-card"><span class="emoji">🤔</span><b>Making decisions</b><code>if</code> statements, bouncing, and touching.</div>
+          <div class="learn-card"><span class="emoji">🖱️</span><b>Clicks &amp; sounds</b>Reacting to the player, and making music.</div>
+          <div class="learn-card"><span class="emoji">🏆</span><b>Levels &amp; winning</b>Game states, goals, and saving progress.</div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🧭</span>
+          <div>
+            <span class="callout-title">How this page works</span>
+            <p>
+              Each step has <strong>code on the left</strong> and <strong>the game on the right</strong>. Change anything you
+              like, then press <strong>▶ Run</strong> (or <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>). Lines that are
+              new in a step glow green. Your edits are saved in your browser, and <strong>↺ Reset</strong> brings back
+              the original. <strong>🎯 Challenges check themselves</strong> while your game runs. You can't break anything!
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="A window into the night">
+        <span class="step-kicker"></span>
+        <h2>A window into the night</h2>
+        <p>
+          Every game needs a window to happen in. In js-game-zero, you make one with just a few lines. Here's your
+          entire first program. Press <strong>Run</strong>:
+        </p>
+        <div class="cell" data-step="01-window"></div>
+        <p>A dark sky and a moon! Let's read it line by line.</p>
+        <ul>
+          <li>
+            <code class="ref">WIDTH = 640;</code> and <code class="ref">HEIGHT = 400;</code> set the size of the game window in
+            <span class="term" tabindex="0" data-tip="The tiny dots a screen is made of. This game is 640 dots wide and 400 tall.">pixels</span>.
+            They must be written in capitals, exactly like that, because the game looks for those exact names.
+          </li>
+          <li><code class="ref">TITLE</code> is the game's name. The words go inside quote marks, which makes them a
+            <span class="term" tabindex="0" data-tip="A piece of text. Strings always go inside quote marks: &quot;like this&quot;.">string</span>.</li>
+          <li>
+            <code class="ref" data-match="function draw">function draw() { … }</code> is a
+            <span class="term" tabindex="0" data-tip="A named set of instructions. Everything between its { curly brackets } runs when the function is called.">function</span>:
+            a named recipe. The game runs <code>draw</code> about <strong>60 times every second</strong> to paint the picture,
+            like the pages of a flip book.
+          </li>
+          <li><code class="ref">screen.fill</code> paints the whole window. With two colours it fades from the first (top) to the second (bottom).</li>
+          <li>
+            <code class="ref">screen.circle(446, 74, 40, "#fff4cf")</code> draws a filled circle. The four numbers and colour mean:
+            <strong>x</strong>, <strong>y</strong>, <strong>radius</strong> (how far it reaches from its middle), and
+            <strong>colour</strong>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🧠</span>
+          <div>
+            <span class="callout-title">Big idea: x and y</span>
+            <p>
+              Every spot in the window has two numbers. <strong>x</strong> says how far across from the left edge.
+              <strong>y</strong> says how far <em>down</em> from the top. So <code>(0, 0)</code> is the top-left corner, and
+              y gets <em>bigger</em> as you go <em>down</em>. That surprises everyone at first!
+            </p>
+            <p>👉 <strong>Hover over the game above</strong> to see the x and y of any spot.</p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-origin" data-answer="b">
+          <p>Where is the spot <code>(0, 0)</code>?</p>
+          <button data-choice="a">Right in the middle of the window</button>
+          <button data-choice="b">The top-left corner</button>
+          <button data-choice="c">The bottom-left corner, like in maths class</button>
+          <div class="explain" data-for="b">x counts from the left edge and y counts down from the top, so both are 0 in the top-left corner.</div>
+          <div class="explain" data-for="c">That's how graphs work in maths, but screens count y <em>downwards</em> from the top.</div>
+          <div class="explain" data-for="a">The middle would be (320, 200): half of 640 and half of 400.</div>
+        </div>
+
+        <div class="challenge" data-id="moon-corner" data-success="The moon moved! You just changed a program and saw the result.">
+          <p><strong>Move the moon</strong> into the top-left corner of the sky.</p>
+          <p class="hint">The first two numbers inside <code>screen.circle(…)</code> are the moon's x and y.</p>
+          <p class="hint">Smaller x is further left, and smaller y is higher up. Try numbers around 80 and 70.</p>
+          <pre class="answer">screen.circle(80, 70, 40, "#fff4cf");</pre>
+        </div>
+        <div class="challenge" data-id="big-moon" data-success="What a whopper of a moon.">
+          <p><strong>Make the moon bigger</strong>: give it a radius of at least 60.</p>
+          <p class="hint">The third number is the radius.</p>
+          <pre class="answer">screen.circle(446, 74, 70, "#fff4cf");</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Paint the meadow">
+        <span class="step-kicker"></span>
+        <h2>Paint the meadow</h2>
+        <p>
+          Let's add stars, hills and some ground. There's nothing new to learn here except two tricks: comments, and the
+          order things are painted in.
+        </p>
+        <div class="cell" data-step="02-meadow"></div>
+        <ul>
+          <li>
+            Lines starting with <code class="ref" data-match="// The sky">//</code> are
+            <span class="term" tabindex="0" data-tip="Notes for humans. The computer skips everything after // on a line.">comments</span>.
+            The computer ignores them; they're notes to remind people what the code does.
+          </li>
+          <li>
+            <code class="ref" data-match="screen.rect">screen.rect(0, 350, WIDTH, 50, "#1b1846")</code> draws a filled rectangle:
+            its left edge's x, its top edge's y, its width, its height, and its colour. Notice we used <code>WIDTH</code> as the
+            width, so the ground always stretches all the way across.
+          </li>
+          <li>
+            The hills are giant circles whose middles are <em>below</em> the bottom of the window (y = 470 when the window is only
+            400 tall). Only their tops poke up. Drawing off the edge is completely fine. It just gets cut off.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🖌️</span>
+          <div>
+            <span class="callout-title">Big idea: painting order</span>
+            <p>
+              The computer paints in the order you write the lines, like painting on a real canvas. Things painted
+              <strong>later</strong> cover things painted <strong>earlier</strong>. That's why the sky comes first and the ground
+              comes last.
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-order" data-answer="c">
+          <p>What would happen if you moved the <code>screen.rect(…)</code> ground line to be <em>first</em> in <code>draw()</code>, before <code>screen.fill</code>?</p>
+          <button data-choice="a">The ground would be drawn on top of the hills</button>
+          <button data-choice="b">The game would show an error</button>
+          <button data-choice="c">The ground would vanish, because the sky gets painted over it</button>
+          <div class="explain" data-for="c"><code>screen.fill</code> paints the <em>whole</em> window, so anything drawn before it is covered up. Try it if you like!</div>
+          <div class="explain" data-for="wrong">Think about painting order: what does <code>screen.fill</code> do to everything that's already there?</div>
+        </div>
+
+        <div class="challenge" data-id="more-stars" data-success="Twinkle twinkle!">
+          <p><strong>Add at least two more stars</strong>, anywhere you like.</p>
+          <p class="hint">Copy one of the star lines and paste it underneath, then change its x and y.</p>
+          <pre class="answer">  screen.circle(260, 150, 2, "white");
+  screen.circle(40, 200, 1.5, "white");</pre>
+        </div>
+        <div class="challenge" data-id="hill-color" data-success="A brand-new landscape.">
+          <p><strong>Paint both hills a new colour.</strong> You can use names like <code>"teal"</code>, <code>"darkgreen"</code> or <code>"pink"</code>, or a hex code like <code>"#2e5e4e"</code>.</p>
+          <p class="hint">The hills are the two circles with radius 160 and 190. The colour is the last thing in the brackets.</p>
+          <pre class="answer">  screen.circle(120, 470, 160, "#1f4d45");
+  screen.circle(520, 480, 190, "#1f4d45");</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Variables: meet a firefly">
+        <span class="step-kicker"></span>
+        <h2>Variables: meet a firefly</h2>
+        <p>
+          Time for our first firefly! We want it to move around later, so instead of typing its position straight into the
+          drawing code, we'll keep it in two <strong>variables</strong>.
+        </p>
+        <div class="cell" data-step="03-variables"></div>
+        <div class="callout big-idea">
+          <span class="callout-icon">📦</span>
+          <div>
+            <span class="callout-title">Big idea: variables</span>
+            <p>
+              A <span class="term" tabindex="0" data-tip="A named box that holds a value. You can read what's inside, or put something new in.">variable</span>
+              is a labelled box that holds a value. <code class="ref">let x = 200;</code> means "make a box called
+              <code>x</code> and put 200 in it". Anywhere you write <code>x</code> afterwards, the computer uses what's in the box.
+            </p>
+          </div>
+        </div>
+        <p>
+          Look at how the firefly is drawn: <code class="ref" data-match="screen.circle(x, y">screen.circle(x, y, 9, …)</code>
+          for the head and <code>y + 9</code> for the tail, a bit lower. Every part is placed <em>relative to</em> x and y, so
+          changing those two numbers moves the whole firefly. Try the sliders. They rewrite the code and re-run it for you:
+        </p>
+        <div class="tweak-row">
+          <div class="tweak" data-name="x" data-min="0" data-max="640" data-label="x: across" data-icon="↔️"></div>
+          <div class="tweak" data-name="y" data-min="0" data-max="400" data-label="y: down" data-icon="↕️"></div>
+        </div>
+        <p>
+          We also tidied up. All the scenery moved into its own function, <code class="ref" data-match="function drawSky">drawSky()</code>,
+          and <code>draw()</code> just <em>calls</em> it by writing its name with brackets: <code class="ref" data-match="  drawSky();">drawSky();</code>.
+          Functions let you give a name to a chunk of work.
+        </p>
+        <p>
+          The glow uses <code class="ref" data-match="rgb(">rgb(255, 240, 140, 70)</code>: a colour mixed from red, green and blue
+          light (each 0–255). The optional fourth number is how solid it is: 0 is invisible, 255 is solid, so 70 is mostly
+          see-through.
+        </p>
+        <div class="quiz" data-id="q-tail" data-answer="b">
+          <p>If <code>x</code> is 200 and <code>y</code> is 180, where is the middle of the tail drawn?</p>
+          <button data-choice="a">(200, 180)</button>
+          <button data-choice="b">(200, 189)</button>
+          <button data-choice="c">(209, 180)</button>
+          <div class="explain" data-for="b">The tail uses <code>x</code> and <code>y + 9</code>: same across, 9 pixels lower.</div>
+          <div class="explain" data-for="wrong">Look at the tail's line: <code>screen.circle(x, y + 9, 8, …)</code>.</div>
+        </div>
+        <div class="challenge" data-id="on-moon" data-success="A firefly visiting the moon. Adorable.">
+          <p><strong>Land the firefly on the moon.</strong> Use the sliders, or change the numbers in the code.</p>
+          <p class="hint">The moon is drawn at x = 446, y = 74.</p>
+          <pre class="answer">let x = 446;
+let y = 74;</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="The game loop: make it fly">
+        <span class="step-kicker"></span>
+        <h2>The game loop: make it fly</h2>
+        <p>
+          A picture is nice, but games <em>move</em>. Here's the secret behind every video game: the computer draws a picture,
+          changes things a tiny bit, draws again, changes a tiny bit, draws again… about 60 times a second. Your eyes blend those
+          pictures into motion. That's the <strong>game loop</strong>.
+        </p>
+        <div class="cell" data-step="04-game-loop" data-watch="x, y, vx, vy"></div>
+        <p>
+          We added a second special function, <code class="ref" data-match="function update">update(dt)</code>. The game calls it
+          every frame, just <em>before</em> <code>draw()</code>. <strong>update changes things, draw shows them.</strong>
+        </p>
+        <ul>
+          <li>
+            <code class="ref" data-match="let vx">vx</code> and <code class="ref" data-match="let vy">vy</code> are the firefly's
+            <span class="term" tabindex="0" data-tip="Speed in a particular direction. vx is speed across, vy is speed up or down.">velocity</span>:
+            how many pixels it moves each second, across (x) and down (y). A negative <code>vy</code> means it flies <em>up</em>.
+          </li>
+          <li>
+            <code>dt</code> is the time since the last frame, in seconds. It's usually about 0.017 (one sixtieth of a second).
+          </li>
+          <li>
+            <code class="ref" data-match="x += vx * dt">x += vx * dt;</code> means "add <code>vx × dt</code> to x". Speed × time =
+            distance, so each frame the firefly moves exactly as far as it should in that sliver of time.
+          </li>
+        </ul>
+        <p>Watch the <strong>Live values</strong> box while it runs: <code>x</code> and <code>y</code> change every frame!</p>
+
+        <div class="widget" id="dt-race">
+          <div class="widget-title">🏁 Why multiply by <code>dt</code>?</div>
+          <div class="widget-sub">
+            Not every computer manages 60 frames a second. Pick a slower frame rate and watch two fireflies race. Each dot is one
+            frame.
+          </div>
+          <canvas width="760" height="210"></canvas>
+          <div class="widget-controls">
+            <label>Frames per second <input type="range" min="5" max="60" value="60" step="1" data-fps /> <output data-fps-out>60</output></label>
+            <button class="btn btn-small btn-soft" type="button" data-restart>↺ Restart race</button>
+          </div>
+          <div class="lane-legend">
+            <span style="--swatch: #7cf0c5">Top: <code>x += 50 * dt</code> — moves by time</span>
+            <span style="--swatch: #ff9ecf">Bottom: <code>x += 50 / 60</code> — moves by frame</span>
+          </div>
+          <div class="readout" data-readout></div>
+        </div>
+        <p>
+          At 60 frames a second they tie. Slow the frame rate down and the bottom firefly falls behind, because it only moves
+          when a frame happens. The top one takes bigger steps when frames are rare, so it always arrives on time.
+          <strong>That's why we multiply by <code>dt</code></strong>: the game runs at the same speed on every computer.
+        </p>
+
+        <div class="tweak-row">
+          <div class="tweak" data-name="vx" data-min="-200" data-max="200" data-label="vx: speed across" data-icon="↔️" data-unit=" px/s"></div>
+          <div class="tweak" data-name="vy" data-min="-200" data-max="200" data-label="vy: speed down" data-icon="↕️" data-unit=" px/s"></div>
+        </div>
+
+        <div class="quiz" data-id="q-dt" data-answer="b">
+          <p>What is <code>dt</code>?</p>
+          <button data-choice="a">How many pixels the firefly moves</button>
+          <button data-choice="b">How many seconds passed since the last frame</button>
+          <button data-choice="c">How many frames happen each second</button>
+          <div class="explain" data-for="b">It's a tiny slice of time, about 0.017 seconds. Multiplying a speed by it gives a distance.</div>
+          <div class="explain" data-for="wrong">Try the race above at a low frame rate: what does the top firefly use to take bigger steps?</div>
+        </div>
+        <div class="challenge" data-id="fly-down" data-success="Gently sinking, like a sleepy firefly.">
+          <p><strong>Make the firefly sink slowly, straight down.</strong> It shouldn't drift sideways at all, and its downward speed should be 60 or less.</p>
+          <p class="hint">Straight down means no sideways speed. What should <code>vx</code> be?</p>
+          <p class="hint">Down is a <em>positive</em> <code>vy</code>.</p>
+          <pre class="answer">let vx = 0;
+let vy = 30;</pre>
+        </div>
+        <p class="muted">Did your firefly fly off the edge and never come back? That's the next step's job.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Bounce! Making decisions">
+        <span class="step-kicker"></span>
+        <h2>Bounce! Making decisions</h2>
+        <p>
+          Our firefly needs to turn around at the edges of the sky. That means the code has to <em>check</em> something and
+          <em>decide</em>. Enter the <code>if</code> statement.
+        </p>
+        <div class="cell" data-step="05-bounce" data-watch="x, y, vx, vy"></div>
+        <div class="callout big-idea">
+          <span class="callout-icon">🤔</span>
+          <div>
+            <span class="callout-title">Big idea: if</span>
+            <p>
+              <code>if (something is true) do this;</code>. The part in brackets is a question with a yes-or-no answer.
+              <code class="ref" data-match="if (x < EDGE)">if (x &lt; EDGE)</code> asks "is x less than EDGE?". If yes, the rest
+              of the line runs; if no, it's skipped.
+            </p>
+          </div>
+        </div>
+        <ul>
+          <li>
+            <code class="ref" data-match="const SKY_BOTTOM">const SKY_BOTTOM</code> and <code class="ref" data-match="const EDGE">const EDGE</code>
+            are <strong>constants</strong>: like variables, but they can never change. Giving numbers names makes the code
+            easier to read. <code>SKY_BOTTOM</code> says much more than <code>330</code>.
+          </li>
+          <li>
+            <code>Math.abs</code> turns any number positive: <code>Math.abs(-50)</code> is <code>50</code>. So
+            <code class="ref" data-match="vx = Math.abs(vx)">vx = Math.abs(vx)</code> means "fly right now", and
+            <code class="ref" data-match="vx = -Math.abs(vx)">vx = -Math.abs(vx)</code> means "fly left now".
+          </li>
+        </ul>
+        <div class="callout tip">
+          <span class="callout-icon">🐞</span>
+          <div>
+            <span class="callout-title">Why not just flip the speed?</span>
+            <p>
+              You might think <code>vx = -vx</code> ("go the other way") would do. But if the firefly ends up a little past the
+              edge, it flips, still isn't back inside next frame, and flips <em>again</em>, wiggling in the wall forever.
+              <code>Math.abs</code> always points it back toward the inside, so it can never get stuck.
+            </p>
+          </div>
+        </div>
+        <div class="tweak" data-name="SKY_BOTTOM" data-min="80" data-max="390" data-label="Where's the bottom of the sky?" data-icon="🌾"></div>
+        <div class="quiz" data-id="q-if" data-answer="b">
+          <p>The firefly is at <code>x = 630</code>. <code>WIDTH</code> is 640 and <code>EDGE</code> is 16. Which line changes its speed?</p>
+          <button data-choice="a"><code>if (x &lt; EDGE) vx = Math.abs(vx);</code></button>
+          <button data-choice="b"><code>if (x &gt; WIDTH - EDGE) vx = -Math.abs(vx);</code></button>
+          <button data-choice="c">Neither: it's still inside the window</button>
+          <div class="explain" data-for="b"><code>WIDTH - EDGE</code> is 624, and 630 is bigger than that, so it turns left.</div>
+          <div class="explain" data-for="wrong">Work out <code>WIDTH - EDGE</code> first, then compare it with 630.</div>
+        </div>
+        <div class="challenge" data-id="zoom" data-success="Zoom zoom! A very caffeinated firefly.">
+          <p><strong>Make the firefly zip around</strong>: at least 150 pixels a second both across and up/down.</p>
+          <p class="hint">Change the numbers in <code>let vx</code> and <code>let vy</code>. Negative numbers count too: −160 is just as fast as 160, only in the other direction.</p>
+          <pre class="answer">let vx = 180;
+let vy = -160;</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="A swarm: lists and loops">
+        <span class="step-kicker"></span>
+        <h2>A swarm: lists and loops</h2>
+        <p>
+          One firefly is lonely. We want lots, but writing <code>x1</code>, <code>y1</code>, <code>x2</code>, <code>y2</code>…
+          for each would be awful. Instead, we'll keep a <strong>list</strong> of fireflies and let <strong>loops</strong> do the
+          repetitive work. We'll start with something simpler: a list of stars.
+        </p>
+        <div class="cell" data-step="06-swarm" data-watch="fireflies.length, fireflies[0].x, fireflies[0].y"></div>
+        <div class="callout big-idea">
+          <span class="callout-icon">🧺</span>
+          <div>
+            <span class="callout-title">Big idea: objects and lists</span>
+            <p>
+              An <span class="term" tabindex="0" data-tip="A bundle of named values in { curly brackets }, like { x: 10, y: 20 }.">object</span>
+              bundles named values together: <code>{ x: 80, y: 60, size: 2 }</code> is one star. Read a part with a dot:
+              <code>star.x</code>.
+            </p>
+            <p>
+              A <span class="term" tabindex="0" data-tip="Also called an array. An ordered list of values in [square brackets].">list</span>
+              (programmers say <em>array</em>) holds many values in order: <code>[]</code> is an empty list, and
+              <code class="ref" data-match="stars.push">.push(…)</code> adds something to the end.
+            </p>
+          </div>
+        </div>
+        <p>Two kinds of loop do the repeating:</p>
+        <ul>
+          <li>
+            <code class="ref" data-match="for (let i = 0; i < 70; i++)">for (let i = 0; i &lt; 70; i++)</code> is a
+            <strong>counting loop</strong>: start <code>i</code> at 0, keep going while <code>i</code> is less than 70, add one
+            each time. The code inside runs 70 times, making 70 stars.
+          </li>
+          <li>
+            <code class="ref" data-match="for (const star of stars)">for (const star of stars)</code> visits <strong>each item</strong> of
+            a list in turn, calling it <code>star</code> while it's there. That's how every star gets drawn.
+          </li>
+        </ul>
+        <p>
+          <code class="ref" data-match="function makeFirefly">makeFirefly()</code> builds one firefly object at a random spot and
+          <code>return</code>s it: it hands the new firefly back to whoever called it. <code>randomInt(25, 60)</code> picks a
+          whole number from 25 to 60, and <code>randomChoice([-1, 1])</code> picks either −1 or 1, so each firefly heads off in a
+          random direction.
+        </p>
+        <p>
+          <code class="ref" data-match="function moveFirefly">moveFirefly(fly, dt)</code> is our old movement code, but now it takes
+          a firefly as an <span class="term" tabindex="0" data-tip="A value you hand to a function when you call it. Inside the function it has a name, like fly.">argument</span>,
+          so the same code moves any firefly we give it.
+        </p>
+        <div class="tweak" data-name="COUNT" data-min="1" data-max="300" data-label="How many fireflies?" data-icon="🐞"></div>
+        <div class="quiz" data-id="q-index" data-answer="b">
+          <p>In the Live values box, what does <code>fireflies[0]</code> mean?</p>
+          <button data-choice="a">The last firefly in the list</button>
+          <button data-choice="b">The first firefly in the list</button>
+          <button data-choice="c">A list with no fireflies</button>
+          <div class="explain" data-for="b">Programmers count from 0, so the first item is number 0, the second is number 1, and so on.</div>
+          <div class="explain" data-for="wrong">The number in square brackets picks an item by its position, and positions start at 0.</div>
+        </div>
+        <div class="challenge" data-id="fifty" data-success="Fifty fireflies! The meadow's getting busy.">
+          <p><strong>Make exactly 50 fireflies.</strong></p>
+          <p class="hint">Only one number needs to change. Look at the constants at the top.</p>
+          <pre class="answer">const COUNT = 50; // how many fireflies come out</pre>
+        </div>
+        <div class="challenge" data-id="slowpokes" data-success="A lazy summer evening.">
+          <p><strong>Make every firefly slow</strong>: no firefly should fly faster than 20 pixels a second.</p>
+          <p class="hint">Look at <code>MIN_SPEED</code> and <code>MAX_SPEED</code>.</p>
+          <p class="hint">If you see an error about the bigger number coming first, read it carefully: <code>randomInt</code> needs the smaller number first, so <code>MIN_SPEED</code> must not be bigger than <code>MAX_SPEED</code>.</p>
+          <pre class="answer">const MIN_SPEED = 5; // pixels per second
+const MAX_SPEED = 20;</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Cute sprites">
+        <span class="step-kicker"></span>
+        <h2>Cute sprites</h2>
+        <p>
+          Circles are fine, but we have <em>art</em>! Games keep their pictures in an <code>images</code> folder. Here's what
+          comes with Firefly Flash:
+        </p>
+        <div class="art-tray"></div>
+        <div class="cell" data-step="07-sprites"></div>
+        <ul>
+          <li>
+            An <code class="ref" data-match="new Actor">Actor</code> is a picture you can move around.
+            <code class="ref" data-match='new Actor("moon"'>new Actor("moon", { center: [446, 74] })</code> loads
+            <code>images/moon.svg</code> and puts its middle at (446, 74). Then <code class="ref" data-match="moon.draw()">moon.draw()</code> paints it.
+          </li>
+          <li>
+            Actors already have <code>x</code> and <code>y</code>, and we can stick our own extras onto them, like
+            <code class="ref" data-match="fly.vx =">fly.vx</code>. So the rest of our code barely changed!
+          </li>
+          <li>
+            Giving an actor a list of <code class="ref" data-match="images: [">images</code> and an <code>fps</code>
+            (frames per second) makes it flip between the pictures like a flip book. Two wing positions, twelve flips a
+            second, and the wings flap.
+          </li>
+          <li><code class="ref" data-match="screen.blit">screen.blit("meadow", [0, HEIGHT - 130])</code> draws a picture with its top-left corner at that spot. It's great for scenery that doesn't move.</li>
+        </ul>
+        <div class="callout tip">
+          <span class="callout-icon">🌊</span>
+          <div>
+            <span class="callout-title">Twinkle, twinkle</span>
+            <p>
+              The stars now shimmer. <code class="ref" data-match="Math.sin(time * 2">Math.sin</code> gives a number that swings
+              smoothly between −1 and 1 as time goes on, like a wave. <code>150 + 100 × that</code> swings between 50 and 250, and
+              we use it as each star's see-through-ness. Each star starts at a different point of the wave
+              (<code>star.twinkle</code>), so they don't all blink together.
+            </p>
+          </div>
+        </div>
+        <div class="quiz" data-id="q-asset" data-answer="b">
+          <p>Which name loads the picture <code>images/moon.svg</code>?</p>
+          <button data-choice="a"><code>new Actor("Moon")</code></button>
+          <button data-choice="b"><code>new Actor("moon")</code></button>
+          <button data-choice="c"><code>new Actor("images/moon")</code></button>
+          <div class="explain" data-for="b">Just the file's name, in lowercase. The <code>images/</code> folder and the <code>.svg</code> are found automatically.</div>
+          <div class="explain" data-for="a">So close! Picture names are always lowercase.</div>
+          <div class="explain" data-for="c">Actors already look in the <code>images</code> folder, so you only need the file's own name.</div>
+        </div>
+        <div class="challenge" data-id="fast-wings" data-success="Bzzzzzz!">
+          <p><strong>Make the wings flap twice as fast.</strong></p>
+          <p class="hint">How many pictures a second does the flip book show?</p>
+          <pre class="answer">    fps: 24,</pre>
+        </div>
+        <div class="challenge" data-id="moon-left" data-success="Moonrise over the mushrooms.">
+          <p><strong>Move the moon actor to the left side</strong> of the sky.</p>
+          <p class="hint">The moon's position is the <code>center</code> given when it's created. (The soft glow circles won't follow it. Can you move them too?)</p>
+          <pre class="answer">const moon = new Actor("moon", { center: [120, 74] });</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Click to flash">
+        <span class="step-kicker"></span>
+        <h2>Click to flash</h2>
+        <p>
+          Now let's make the game listen to <em>you</em>. When you click, we'll send out a flash of light: a glowing circle that
+          grows, shines for a moment, then fades away. Click the sky a few times:
+        </p>
+        <div class="cell" data-step="08-flash" data-watch="spark"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="function onMouseDown">onMouseDown(pos)</code> is another special name: the game calls it
+            whenever you click or tap. <code>pos</code> is a list of two numbers, where you clicked, so <code>pos[0]</code> is the
+            x and <code>pos[1]</code> is the y.
+          </li>
+          <li>
+            <code class="ref" data-match="let spark = null">let spark = null;</code>: <code>null</code> means "nothing here yet".
+            A click puts a new object in <code>spark</code>, and <code class="ref" data-match="if (spark) {">if (spark)</code> only
+            runs its code when there <em>is</em> one.
+          </li>
+          <li>Each frame, <code>update</code> makes the spark older (<code>spark.age += dt</code>) and works out its size. Once it's older than <code>FLASH_TIME</code>, it's set back to <code>null</code>: gone.</li>
+        </ul>
+        <p>
+          The size comes from <code class="ref" data-match="function flashRadius">flashRadius(age)</code>, a function that
+          <em>answers a question</em>: "how big is a flash that is this many seconds old?" It checks which part of its life the
+          flash is in, and <code>return</code>s the answer. Drag through time on this graph to see it:
+        </p>
+        <div class="widget" id="flash-graph">
+          <div class="widget-title">📈 A flash's life</div>
+          <div class="widget-sub">This graph reads the constants from the code above, so it changes when you do. Drag across it to pick an age.</div>
+          <canvas width="760" height="250"></canvas>
+          <div class="readout" data-readout></div>
+        </div>
+        <div class="tweak-row">
+          <div class="tweak" data-name="FLASH_SIZE" data-min="10" data-max="150" data-label="FLASH_SIZE" data-icon="💥" data-unit=" px"></div>
+          <div class="tweak" data-name="GLOW_TIME" data-min="0.1" data-max="4" data-step="0.1" data-label="GLOW_TIME" data-icon="⏳" data-unit=" s"></div>
+        </div>
+        <div class="quiz" data-id="q-radius" data-answer="b">
+          <p>With <code>GROW_TIME = 0.3</code> and <code>GLOW_TIME = 1.4</code>, what does <code>flashRadius(1.0)</code> return?</p>
+          <button data-choice="a">A size part-way through growing</button>
+          <button data-choice="b"><code>FLASH_SIZE</code>: full size</button>
+          <button data-choice="c">A size part-way through fading</button>
+          <div class="explain" data-for="b">1.0 isn't less than 0.3, so the first <code>if</code> is skipped. It <em>is</em> less than 0.3 + 1.4 = 1.7, so the second one returns full size.</div>
+          <div class="explain" data-for="wrong">Check each <code>if</code> in order with age = 1.0. The first one that's true decides the answer.</div>
+        </div>
+        <div class="challenge" data-id="huge-flash" data-success="KA-BLOOM! That's a big flash.">
+          <p><strong>Make a flash that reaches at least 100 pixels</strong>, then click to set it off.</p>
+          <p class="hint">Which constant says how far a flash reaches at its biggest?</p>
+          <pre class="answer">const FLASH_SIZE = 110; // how far a flash of light reaches at its biggest</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Chain reaction!">
+        <span class="step-kicker"></span>
+        <h2>Chain reaction!</h2>
+        <p>
+          Here's the heart of the game: when a firefly touches light, it lights up too, and its light can catch others. Click
+          near a firefly and watch the chain spread:
+        </p>
+        <div class="cell" data-step="09-chain" data-watch="lit, spark"></div>
+        <p>
+          How does the code know a firefly is touching a light? Two circles touch when the distance between their middles is
+          less than their two radiuses added together. Drag the circles to feel it out:
+        </p>
+        <div class="widget" id="touch-toy">
+          <div class="widget-title">🔵 Do they touch?</div>
+          <div class="widget-sub">Drag the flash or the firefly. The dotted triangle shows how the distance is worked out.</div>
+          <canvas width="760" height="300"></canvas>
+          <div class="readout" data-readout></div>
+        </div>
+        <div class="callout big-idea">
+          <span class="callout-icon">📐</span>
+          <div>
+            <span class="callout-title">Big idea: distance</span>
+            <p>
+              Going from one point to the other is like walking <code>dx</code> across and <code>dy</code> down. Those two walks
+              and the straight line make a right-angled triangle, and Pythagoras worked out (about 2,500 years ago!) that the
+              straight line is <code>√(dx² + dy²)</code>. That's exactly what
+              <code class="ref" data-match="function distance">distance()</code> does: <code>Math.sqrt</code> is the square
+              root.
+            </p>
+          </div>
+        </div>
+        <p>A few more new things:</p>
+        <ul>
+          <li>
+            Each firefly now has a <code class="ref" data-match='fly.state = "drifting"'>state</code>: <code>"drifting"</code>, then
+            <code>"flashing"</code>, then <code>"done"</code>. <code>===</code> asks "are these exactly equal?", and
+            <code>&amp;&amp;</code> means "and": both sides must be true.
+          </li>
+          <li>
+            <code class="ref" data-match="function touchesLight">touchesLight(fly)</code> returns <code>true</code> or
+            <code>false</code>. It checks your spark first, then loops over every flashing firefly. As soon as it finds a light
+            that's close enough, it returns <code>true</code>, and the function stops right there.
+          </li>
+          <li><code class="ref" data-match="function startFlash">startFlash</code> switches the firefly to its happy, glowing pictures and adds one to <code>lit</code>.</li>
+          <li>
+            When a flash is over, <code class="ref" data-match="function flyHome">flyHome</code> uses
+            <code>animate()</code> to float the firefly up while fading it out (<code>opacity</code> going to 0). animate
+            changes numbers smoothly over time for you.
+          </li>
+          <li><code class="ref" data-match="screen.text(`Lit">`Lit: ${lit}`</code> uses backticks, so the value of <code>lit</code> gets dropped right into the text.</li>
+        </ul>
+        <div class="quiz" data-id="q-distance" data-answer="c">
+          <p>How far apart are the points (0, 0) and (3, 4)?</p>
+          <button data-choice="a">7</button>
+          <button data-choice="b">12</button>
+          <button data-choice="c">5</button>
+          <div class="explain" data-for="c">dx = 3 and dy = 4, so √(3×3 + 4×4) = √(9 + 16) = √25 = 5.</div>
+          <div class="explain" data-for="wrong">Walking 3 across then 4 down is 7 steps, but the straight line is shorter. Try √(dx² + dy²).</div>
+        </div>
+        <div class="challenge" data-id="ten-lit" data-success="What a chain! The meadow's glowing.">
+          <p><strong>Light up 10 fireflies.</strong> Click as many times as you like, but can you do it with <em>one</em> click?</p>
+          <p class="hint">Wait for a moment when several fireflies bunch up, then click right in the middle of them.</p>
+        </div>
+        <div class="challenge" data-id="big-bodies" data-success="Easy-catch mode unlocked.">
+          <p><strong>Make fireflies easier to catch</strong>: count them as touching from 30 pixels away, then light one up.</p>
+          <p class="hint">Which constant is added to the light's radius in <code>touchesLight</code>?</p>
+          <pre class="answer">const FIREFLY_SIZE = 30;</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="The music of the night">
+        <span class="step-kicker"></span>
+        <h2>The music of the night</h2>
+        <p>
+          Let's make every flash sing. js-game-zero can make simple musical notes all by itself with
+          <code class="ref" data-match="tone.play">tone.play</code>, so no sound files are needed. Play the game, start a big chain,
+          and listen:
+        </p>
+        <div class="cell" data-step="10-music" data-watch="lit"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="tone.play(note">tone.play(note, 0.4, { waveform: "triangle", volume: 0.25 })</code>
+            plays a note for 0.4 seconds. The <code>{ … }</code> part is extra options: a <code>waveform</code> is the shape of the
+            sound wave (<code>"sine"</code> is pure and soft, <code>"square"</code> is buzzy and retro), and <code>volume</code>
+            goes from 0 to 1.
+          </li>
+          <li>Notes are named with a letter and an octave number: <code>"C5"</code> is a C, one octave above <code>"C4"</code> (middle C).</li>
+          <li>
+            <code class="ref" data-match="const NOTES">NOTES</code> is a <strong>pentatonic scale</strong>: five notes of each
+            octave that never clash. However the chain happens, it sounds pretty!
+          </li>
+          <li>
+            <code class="ref" data-match="% NOTES.length">%</code> means "remainder after dividing". <code>(lit - 1) % 10</code> counts
+            0, 1, 2 … 9, then wraps back to 0, so a chain of 25 never runs out of notes.
+          </li>
+        </ul>
+        <div class="callout tip">
+          <span class="callout-icon">🔇</span>
+          <div><p>No sound? Browsers stay silent until you've clicked on the page, so the very first click wakes the sound up. Check your volume too!</p></div>
+        </div>
+        <div class="widget" id="scale-keys">
+          <div class="widget-title">🎹 Try different scales</div>
+          <div class="widget-sub">Tap the keys, or play the scale as a chain. Like one? Put it in your game!</div>
+          <div class="scale-picks" data-picks></div>
+          <div class="keys" data-keys></div>
+          <div class="widget-controls">
+            <button class="btn btn-small btn-soft" type="button" data-chain>▶ Play as a chain</button>
+            <button class="btn btn-small btn-soft" type="button" data-use>✨ Use this scale in my game</button>
+            <span class="muted" data-used></span>
+          </div>
+        </div>
+        <div class="quiz" data-id="q-mod" data-answer="a">
+          <p>What is <code>13 % 10</code>?</p>
+          <button data-choice="a">3</button>
+          <button data-choice="b">1.3</button>
+          <button data-choice="c">130</button>
+          <div class="explain" data-for="a">13 ÷ 10 is 1 with 3 left over. <code>%</code> gives you the left-over part.</div>
+          <div class="explain" data-for="wrong"><code>%</code> isn't a percentage in code. It's the remainder after dividing.</div>
+        </div>
+        <div class="challenge" data-id="waveform" data-success="Your fireflies have a brand-new voice.">
+          <p><strong>Give the fireflies a different voice</strong>: change the waveform in <code>startFlash</code> to <code>"square"</code>, <code>"sawtooth"</code> or <code>"sine"</code>, then light some up.</p>
+          <p class="hint">Find <code>waveform: "triangle"</code> inside <code>startFlash</code>.</p>
+          <pre class="answer">  tone.play(note, 0.4, { waveform: "square", volume: 0.25 });</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Nights, goals and game states">
+        <span class="step-kicker"></span>
+        <h2>Nights, goals and game states</h2>
+        <p>
+          It's a toy. Let's make it a <em>game</em>! Real rules: you get <strong>one click</strong> per night, and you need to
+          light up enough fireflies to win. Each night gets harder. This step is the biggest one, but it's made of ideas you
+          already know.
+        </p>
+        <div class="cell" data-step="11-nights" data-watch="state, night, lit, fireflies.length"></div>
+        <h3>Levels are just data</h3>
+        <p>
+          <code class="ref" data-match="const NIGHTS">NIGHTS</code> is a list of objects, one per night:
+          <code>{ fireflies: 14, goal: 4 }</code>. The rest of the code looks things up with
+          <code>NIGHTS[night].goal</code>. Want a new level? Add a line. No new code needed!
+        </p>
+        <h3>Game states</h3>
+        <p>
+          The game is always in exactly one <strong>state</strong>, stored in
+          <code class="ref" data-match='let state = "title"'>state</code>. The same click means different things in different
+          states: "start" on the title screen, "flash!" while aiming, "next night" after a win. Watch this map light up as you
+          play the game above:
+        </p>
+        <div class="widget" id="state-map">
+          <div class="widget-title">🗺️ The state map</div>
+          <div class="widget-sub">Right now the game is in: <span class="state-now" data-now>(press Run above)</span></div>
+          <svg class="state-svg" viewBox="0 0 760 300" role="img" aria-label="Game states: title, aiming, chain, won, lost, finished, and the clicks and events that move between them">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" /></marker>
+            </defs>
+            <path class="edge" d="M130 150 H200" marker-end="url(#arrow)" />
+            <text class="edge-label" x="165" y="140">click</text>
+            <path class="edge" d="M330 150 H400" marker-end="url(#arrow)" />
+            <text class="edge-label" x="365" y="140">click</text>
+            <path class="edge" d="M530 135 L600 70" marker-end="url(#arrow)" />
+            <text class="edge-label" x="545" y="88">lights out,</text>
+            <text class="edge-label" x="545" y="102">enough lit</text>
+            <path class="edge" d="M530 165 L600 230" marker-end="url(#arrow)" />
+            <text class="edge-label" x="545" y="212">lights out,</text>
+            <text class="edge-label" x="545" y="226">too few</text>
+            <path class="edge" d="M640 40 C 560 -10, 330 -10, 275 128" marker-end="url(#arrow)" />
+            <text class="edge-label" x="455" y="22">click: next night</text>
+            <path class="edge" d="M640 262 C 560 312, 330 312, 275 172" marker-end="url(#arrow)" />
+            <text class="edge-label" x="455" y="292">click: try again</text>
+            <path class="edge" d="M530 150 H 646" marker-end="url(#arrow)" />
+            <text class="edge-label" x="590" y="142">last night</text>
+            <text class="edge-label" x="590" y="166">cleared</text>
+            <g class="node" data-state="title"><rect x="20" y="125" width="110" height="50" rx="16" /><text x="75" y="150">title</text></g>
+            <g class="node" data-state="aiming"><rect x="210" y="125" width="120" height="50" rx="16" /><text x="270" y="150">aiming</text></g>
+            <g class="node" data-state="chain"><rect x="410" y="125" width="120" height="50" rx="16" /><text x="470" y="150">chain</text></g>
+            <g class="node" data-state="won"><rect x="610" y="30" width="120" height="50" rx="16" /><text x="670" y="55">won</text></g>
+            <g class="node" data-state="finished"><rect x="650" y="128" width="100" height="44" rx="16" /><text x="700" y="150">finished</text></g>
+            <g class="node" data-state="lost"><rect x="610" y="220" width="120" height="50" rx="16" /><text x="670" y="245">lost</text></g>
+          </svg>
+        </div>
+        <ul>
+          <li>
+            <code class="ref" data-match="function onMouseDown">onMouseDown</code> is now a chain of <code>if … else if …</code>:
+            it checks the state and does the right thing. The click only makes a spark in the <code>"aiming"</code> state, and
+            that switches the state to <code>"chain"</code>, so you can't click twice.
+          </li>
+          <li><code class="ref" data-match="function startNight">startNight()</code> fills the sky with fresh fireflies and resets <code>lit</code> and <code>spark</code>.</li>
+          <li>
+            In <code>update</code>, <code class="ref" data-match='if (state !== "chain") return;'>if (state !== "chain") return;</code>
+            leaves early unless a chain is happening (<code>!==</code> means "is not"). Then
+            <code class="ref" data-match="if (!spark && !anyFlashing())">if (!spark &amp;&amp; !anyFlashing())</code> ends the night once
+            every light is out (<code>!</code> means "not").
+          </li>
+          <li><code class="ref" data-match="function endNight">endNight()</code> compares <code>lit</code> with the goal (<code>&gt;=</code> means "at least") and picks the next state.</li>
+          <li><code class="ref" data-match="function write">write()</code> is our own helper for centred text, so drawing words takes one short line each time.</li>
+        </ul>
+        <div class="quiz" data-id="q-lost" data-answer="c">
+          <p>The game is in the <code>"lost"</code> state and you click. What happens?</p>
+          <button data-choice="a">You go back to the title screen</button>
+          <button data-choice="b">You move on to the next night anyway</button>
+          <button data-choice="c">The same night starts again with fresh fireflies</button>
+          <div class="explain" data-for="c">Look at the last <code>else if</code> in <code>onMouseDown</code>: it calls <code>startNight()</code> without changing <code>night</code>.</div>
+          <div class="explain" data-for="wrong">Find the part of <code>onMouseDown</code> that checks for <code>"lost"</code>.</div>
+        </div>
+        <div class="challenge" data-id="easy-first" data-success="A gentle first night for new players.">
+          <p><strong>Make night 1 super easy</strong>: you only need to light up 1 firefly.</p>
+          <p class="hint">Night 1 is the first object in <code>NIGHTS</code>.</p>
+          <pre class="answer">  { fireflies: 10, goal: 1 },</pre>
+        </div>
+        <div class="challenge" data-id="ninth-night" data-success="A ninth night! You're a level designer now.">
+          <p><strong>Add a ninth night</strong> with at least 50 fireflies.</p>
+          <p class="hint">Add a new line at the end of the <code>NIGHTS</code> list, just before the <code>];</code>. Don't forget the comma at the end of the line before!</p>
+          <pre class="answer">  { fireflies: 40, goal: 30 },
+  { fireflies: 55, goal: 45 },
+];</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Polish: fonts, a jar of light, saving">
+        <span class="step-kicker"></span>
+        <h2>Polish: fonts, a jar of light, and saving</h2>
+        <p>
+          The game works! The last step is the sprinkles on top that make it feel finished. This is the complete game, exactly
+          the one you played at the top of the page.
+        </p>
+        <div class="cell" data-step="final" data-watch="state, night, lit, bestNight"></div>
+        <ul>
+          <li>
+            <strong>A rounded font.</strong> Games can carry font files in a <code>fonts</code> folder. Adding
+            <code class="ref" data-match='fontname: "fredoka"'>fontname: "fredoka"</code> to <code>write()</code> changes
+            <em>every</em> piece of text in the game at once. That's the payoff of making a helper function!
+          </li>
+          <li>
+            <strong>A jar of light.</strong> <code class="ref" data-match="const fullness">fullness</code> is how close you are to
+            the goal, from 0 to 1 (<code>Math.min</code> stops it going past 1). The glow behind the jar grows with it.
+          </li>
+          <li>
+            <strong>Left clicks only.</strong> <code class="ref" data-match="button !== mouse.LEFT">onMouseDown(pos, button)</code>
+            can also tell you <em>which</em> button was pressed. In js-game-zero even the scroll wheel counts as a button, so
+            the first line ignores everything except a left click (a tap counts as one too).
+          </li>
+          <li><strong>An aiming ring</strong> follows <code class="ref" data-match="mouse.pos">mouse.pos</code>, the mouse's current position, so you can see how far your flash will reach.</li>
+          <li><strong>A night intro.</strong> <code class="ref" data-match="introTimer">introTimer</code> counts down from 2.5 seconds. While it's above 0, the big "Night 3" message shows.</li>
+          <li>
+            <strong>Little tunes.</strong> <code class="ref" data-match="function playTune">playTune</code> uses
+            <code>clock.schedule(…, delay)</code> to play each note a bit later than the one before. The
+            <code>() =&gt; …</code> is an <span class="term" tabindex="0" data-tip="A short way to write a small function right where you need it: () => doSomething().">arrow function</span>:
+            a tiny function written right where it's needed.
+          </li>
+          <li>
+            <strong>Saving progress.</strong> <code class="ref" data-match='storage.set'>storage.set("bestNight", …)</code> saves a
+            value that's still there next time you play, even after closing the page. The top line reads it back with
+            <code class="ref" data-match='storage.get'>storage.get("bestNight") ?? 0</code>. The <code>??</code> means "or, if
+            nothing was saved yet, use 0".
+          </li>
+        </ul>
+        <div class="challenge" data-id="rename" data-success="It's your game now. Name it whatever you like!">
+          <p><strong>Rename the game</strong>: change the big title on the title screen to anything you like.</p>
+          <p class="hint">Look in <code>drawMessages</code> for the line that writes <code>"Firefly Flash"</code>.</p>
+          <pre class="answer">    write("Glow Party", middle, 140, 60, "#ffd34d");</pre>
+        </div>
+        <div class="challenge" data-id="longer-tune" data-success="Fanfare! 🎺">
+          <p><strong>Make the winning tune longer</strong>: at least 5 notes. Then win a night to hear it.</p>
+          <p class="hint">Find <code>playTune(["C5", "E5", "G5", "C6"])</code> in <code>endNight</code> and add notes to the list.</p>
+          <pre class="answer">    playTune(["C5", "E5", "G5", "C6", "G5", "C6"]);</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="finale">
+        <h2>You made a game! 🎉</h2>
+        <p class="prose">
+          Look at everything you just did: you drew with coordinates, made things move with the game loop, used
+          <code>if</code> to make decisions, kept whole swarms in lists, reacted to clicks, made music, and built levels with
+          game states. That's the toolkit behind almost every game ever made.
+        </p>
+        <h3>Ideas to try next</h3>
+        <div class="idea-grid">
+          <div class="idea"><b>🌈 Rainbow fireflies</b>Give each firefly its own glow colour with <code>rgb(randomInt(…), …)</code> stored on the firefly.</div>
+          <div class="idea"><b>🌕 A magic moon</b>Clicking the moon gives a giant flash. Check <code>moon.touches(pos)</code> in <code>onMouseDown</code>.</div>
+          <div class="idea"><b>🙈 Shy fireflies</b>Fireflies near the mouse fly away from it. Use <code>distance()</code> and flip their speed.</div>
+          <div class="idea"><b>⏱️ Beat the clock</b>Give the player 10 seconds to choose where to click, with a countdown bar.</div>
+          <div class="idea"><b>✌️ Two sparks</b>Harder nights allow two clicks. Count clicks per night in a variable.</div>
+          <div class="idea"><b>🏅 High score</b>Add up every firefly ever lit and save the record with <code>storage</code>.</div>
+        </div>
+        <div class="finale-actions">
+          <button class="btn btn-primary" type="button" id="download-final">⬇ Download your game</button>
+          <a class="btn btn-primary" href="penguin-slide.html" style="--accent: #8fd3ff; --accent-ink: #18324f">Next: Penguin Slide 🐧 →</a>
+          <a class="btn btn-soft" href="index.html">All tutorials</a>
+        </div>
+        <p class="muted" style="margin-top: 16px">
+          The download is a folder with <code>main.js</code>, the <code>images</code> and <code>fonts</code> folders, and a
+          README. It runs in the js-game-zero sandbox, or with <code>jgz test firefly_flash</code>. It includes any changes
+          you made in the last step!
+        </p>
+
+        <h3>Words you learned</h3>
+        <dl class="glossary">
+          <div><dt>Coordinates</dt><dd>Two numbers, x (across from the left) and y (down from the top), that name a spot on the screen.</dd></div>
+          <div><dt>Function</dt><dd>A named set of instructions. <code>draw</code> and <code>update</code> are functions the game calls for you.</dd></div>
+          <div><dt>Variable</dt><dd>A named box holding a value that can change, made with <code>let</code>.</dd></div>
+          <div><dt>Constant</dt><dd>Like a variable, but it never changes. Made with <code>const</code>.</dd></div>
+          <div><dt>Game loop</dt><dd>Update, draw, repeat, about 60 times a second.</dd></div>
+          <div><dt>dt</dt><dd>Seconds since the last frame. Multiply speeds by it so games run the same everywhere.</dd></div>
+          <div><dt>if statement</dt><dd>Runs code only when a yes-or-no question is true.</dd></div>
+          <div><dt>Object</dt><dd>A bundle of named values, like <code>{ x: 10, y: 20 }</code>.</dd></div>
+          <div><dt>Array (list)</dt><dd>An ordered list of values, like <code>[1, 2, 3]</code>. Positions count from 0.</dd></div>
+          <div><dt>Loop</dt><dd>Code that repeats: <code>for (let i = 0; …)</code> counts, <code>for (const x of list)</code> visits each item.</dd></div>
+          <div><dt>Actor</dt><dd>A picture with a position that you can move, animate and draw.</dd></div>
+          <div><dt>State</dt><dd>Which situation the game is in right now (title, aiming, won…), stored in a variable.</dd></div>
+        </dl>
+      </section>
+
+      <footer class="page-footer">
+        Made with <a href="https://github.com/taharafiq/js-game-zero">js-game-zero</a>. Font: Fredoka (SIL Open Font License).
+        · <button type="button" data-reset-progress>Start this tutorial over</button>
+      </footer>
+    </main>
+
+    <script src="lib/jgz.js"></script>
+    <script src="lib/tutorial.js"></script>
+    <script src="lib/data/firefly_flash.js"></script>
+    <script>
+      // ------------------------------------------------------------------
+      // Challenge checks. Each runs a few times a second while its cell's
+      // game is running: true = passed, a string = a gentle nudge.
+      // ------------------------------------------------------------------
+      const circles = (game) => game.drawn().filter((d) => d.kind === "circle");
+      const biggestCircle = (game) => circles(game).sort((a, b) => b.radius - a.radius)[0];
+
+      JGZT.challenge("moon-corner", (game) => {
+        const moon = biggestCircle(game);
+        return Boolean(moon && moon.x < 170 && moon.y < 140);
+      });
+      JGZT.challenge("big-moon", (game) => {
+        const moon = biggestCircle(game);
+        return Boolean(moon && moon.radius >= 60);
+      });
+      JGZT.challenge("more-stars", (game) => circles(game).filter((c) => c.radius <= 3).length >= 6);
+      JGZT.challenge("hill-color", (game) => {
+        const hills = circles(game).filter((c) => c.radius >= 150);
+        if (hills.length < 2) return "Keep both hills (the circles with radius 160 and 190) on the screen.";
+        return hills.every((hill) => String(hill.color).toLowerCase() !== "#231d57");
+      });
+      JGZT.challenge("on-moon", (game) => {
+        const x = game.read("x");
+        const y = game.read("y");
+        return Math.hypot(x - 446, y - 74) < 40;
+      });
+      JGZT.challenge("fly-down", (game) => {
+        const vx = game.read("vx");
+        const vy = game.read("vy");
+        if (vx === 0 && vy > 60) return "Straight down, nice! Now make it slower: 60 or less.";
+        return vx === 0 && vy > 0 && vy <= 60;
+      });
+      JGZT.challenge("zoom", (game) => Math.abs(game.read("vx")) >= 150 && Math.abs(game.read("vy")) >= 150);
+      JGZT.challenge("fifty", (game) => game.read("fireflies.length") === 50);
+      JGZT.challenge("slowpokes", (game) => {
+        const max = game.read("MAX_SPEED");
+        const flies = game.read("fireflies") || [];
+        return max <= 20 && flies.length > 0 && flies.every((fly) => Math.abs(fly.vx) <= 20 && Math.abs(fly.vy) <= 20);
+      });
+      JGZT.challenge("fast-wings", (game) => (game.read("fireflies[0].fps") || 0) >= 24);
+      JGZT.challenge("moon-left", (game) => game.read("moon.x") < 200);
+      JGZT.challenge("huge-flash", (game) => {
+        const spark = game.read("spark");
+        if (!spark && game.read("FLASH_SIZE") >= 100) return "Big flash ready. Now click the sky!";
+        return Boolean(spark && spark.radius >= 100);
+      });
+      JGZT.challenge("ten-lit", (game) => game.read("lit") >= 10);
+      JGZT.challenge("big-bodies", (game) => {
+        if (game.read("FIREFLY_SIZE") < 30) return false;
+        return game.read("lit") >= 1 || "Easy-catch is on. Now light a firefly!";
+      });
+      JGZT.challenge("waveform", (game) => {
+        const match = game.code.match(/tone\.play\(note[^)]*waveform:\s*["'](\w+)["']/);
+        if (!match || match[1] === "triangle") return false;
+        return game.read("lit") >= 1 || `"${match[1]}" it is! Light up a firefly to hear it.`;
+      });
+      JGZT.challenge("easy-first", (game) => game.read("NIGHTS[0].goal") === 1);
+      JGZT.challenge("ninth-night", (game) => game.read("NIGHTS.length") === 9 && game.read("NIGHTS[8].fireflies") >= 50);
+      JGZT.challenge("rename", (game) => {
+        if (game.read("state") !== "title") return false;
+        const texts = game.drawn().filter((d) => d.kind === "text");
+        return texts.length > 0 && !texts.some((t) => t.text === "Firefly Flash") && texts[0].text.trim() !== "";
+      });
+      JGZT.challenge("longer-tune", (game) => {
+        const winning = game.code.match(/state = "won";[\s\S]*?playTune\(\[([^\]]*)\]\)/);
+        const notes = winning ? winning[1].match(/["'][A-G][#b]?\d["']/g) || [] : [];
+        if (notes.length < 5) return false;
+        return ["won", "finished"].includes(game.read("state")) || "Longer tune ready. Win a night to hear it!";
+      });
+
+      JGZT.start();
+
+      document.getElementById("download-final").addEventListener("click", () => {
+        const editable = JGZT.cell("cell-final");
+        JGZT.downloadProject(editable ? editable.code : JGZT.games.firefly_flash.steps.final);
+      });
+
+      // ------------------------------------------------------------------
+      // Coordinate readout: hover the first cells' games to see x and y.
+      // ------------------------------------------------------------------
+      function coordinateReadout(stepKey) {
+        const cell = JGZT.cell(stepKey);
+        const stage = cell.stage;
+        const label = document.createElement("div");
+        label.className = "coord-label";
+        const vertical = document.createElement("div");
+        vertical.className = "coord-line v";
+        const horizontal = document.createElement("div");
+        horizontal.className = "coord-line h";
+        stage.append(vertical, horizontal, label);
+        stage.addEventListener("mousemove", (event) => {
+          const canvas = stage.querySelector("canvas");
+          if (!canvas) return;
+          const box = canvas.getBoundingClientRect();
+          const stageBox = stage.getBoundingClientRect();
+          const x = Math.round(((event.clientX - box.left) / box.width) * 640);
+          const y = Math.round(((event.clientY - box.top) / box.height) * 400);
+          if (x < 0 || y < 0 || x > 640 || y > 400) return;
+          const left = event.clientX - stageBox.left;
+          const top = event.clientY - stageBox.top;
+          label.textContent = `x ${x}, y ${y}`;
+          label.style.left = `${Math.min(left, stageBox.width - 110)}px`;
+          label.style.top = `${Math.min(top, stageBox.height - 34)}px`;
+          vertical.style.left = `${left}px`;
+          horizontal.style.top = `${top}px`;
+          stage.classList.add("show-coords");
+        });
+        stage.addEventListener("mouseleave", () => stage.classList.remove("show-coords"));
+      }
+      coordinateReadout("01-window");
+      coordinateReadout("02-meadow");
+      coordinateReadout("03-variables");
+
+      // Draws a little firefly (head, tail, glow) on a widget canvas.
+      function drawBug(ctx, x, y, glow = "rgba(255, 240, 140, 0.35)") {
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(x, y + 6, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#2a2140";
+        ctx.fillStyle = "#f2eaa0";
+        ctx.beginPath();
+        ctx.arc(x, y + 6, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ff9f6e";
+        ctx.beginPath();
+        ctx.arc(x, y - 1, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // ------------------------------------------------------------------
+      // Widget: why multiply by dt? Two fireflies race at the chosen frame
+      // rate. The top one moves by time (50 * dt), the bottom one by frame
+      // (50 / 60 per frame, which is only right at 60 frames a second).
+      // ------------------------------------------------------------------
+      (function dtRace() {
+        const root = document.getElementById("dt-race");
+        const canvas = root.querySelector("canvas");
+        const ctx = canvas.getContext("2d");
+        const fpsInput = root.querySelector("[data-fps]");
+        const fpsOut = root.querySelector("[data-fps-out]");
+        const readout = root.querySelector("[data-readout]");
+        const START = 40;
+        const FINISH = 720;
+        const SPEED = 50 * 2.5; // sped up 2.5× so the race doesn't take all day
+        let racers;
+        let clockTime;
+        let frames;
+        let carry;
+        let finished;
+        function restart() {
+          racers = { time: { x: START, trail: [START] }, frame: { x: START, trail: [START] } };
+          clockTime = 0;
+          frames = 0;
+          carry = 0;
+          finished = false;
+        }
+        restart();
+        root.querySelector("[data-restart]").addEventListener("click", restart);
+        fpsInput.addEventListener("input", () => {
+          fpsOut.textContent = fpsInput.value;
+          restart();
+        });
+        let last = performance.now();
+        function tick(now) {
+          const real = Math.min(0.1, (now - last) / 1000);
+          last = now;
+          const fps = Number(fpsInput.value);
+          const dt = 1 / fps;
+          if (!finished && isVisible(root)) {
+            carry += real;
+            while (carry >= dt) {
+              carry -= dt;
+              clockTime += dt;
+              frames += 1;
+              racers.time.x = Math.min(FINISH, racers.time.x + SPEED * dt);
+              racers.frame.x = Math.min(FINISH, racers.frame.x + SPEED / 60);
+              racers.time.trail.push(racers.time.x);
+              racers.frame.trail.push(racers.frame.x);
+              if (racers.time.x >= FINISH) finished = true;
+            }
+          }
+          draw(fps);
+          requestAnimationFrame(tick);
+        }
+        function lane(y, racer, color) {
+          ctx.strokeStyle = "rgba(255,255,255,0.12)";
+          ctx.setLineDash([6, 8]);
+          ctx.beginPath();
+          ctx.moveTo(START, y);
+          ctx.lineTo(FINISH, y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = color;
+          for (const x of racer.trail.slice(-160)) {
+            ctx.beginPath();
+            ctx.arc(x, y + 22, 2.4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          drawBug(ctx, racer.x, y);
+        }
+        function draw(fps) {
+          ctx.fillStyle = "#15122d";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#ffd34d";
+          ctx.fillRect(FINISH + 4, 20, 6, 170);
+          ctx.font = "600 14px Fredoka, sans-serif";
+          ctx.fillText("finish", FINISH - 12, 16);
+          lane(65, racers.time, "#7cf0c5");
+          lane(150, racers.frame, "#ff9ecf");
+          readout.innerHTML =
+            `<b>${fps}</b> frames a second · dt = 1 ÷ ${fps} = <b>${(1 / fps).toFixed(4)}</b> s · after <b>${clockTime.toFixed(1)}</b> s ` +
+            `(${frames} frames): top x = <b>${racers.time.x.toFixed(0)}</b>, bottom x = <b>${racers.frame.x.toFixed(0)}</b>`;
+        }
+        requestAnimationFrame(tick);
+      })();
+
+      function isVisible(node) {
+        const box = node.getBoundingClientRect();
+        return box.bottom > 0 && box.top < innerHeight;
+      }
+
+      // Reads `const NAME = 1.5;` from a cell's code (falls back if missing).
+      function readConst(code, name, fallback) {
+        const match = code.match(new RegExp(`\\b(?:const|let)\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)`));
+        return match ? Number(match[1]) : fallback;
+      }
+
+      // ------------------------------------------------------------------
+      // Widget: a flash's life. Plots flashRadius(age) using the constants
+      // currently in step 8's code, with a draggable playhead.
+      // ------------------------------------------------------------------
+      (function flashGraph() {
+        const root = document.getElementById("flash-graph");
+        const canvas = root.querySelector("canvas");
+        const ctx = canvas.getContext("2d");
+        const readout = root.querySelector("[data-readout]");
+        const cell = JGZT.cell("08-flash");
+        let dragging = false;
+        let age = 0;
+        let auto = true;
+        const settings = () => {
+          const code = cell.code;
+          return {
+            size: readConst(code, "FLASH_SIZE", 44),
+            grow: readConst(code, "GROW_TIME", 0.3),
+            glow: readConst(code, "GLOW_TIME", 1.4),
+            fade: readConst(code, "FADE_TIME", 0.5),
+          };
+        };
+        // The same function as the game's flashRadius, for the graph.
+        function radius(s, a) {
+          if (a < s.grow) return s.size * (a / s.grow);
+          if (a < s.grow + s.glow) return s.size;
+          return Math.max(0, s.size * (1 - (a - s.grow - s.glow) / s.fade));
+        }
+        const left = 60;
+        const right = 520;
+        const top = 30;
+        const bottom = 200;
+        function draw() {
+          const s = settings();
+          const total = s.grow + s.glow + s.fade;
+          const maxR = Math.max(150, s.size);
+          const tx = (a) => left + (a / total) * (right - left);
+          const ry = (r) => bottom - (r / maxR) * (bottom - top);
+          ctx.fillStyle = "#15122d";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // phases
+          const phases = [
+            ["grow", 0, s.grow, "rgba(124,240,197,0.12)"],
+            ["glow", s.grow, s.grow + s.glow, "rgba(255,211,77,0.12)"],
+            ["fade", s.grow + s.glow, total, "rgba(255,158,207,0.12)"],
+          ];
+          ctx.font = "600 13px Fredoka, sans-serif";
+          for (const [name, a, b, color] of phases) {
+            ctx.fillStyle = color;
+            ctx.fillRect(tx(a), top, tx(b) - tx(a), bottom - top);
+            ctx.fillStyle = "#b9b2e3";
+            ctx.fillText(name, tx(a) + 6, top + 16);
+          }
+          // axes
+          ctx.strokeStyle = "rgba(255,255,255,0.3)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(left, top);
+          ctx.lineTo(left, bottom);
+          ctx.lineTo(right, bottom);
+          ctx.stroke();
+          ctx.fillStyle = "#b9b2e3";
+          ctx.fillText("radius", 6, top + 4);
+          ctx.fillText("age (seconds) →", right - 110, bottom + 34);
+          for (let a = 0; a <= total + 0.001; a += total > 3 ? 1 : 0.5) {
+            ctx.fillText(a.toFixed(1), tx(a) - 8, bottom + 16);
+          }
+          // curve
+          ctx.strokeStyle = "#ffd34d";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          for (let i = 0; i <= 200; i++) {
+            const a = (i / 200) * total;
+            const x = tx(a);
+            const y = ry(radius(s, a));
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          // playhead
+          if (auto && !dragging) age = (performance.now() / 1000) % (total + 0.6);
+          const shown = Math.min(age, total);
+          const r = radius(s, shown);
+          ctx.strokeStyle = "#7cf0c5";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(tx(shown), top);
+          ctx.lineTo(tx(shown), bottom);
+          ctx.stroke();
+          ctx.fillStyle = "#7cf0c5";
+          ctx.beginPath();
+          ctx.arc(tx(shown), ry(r), 6, 0, Math.PI * 2);
+          ctx.fill();
+          // the flash itself
+          const cx = 640;
+          const cy = 125;
+          const scale = 95 / maxR;
+          ctx.fillStyle = "rgba(140,255,214,0.18)";
+          ctx.beginPath();
+          ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(140,255,214,0.8)";
+          ctx.stroke();
+          drawBug(ctx, cx, cy - 4);
+          let which = "return FLASH_SIZE * (age / GROW_TIME)";
+          if (shown >= s.grow) which = "return FLASH_SIZE";
+          if (shown >= s.grow + s.glow) which = "return FLASH_SIZE * (1 - fading)";
+          readout.innerHTML = `flashRadius(<b>${shown.toFixed(2)}</b>) → <code>${which}</code> → <b>${r.toFixed(1)}</b> pixels`;
+          requestAnimationFrame(draw);
+        }
+        function pick(event) {
+          const box = canvas.getBoundingClientRect();
+          const x = ((event.clientX - box.left) / box.width) * canvas.width;
+          const s = settings();
+          const total = s.grow + s.glow + s.fade;
+          age = Math.max(0, Math.min(total, ((x - left) / (right - left)) * total));
+        }
+        canvas.addEventListener("pointerdown", (event) => {
+          dragging = true;
+          auto = false;
+          canvas.setPointerCapture(event.pointerId);
+          pick(event);
+        });
+        canvas.addEventListener("pointermove", (event) => dragging && pick(event));
+        canvas.addEventListener("pointerup", () => (dragging = false));
+        canvas.addEventListener("dblclick", () => (auto = true));
+        requestAnimationFrame(draw);
+      })();
+
+      // ------------------------------------------------------------------
+      // Widget: do they touch? Drag two circles; shows dx, dy, the distance
+      // and the sum of the radiuses.
+      // ------------------------------------------------------------------
+      (function touchToy() {
+        const root = document.getElementById("touch-toy");
+        const canvas = root.querySelector("canvas");
+        const ctx = canvas.getContext("2d");
+        const readout = root.querySelector("[data-readout]");
+        const flash = { x: 250, y: 150, r: 44, name: "flash" };
+        const bug = { x: 470, y: 190, r: 12, name: "firefly" };
+        let held = null;
+        let offset = [0, 0];
+        function draw() {
+          const dx = bug.x - flash.x;
+          const dy = bug.y - flash.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const touching = dist < flash.r + bug.r;
+          ctx.fillStyle = "#15122d";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // flash
+          ctx.fillStyle = touching ? "rgba(255,226,110,0.3)" : "rgba(140,255,214,0.18)";
+          ctx.beginPath();
+          ctx.arc(flash.x, flash.y, flash.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = touching ? "#ffd34d" : "rgba(140,255,214,0.8)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          // firefly body circle
+          ctx.strokeStyle = "rgba(255,255,255,0.5)";
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.arc(bug.x, bug.y, bug.r, 0, Math.PI * 2);
+          ctx.stroke();
+          // triangle
+          ctx.strokeStyle = "rgba(255,158,207,0.9)";
+          ctx.beginPath();
+          ctx.moveTo(flash.x, flash.y);
+          ctx.lineTo(bug.x, flash.y);
+          ctx.lineTo(bug.x, bug.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.strokeStyle = "#fff";
+          ctx.beginPath();
+          ctx.moveTo(flash.x, flash.y);
+          ctx.lineTo(bug.x, bug.y);
+          ctx.stroke();
+          ctx.font = "600 14px Fredoka, sans-serif";
+          ctx.fillStyle = "#ff9ecf";
+          ctx.fillText(`dx = ${Math.round(dx)}`, (flash.x + bug.x) / 2 - 24, flash.y - 8);
+          ctx.fillText(`dy = ${Math.round(dy)}`, bug.x + 8, (flash.y + bug.y) / 2);
+          drawBug(ctx, bug.x, bug.y, touching ? "rgba(255,240,140,0.7)" : "rgba(255,240,140,0.25)");
+          ctx.fillStyle = "#fff";
+          ctx.beginPath();
+          ctx.arc(flash.x, flash.y, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.font = "700 18px Fredoka, sans-serif";
+          ctx.fillStyle = touching ? "#ffd34d" : "#b9b2e3";
+          ctx.fillText(touching ? "✨ Touching! The firefly lights up." : "Not touching yet…", 20, 30);
+          readout.innerHTML =
+            `distance = √(dx² + dy²) = √(${Math.round(dx)}² + ${Math.round(dy)}²) = <b>${dist.toFixed(1)}</b><br>` +
+            `flash radius + firefly size = ${flash.r} + ${bug.r} = <b>${flash.r + bug.r}</b> → ` +
+            `<b>${dist.toFixed(1)} ${touching ? "&lt;" : "≥"} ${flash.r + bug.r}</b>, so ${touching ? "they <b>touch</b>" : "they don't touch"}`;
+        }
+        function point(event) {
+          const box = canvas.getBoundingClientRect();
+          return [((event.clientX - box.left) / box.width) * canvas.width, ((event.clientY - box.top) / box.height) * canvas.height];
+        }
+        canvas.addEventListener("pointerdown", (event) => {
+          const [x, y] = point(event);
+          held = Math.hypot(x - bug.x, y - bug.y) < bug.r + 14 ? bug : Math.hypot(x - flash.x, y - flash.y) < flash.r ? flash : null;
+          if (held) {
+            offset = [held.x - x, held.y - y];
+            canvas.setPointerCapture(event.pointerId);
+          }
+        });
+        canvas.addEventListener("pointermove", (event) => {
+          const [x, y] = point(event);
+          canvas.style.cursor = held || Math.hypot(x - bug.x, y - bug.y) < bug.r + 14 || Math.hypot(x - flash.x, y - flash.y) < flash.r ? "grab" : "default";
+          if (!held) return;
+          held.x = Math.max(10, Math.min(canvas.width - 10, x + offset[0]));
+          held.y = Math.max(10, Math.min(canvas.height - 10, y + offset[1]));
+          draw();
+        });
+        canvas.addEventListener("pointerup", () => (held = null));
+        draw();
+      })();
+
+      // ------------------------------------------------------------------
+      // Widget: scales. Plays notes with the browser's own audio, and can
+      // write the chosen scale into step 10's NOTES list.
+      // ------------------------------------------------------------------
+      (function scaleKeys() {
+        const root = document.getElementById("scale-keys");
+        const SCALES = {
+          "Pentatonic (the game's)": ["C5", "D5", "E5", "G5", "A5", "C6", "D6", "E6", "G6", "A6"],
+          Major: ["C5", "D5", "E5", "F5", "G5", "A5", "B5", "C6", "D6", "E6"],
+          "Spooky minor": ["A4", "C5", "D5", "D#5", "E5", "G5", "A5", "C6", "D6", "D#6"],
+          Dreamy: ["C5", "D5", "E5", "F#5", "G#5", "A#5", "C6", "D6", "E6", "F#6"],
+        };
+        const NAMES = { C: 0, "C#": 1, D: 2, "D#": 3, E: 4, F: 5, "F#": 6, G: 7, "G#": 8, A: 9, "A#": 10, B: 11 };
+        const frequency = (note) => {
+          const [, name, octave] = note.match(/^([A-G]#?)(\d)$/);
+          return 440 * Math.pow(2, (NAMES[name] + 12 * (Number(octave) + 1) - 69) / 12);
+        };
+        let audio;
+        function play(note, at = 0) {
+          if (JGZT.sfx.muted) return;
+          audio ??= new AudioContext();
+          const start = audio.currentTime + at;
+          const osc = audio.createOscillator();
+          const gain = audio.createGain();
+          osc.type = "triangle";
+          osc.frequency.value = frequency(note);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(0.2, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.4);
+          osc.connect(gain).connect(audio.destination);
+          osc.start(start);
+          osc.stop(start + 0.45);
+        }
+        const picks = root.querySelector("[data-picks]");
+        const keys = root.querySelector("[data-keys]");
+        const used = root.querySelector("[data-used]");
+        let current = Object.keys(SCALES)[0];
+        function showKeys() {
+          keys.textContent = "";
+          for (const note of SCALES[current]) {
+            const key = document.createElement("button");
+            key.type = "button";
+            key.className = "key";
+            key.textContent = note;
+            key.addEventListener("pointerdown", () => play(note));
+            keys.append(key);
+          }
+          for (const button of picks.children) button.setAttribute("aria-pressed", String(button.dataset.scale === current));
+        }
+        for (const name of Object.keys(SCALES)) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "btn btn-small btn-soft";
+          button.dataset.scale = name;
+          button.textContent = name;
+          button.addEventListener("click", () => {
+            current = name;
+            used.textContent = "";
+            showKeys();
+          });
+          picks.append(button);
+        }
+        root.querySelector("[data-chain]").addEventListener("click", () => {
+          SCALES[current].forEach((note, i) => {
+            play(note, i * 0.14);
+            setTimeout(() => {
+              const key = keys.children[i];
+              key?.classList.add("is-playing");
+              setTimeout(() => key?.classList.remove("is-playing"), 140);
+            }, i * 140);
+          });
+        });
+        root.querySelector("[data-use]").addEventListener("click", () => {
+          const cell = JGZT.cell("10-music");
+          const list = SCALES[current].map((note) => `"${note}"`).join(", ");
+          const code = cell.code.replace(/const NOTES = \[[^\]]*\];/, `const NOTES = [${list}];`);
+          if (code === cell.code && !cell.code.includes(list)) {
+            used.textContent = "Couldn't find the NOTES line. Press ↺ Reset on the code above.";
+            return;
+          }
+          cell.setCode(code);
+          used.textContent = "Done! Your game is running with the new scale. Start a chain!";
+        });
+        showKeys();
+      })();
+
+      // ------------------------------------------------------------------
+      // Widget: the state map lights up the state the step-11 game is in.
+      // ------------------------------------------------------------------
+      (function stateMap() {
+        const root = document.getElementById("state-map");
+        const now = root.querySelector("[data-now]");
+        const nodes = root.querySelectorAll(".node");
+        const cell = JGZT.cell("11-nights");
+        setInterval(() => {
+          const game = cell.view();
+          const state = game.running ? game.read("state") : null;
+          now.textContent = state ? `"${state}"` : "(press Run above)";
+          for (const node of nodes) node.classList.toggle("is-on", node.dataset.state === state);
+        }, 150);
+      })();
+    </script>
+  </body>
+</html>

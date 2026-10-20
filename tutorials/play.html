@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Play</title>
+    <link rel="stylesheet" href="lib/tutorial.css" />
+    <style>
+      body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .play-page {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        padding: 28px 16px 40px;
+      }
+      .play-head {
+        width: min(100%, 960px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .play-head h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 5vw, 2.6rem);
+      }
+      .play-stage {
+        position: relative;
+        width: min(100%, 960px, calc((100vh - 220px) * var(--aspect, 1.6)));
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        background: #0e0d1c;
+        outline: none;
+      }
+      .play-stage:focus-visible {
+        box-shadow:
+          0 0 0 3px var(--accent),
+          var(--shadow);
+      }
+      .play-stage canvas {
+        display: block;
+        width: 100% !important;
+        height: auto !important;
+        touch-action: none;
+      }
+      .play-start {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        background: rgba(10, 8, 30, 0.45);
+      }
+      .play-start .stage-play-icon {
+        width: 96px;
+        height: 96px;
+        font-size: 2.4rem;
+      }
+      .play-help {
+        color: var(--muted);
+        font-size: 0.95rem;
+        text-align: center;
+        max-width: 640px;
+      }
+      .play-error {
+        color: #ff8a65;
+      }
+    </style>
+  </head>
+  <body class="theme-hub">
+    <main class="play-page">
+      <div class="play-head">
+        <h1 data-title>Loading…</h1>
+        <div class="finale-actions" style="margin: 0">
+          <a class="btn btn-soft" data-tutorial-link href="index.html">📖 Learn to make it</a>
+          <a class="btn btn-soft" href="index.html">All tutorials</a>
+        </div>
+      </div>
+      <div class="play-stage" tabindex="0" aria-label="The game. Click to play." data-stage>
+        <button class="play-start" type="button" data-start aria-label="Start the game">
+          <span class="stage-play-icon" aria-hidden="true">▶</span>
+        </button>
+      </div>
+      <p class="play-help" data-help></p>
+    </main>
+    <script src="lib/jgz.js"></script>
+    <script>
+      // Which game to play comes from the address: play.html?game=penguin_slide
+      const GAMES = {
+        firefly_flash: {
+          title: "Firefly Flash",
+          tutorial: "firefly-flash.html",
+          theme: "theme-night",
+          help: "One click per night: your flash lights the fireflies it touches, and their light catches more. Light up enough to clear the night!",
+        },
+        penguin_slide: {
+          title: "Penguin Slide",
+          tutorial: "penguin-slide.html",
+          theme: "theme-ice",
+          help: "Arrow keys or WASD (or swipe) to slide. The penguin keeps going until something stops it. Eat every fish! R restarts, Z undoes.",
+        },
+        planet_putt: {
+          title: "Planet Putt",
+          tutorial: "planet-putt.html",
+          theme: "theme-space",
+          help: "Press, drag back and let go to shoot. Planets pull on your ball. Sink it in the wormhole in as few strokes as you can.",
+        },
+      };
+      const key = new URLSearchParams(location.search).get("game") || "firefly_flash";
+      const info = GAMES[key] || GAMES.firefly_flash;
+      const gameKey = GAMES[key] ? key : "firefly_flash";
+      document.body.className = info.theme;
+      document.title = info.title;
+      document.querySelector("[data-title]").textContent = info.title;
+      document.querySelector("[data-help]").textContent = info.help;
+      document.querySelector("[data-tutorial-link]").href = info.tutorial;
+
+      // The game's data file calls JGZT.register(...) with its art and code.
+      window.JGZT = {
+        register(name, data) {
+          if (name === gameKey) start(data);
+        },
+      };
+      const script = document.createElement("script");
+      script.src = `lib/data/${gameKey}.js`;
+      script.onerror = () => fail("Couldn't load the game. Run `bun scripts/build.ts` first.");
+      document.body.append(script);
+
+      const stage = document.querySelector("[data-stage]");
+      const startButton = document.querySelector("[data-start]");
+
+      function fail(message) {
+        const help = document.querySelector("[data-help]");
+        help.textContent = message;
+        help.classList.add("play-error");
+      }
+
+      function start(data) {
+        const canvas = document.createElement("canvas");
+        stage.prepend(canvas);
+        let handle;
+        try {
+          handle = JGZ.run(data.steps.final, {
+            canvas,
+            assetUrls: data.assets,
+            // The same storage scope as the tutorial, so progress is shared.
+            projectId: `jgzt-${gameKey}`,
+            keyboardTarget: stage,
+            autostart: false,
+          });
+        } catch (error) {
+          fail(String(error.message || error));
+          return;
+        }
+        document.title = info.title;
+        handle.ready.then(async () => {
+          handle.step(0);
+          stage.style.setProperty("--aspect", String(canvas.width / canvas.height || 1.6));
+          // Fonts used in draw() load during the first frame; redraw once ready.
+          await document.fonts.ready;
+          if (canvas.isConnected) handle.step(0);
+        });
+        // Draw the first frame as a poster, then play for real on click.
+        startButton.addEventListener("click", () => {
+          handle.stop();
+          canvas.remove();
+          startButton.remove();
+          const live = document.createElement("canvas");
+          stage.prepend(live);
+          JGZ.run(data.steps.final, {
+            canvas: live,
+            assetUrls: data.assets,
+            projectId: `jgzt-${gameKey}`,
+            keyboardTarget: stage,
+          });
+          document.title = info.title;
+          stage.focus();
+        });
+        stage.addEventListener("keydown", (event) => {
+          if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(event.key)) event.preventDefault();
+        });
+      }
+    </script>
+  </body>
+</html>

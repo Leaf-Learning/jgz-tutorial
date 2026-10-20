@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <clipPath id="body"><ellipse cx="24" cy="25" rx="16" ry="18"/></clipPath>
+  </defs>
+  <ellipse cx="24" cy="44.5" rx="15" ry="2.5" fill="#2a2140" opacity="0.15"/>
+  <ellipse cx="17" cy="42.5" rx="5.5" ry="3" fill="#ffa94d" stroke="#2a2140" stroke-width="2"/>
+  <ellipse cx="31" cy="42.5" rx="5.5" ry="3" fill="#ffa94d" stroke="#2a2140" stroke-width="2"/>
+  <path d="M10 22 Q2.5 28 4.5 35.5 Q9.5 34.5 12 29 Z" fill="#3d4d78" stroke="#2a2140" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M38 22 Q45.5 28 43.5 35.5 Q38.5 34.5 36 29 Z" fill="#3d4d78" stroke="#2a2140" stroke-width="2" stroke-linejoin="round"/>
+  <ellipse cx="24" cy="25" rx="16" ry="18" fill="#3d4d78"/>
+  <g clip-path="url(#body)">
+    <path d="M33 45 C42 38 43 24 38 12 L46 12 L46 46 Z" fill="#2f3c62"/>
+    <ellipse cx="15" cy="12.5" rx="3.6" ry="2" fill="#ffffff" opacity="0.28" transform="rotate(-35 15 12.5)"/>
+  </g>
+  <path d="M24 13.5 C20 9.5 12.5 10.5 12.5 19 C12.5 27.5 15 37 24 41 C33 37 35.5 27.5 35.5 19 C35.5 10.5 28 9.5 24 13.5 Z" fill="#fbfcff"/>
+  <path d="M30.5 37 C33.5 33 35 27 35 21" fill="none" stroke="#dce6f5" stroke-width="2.5" stroke-linecap="round"/>
+  <ellipse cx="24" cy="25" rx="16" ry="18" fill="none" stroke="#2a2140" stroke-width="2.5"/>
+  <path d="M22 7.3 Q22.5 3 26.5 3.5 Q24 5 25 7.2" fill="#3d4d78" stroke="#2a2140" stroke-width="1.8" stroke-linejoin="round"/>
+  <ellipse cx="18.8" cy="19.5" rx="2.7" ry="3.3" fill="#2a2140"/>
+  <ellipse cx="29.2" cy="19.5" rx="2.7" ry="3.3" fill="#2a2140"/>
+  <circle cx="19.8" cy="18.2" r="1.2" fill="#ffffff"/>
+  <circle cx="30.2" cy="18.2" r="1.2" fill="#ffffff"/>
+  <circle cx="18" cy="20.9" r="0.55" fill="#ffffff"/>
+  <circle cx="28.4" cy="20.9" r="0.55" fill="#ffffff"/>
+  <ellipse cx="15.2" cy="24.6" rx="2.6" ry="1.5" fill="#ff8fab" opacity="0.6"/>
+  <ellipse cx="32.8" cy="24.6" rx="2.6" ry="1.5" fill="#ff8fab" opacity="0.6"/>
+  <path d="M20.8 23 Q24 21.4 27.2 23 Q24 27.8 20.8 23 Z" fill="#ffa94d" stroke="#2a2140" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>

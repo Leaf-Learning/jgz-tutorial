@@ -1,0 +1,1410 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planet Putt</title>
+    <meta
+      name="description"
+      content="Build a space mini-golf game with gravity, bounces and a crystal-ball prediction line — a hands-on js-game-zero tutorial about game physics."
+    />
+    <link rel="stylesheet" href="lib/tutorial.css" />
+    <style>
+      /* ---- Page-only styles for Planet Putt's widgets ---- */
+      .widget canvas {
+        background: #0d0b24;
+        cursor: grab;
+      }
+      .widget canvas:active {
+        cursor: grabbing;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 18px;
+        font-size: 0.88rem;
+        margin-top: 10px;
+        color: var(--muted);
+      }
+      .legend span::before {
+        content: "";
+        display: inline-block;
+        width: 18px;
+        height: 4px;
+        border-radius: 2px;
+        margin-right: 7px;
+        vertical-align: middle;
+        background: var(--swatch);
+      }
+      .chain {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin: 20px 0;
+        font: 600 1.05rem/1.2 var(--font-display);
+      }
+      .chain .link {
+        padding: 10px 16px;
+        border-radius: 14px;
+        background: var(--card);
+        border: 1px solid var(--line);
+      }
+      .chain .link small {
+        display: block;
+        font: 600 0.75rem/1.3 var(--font-body);
+        color: var(--muted);
+      }
+      .chain .arrow {
+        color: var(--accent);
+        font-size: 1.3rem;
+      }
+      .readout .hi-pink {
+        color: #ff8fc8;
+      }
+      .readout .hi-cyan {
+        color: #5ee0ff;
+      }
+      .readout .hi-gold {
+        color: #ffd36e;
+      }
+      .readout .hi-green {
+        color: #7cf0c5;
+      }
+      .widget .btn-soft {
+        color: var(--ink);
+      }
+    </style>
+  </head>
+  <body class="theme-space" data-game="planet_putt" data-tutorial="Planet Putt">
+    <main class="page">
+      <section class="hero">
+        <div class="hero-kicker">🪐 Tutorial 3 of 3 · Space physics</div>
+        <h1>Planet <span class="pop">Putt</span></h1>
+        <p class="hero-lede">
+          Mini-golf among the stars. You'll build a game where planets pull the ball with gravity, bounce it off their
+          faces, and a dotted line shows you the future. Along the way you'll learn the physics behind almost every
+          action game.
+        </p>
+        <ul class="hero-meta">
+          <li>⏱ About 2 hours</li>
+          <li>🚀 Best after Firefly Flash &amp; Penguin Slide</li>
+          <li>💻 Nothing to install — the code runs right on this page</li>
+        </ul>
+
+        <h3>Play it first</h3>
+        <p class="prose">
+          Press <strong>Play</strong>, then click to start. Press anywhere on the game, <strong>pull back</strong> like a
+          slingshot, and let go. The dotted line shows where the ball will go. Sink it in the swirling wormhole in as few
+          strokes as you can. Fly off the screen and it costs you a stroke!
+        </p>
+        <div class="cell" id="hero-game" data-step="final" data-play-only></div>
+
+        <div class="learn-grid">
+          <div class="learn-card"><span class="emoji">🏃</span><b>Velocity</b>How fast and which way: two numbers that move everything.</div>
+          <div class="learn-card"><span class="emoji">🍎</span><b>Acceleration</b>Why thrown balls curve, and how gravity changes speed.</div>
+          <div class="learn-card"><span class="emoji">📐</span><b>Distance &amp; direction</b>Pythagoras and arrows, explained with pictures.</div>
+          <div class="learn-card"><span class="emoji">🏓</span><b>Bouncing</b>Splitting a velocity into "along" and "into" a surface.</div>
+          <div class="learn-card"><span class="emoji">🔮</span><b>Predicting the future</b>Run your physics ahead of time to draw the path.</div>
+          <div class="learn-card"><span class="emoji">🗺️</span><b>Levels as data</b>Six holes from one list, a scorecard, and saving.</div>
+        </div>
+
+        <h3>Meet the cast</h3>
+        <p class="prose">These are the pictures in the game's <code>images</code> folder. Each one's name is how the code asks for it.</p>
+        <div class="art-tray"></div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🧭</span>
+          <div>
+            <span class="callout-title">How this page works</span>
+            <p>
+              Each step has <strong>code on the left</strong> and <strong>the game on the right</strong>. Change anything you
+              like, then press <strong>▶ Run</strong> (or <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>). Lines that are
+              new in a step glow green, and hovering a dotted code word in the text lights up the matching lines.
+              <strong>🎯 Challenges check themselves</strong> while your game runs. You can't break anything:
+              <strong>↺ Reset</strong> always brings the step back.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="A sky full of stars">
+        <span class="step-kicker"></span>
+        <h2>A sky full of stars</h2>
+        <p>
+          Every game starts with an empty window. Ours is outer space, and space needs stars. Lots of them. Writing 90
+          lines of code, one per star, would be no fun, so we let a <strong>loop</strong> make them and keep them in a
+          <strong>list</strong>.
+        </p>
+        <div class="cell" data-step="01-sky" data-watch="stars.length, stars[0].x, stars[0].y, stars[0].size"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="const stars = [];">const stars = []</code> makes an empty list. The
+            <code class="ref" data-match="for (let i = 0">for</code> loop runs its block <code>STAR_COUNT</code> times, and each time
+            <code class="ref">stars.push</code> adds one more star to the end of the list.
+          </li>
+          <li>
+            Each star is an <span class="term" tabindex="0" data-tip="A bundle of named values in curly brackets, like { x: 10, y: 20 }. Read one with a dot: star.x.">object</span>
+            with an <code>x</code>, a <code>y</code> and a <code>size</code>. <code>randomInt(0, WIDTH)</code> picks a whole number
+            somewhere across the screen.
+          </li>
+          <li>
+            <code class="ref" data-match="randomChoice">randomChoice([1, 1, 1, 1.5, 2, 3])</code> picks one item from the list.
+            There are three 1s, so most stars come out tiny, just like the real night sky.
+          </li>
+          <li>
+            In <code class="ref" data-match="function drawSky">drawSky()</code>, <code>for (const star of stars)</code> visits every
+            star in the list, one at a time, and draws a little circle for it.
+          </li>
+        </ul>
+        <div class="tweak" data-name="STAR_COUNT" data-min="0" data-max="400" data-label="How many stars?" data-icon="✨"></div>
+
+        <div class="callout">
+          <span class="callout-icon">🔁</span>
+          <div>
+            <span class="callout-title">Quick refresher: lists and objects</span>
+            <p>
+              A list (an <em>array</em>) keeps things in order: <code>[5, 8, 13]</code>. An object keeps things by name:
+              <code>{ x: 5, y: 8 }</code>. A list of objects is how games keep track of <em>many</em> things at once.
+              Firefly Flash's <a href="firefly-flash.html#step-6">swarm step</a> covers this in depth.
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-stars-once" data-answer="b">
+          <p>The stars are made <em>once</em>, at the top of the file. What would happen if the star-making loop were inside <code>draw()</code> instead?</p>
+          <button data-choice="a">Nothing different, the sky would look the same.</button>
+          <button data-choice="b">The stars would jump to new random places every frame, 60 times a second.</button>
+          <button data-choice="c">The game would refuse to run.</button>
+          <div class="explain" data-for="b">
+            <code>draw()</code> runs about 60 times a second, so you'd get a brand-new random sky every frame, a
+            fizzing mess, and the list would grow forever. Make things once; draw them every frame.
+          </div>
+          <div class="explain" data-for="wrong">Think about how often <code>draw()</code> runs, and what <code>randomInt</code> does each time.</div>
+        </div>
+
+        <div class="challenge" data-id="giant-stars" data-success="Twinkle, twinkle, giant star!">
+          <p><strong>Add some giant stars</strong>: make a few stars with a size of 6 or more.</p>
+          <p class="hint">Star sizes come from the list inside <code>randomChoice([…])</code>. What if that list had a big number in it?</p>
+          <p class="hint">Add <code>, 6</code> to the end of the list, before the <code>]</code>, then press ▶ Run.</p>
+          <pre class="answer">    size: randomChoice([1, 1, 1, 1.5, 2, 3, 6]),</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Velocity: how things move">
+        <span class="step-kicker"></span>
+        <h2>Velocity: how things move</h2>
+        <p>
+          Time for our hero: a little golf ball. It's an <span class="term" tabindex="0" data-tip="A picture with a position. Change its x and y to move it; call .draw() to show it.">Actor</span>,
+          so it has a picture and a position. To make it move we give it a
+          <strong>velocity</strong>: two numbers that say how fast it goes across and how fast it goes down.
+        </p>
+        <div class="cell" data-step="02-velocity" data-watch="ball.x, ball.y, ball.vx, ball.vy"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="ball.vx = 150">ball.vx = 150</code> means "150 pixels to the right every second".
+            <code class="ref" data-match="ball.vy = -60">ball.vy = -60</code> means 60 pixels <em>up</em> every second. On a
+            screen, y grows <em>downwards</em>, so going up means a negative number.
+          </li>
+          <li>
+            Every frame, <code class="ref" data-match="ball.x += ball.vx * dt">ball.x += ball.vx * dt</code> nudges the ball a
+            tiny bit. <code>dt</code> is the time since the last frame, about 1/60 of a second, so the ball moves
+            150 × 1/60 = 2.5 pixels each frame. Sixty little nudges add up to 150 pixels a second.
+          </li>
+          <li>Click anywhere on the game to put the ball somewhere else. It keeps its velocity, so off it goes again.</li>
+        </ul>
+
+        <div class="widget">
+          <div class="widget-title">🏃 Velocity playground</div>
+          <div class="widget-sub">Drag the yellow arrow to change the ball's velocity. Each dot shows where the ball will be, a tenth of a second apart.</div>
+          <canvas id="velocity-canvas" aria-label="Velocity playground: drag the arrow to set the ball's velocity and see its path"></canvas>
+          <div class="widget-controls">
+            <button class="btn btn-soft btn-small" type="button" id="velocity-fly">▶ Fly!</button>
+            <label><input type="checkbox" id="velocity-fall" /> Add falling (we'll meet this in the next step)</label>
+          </div>
+          <div class="readout" id="velocity-readout" aria-live="polite"></div>
+        </div>
+
+        <div class="quiz" data-id="q-negative-vy" data-answer="c">
+          <p>A ball has <code>vx = -100</code> and <code>vy = 0</code>. Which way does it go?</p>
+          <button data-choice="a">Up</button>
+          <button data-choice="b">Down</button>
+          <button data-choice="c">Left</button>
+          <button data-choice="d">It stays still</button>
+          <div class="explain" data-for="c">A negative <code>vx</code> makes <code>x</code> smaller every frame, and smaller x is further left. <code>vy = 0</code> means no up or down at all.</div>
+          <div class="explain" data-for="wrong"><code>vx</code> is the across part. What happens to <code>x</code> if you keep adding a negative number to it?</div>
+        </div>
+
+        <div class="challenge" data-id="straight-up" data-success="Lift-off! 🚀">
+          <p><strong>Launch the ball straight up</strong>, with no sideways movement at all.</p>
+          <p class="hint">Straight up means no across speed. Which of <code>vx</code> and <code>vy</code> should be 0?</p>
+          <p class="hint">Set <code>ball.vx</code> to 0 and give <code>ball.vy</code> a negative number (negative is up).</p>
+          <pre class="answer">ball.vx = 0;
+ball.vy = -120;</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Acceleration: a ball that falls">
+        <span class="step-kicker"></span>
+        <h2>Acceleration: a ball that falls</h2>
+        <p>
+          Our ball glides in a perfectly straight line, forever. Real thrown balls don't: they curve back down. That's
+          because gravity keeps changing the ball's velocity, adding a little more "downwards" every moment. A change in
+          velocity has a name: <strong>acceleration</strong>.
+        </p>
+        <div class="chain" aria-label="Acceleration changes velocity, velocity changes position">
+          <div class="link">FALL<small>acceleration</small></div>
+          <span class="arrow">➜ changes ➜</span>
+          <div class="link">ball.vy<small>velocity</small></div>
+          <span class="arrow">➜ changes ➜</span>
+          <div class="link">ball.y<small>position</small></div>
+        </div>
+        <div class="cell" data-step="03-falling" data-watch="ball.y, ball.vy"></div>
+        <p>
+          The only new idea is one line: <code class="ref" data-match="ball.vy += FALL * dt">ball.vy += FALL * dt</code>. Every
+          second, the downward speed grows by <code>FALL</code>. The ball starts going up fast (<code>vy = -300</code>), slows down,
+          stops for an instant at the top, then falls faster and faster. Watch <code>ball.vy</code> climb in the live values.
+          Click to throw it again.
+        </p>
+        <div class="tweak" data-name="FALL" data-min="-300" data-max="900" data-step="10" data-label="Gravity strength (FALL)" data-icon="🍎"></div>
+        <p class="prose muted">Try <strong>0</strong>: no acceleration, and you're back to a straight line. Try a negative number: the ball falls <em>up</em>!</p>
+
+        <div class="quiz" data-id="q-acceleration" data-answer="a">
+          <p>In <code>ball.vy += FALL * dt</code>, what does <code>FALL</code> change directly?</p>
+          <button data-choice="a">The velocity, <code>ball.vy</code></button>
+          <button data-choice="b">The position, <code>ball.y</code></button>
+          <button data-choice="c">The size of the ball</button>
+          <div class="explain" data-for="a">Acceleration changes velocity, and then velocity changes position. Gravity never moves the ball directly. It only ever changes its speed.</div>
+          <div class="explain" data-for="wrong">Look at which variable is on the left of the <code>+=</code>.</div>
+        </div>
+
+        <div class="challenge" data-id="floor-bounce" data-success="Boing! That's an if statement doing physics.">
+          <p>
+            <strong>Make the ball bounce</strong> off the bottom of the screen instead of falling out of sight. Add an
+            <code>if</code> to <code>update</code>: when the ball is below the bottom and moving down, flip its
+            <code>vy</code> around.
+          </p>
+          <p class="hint">The bottom of the screen is <code>HEIGHT</code>. "Below the bottom" is <code>ball.y &gt; HEIGHT</code>, and "moving down" is <code>ball.vy &gt; 0</code>.</p>
+          <p class="hint">Flipping means making it negative: <code>ball.vy = -ball.vy</code>. Times 0.8 makes each bounce a bit smaller, like a real ball.</p>
+          <pre class="answer" data-label="Add this inside update, after the other lines:">  if (ball.y &gt; HEIGHT &amp;&amp; ball.vy &gt; 0) {
+    ball.vy = -ball.vy * 0.8;
+  }</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Planet gravity">
+        <span class="step-kicker"></span>
+        <h2>Planet gravity</h2>
+        <p>
+          In space there's no "down". Instead, every planet pulls the ball <em>towards itself</em>. That's the same idea as
+          <code>FALL</code>, an acceleration that changes the velocity, except now the direction and strength change
+          depending on where the ball is. To work it out we need to answer three questions: <strong>which way</strong>,
+          <strong>how far</strong>, and <strong>how hard</strong>.
+        </p>
+        <div class="cell" data-step="04-gravity" data-watch="ball.vx, ball.vy, planets.length"></div>
+
+        <h3>1. Which way? An arrow from the ball to the planet</h3>
+        <p>
+          <code class="ref" data-match="const dx = planet.x - body.x">dx</code> and <code class="ref" data-match="const dy = planet.y - body.y">dy</code>
+          are how far across and how far down the planet is from the ball. Together they make an arrow pointing straight at the
+          planet.
+        </p>
+        <h3>2. How far? Pythagoras</h3>
+        <p>
+          The arrow's length is the distance. Picture a right-angled triangle: <code>dx</code> along the bottom,
+          <code>dy</code> up the side, and the distance is the long slanted side. Pythagoras worked out, about 2,500 years
+          ago, that <strong>distance = √(dx² + dy²)</strong>, which in code is
+          <code class="ref" data-match="Math.sqrt(dx * dx + dy * dy)">Math.sqrt(dx * dx + dy * dy)</code>.
+        </p>
+        <h3>3. How hard? Weaker with distance</h3>
+        <p>
+          <code class="ref" data-match="const pull =">pull = G × mass ÷ distance²</code>. Big planets pull harder, and the pull
+          fades fast as you get further away. <em>Twice</em> as far means a <em>quarter</em> of the pull. That's how real gravity
+          works too!
+        </p>
+
+        <div class="widget">
+          <div class="widget-title">🧲 Gravity explorer</div>
+          <div class="widget-sub">Drag the ball around the planet. The pink arrow is the pull: watch it grow as you get closer.</div>
+          <canvas id="gravity-canvas" aria-label="Gravity explorer: drag the ball near the planet and watch the pull arrow"></canvas>
+          <div class="widget-controls">
+            <label>Planet size <input type="range" id="gravity-radius" min="20" max="90" value="60" /></label>
+            <label>G <input type="range" id="gravity-g" min="0" max="800" step="10" value="240" /></label>
+            <label><input type="checkbox" id="gravity-field" /> Show the pull everywhere</label>
+          </div>
+          <div class="legend">
+            <span style="--swatch: #ff8fc8">dx (across)</span>
+            <span style="--swatch: #5ee0ff">dy (down)</span>
+            <span style="--swatch: #ffd36e">distance</span>
+            <span style="--swatch: #ff6fb5">the pull</span>
+          </div>
+          <div class="readout" id="gravity-readout" aria-live="polite"></div>
+        </div>
+
+        <p>
+          Then <code class="ref" data-match="(dx / distance) * pull * dt">dx / distance</code> shrinks the arrow to exactly one pixel
+          long. That's a pure <span class="term" tabindex="0" data-tip="An arrow exactly 1 long. It only says which way, not how much. Multiply it by a number to get an arrow of that length.">direction</span>,
+          which we multiply by <code>pull</code> and <code>dt</code> and add to the velocity, just like <code>FALL</code> did.
+        </p>
+        <ul>
+          <li>
+            <code class="ref" data-match="Math.max(">Math.max(…, planet.radius)</code> never lets the distance be smaller than the planet.
+            Right at a planet's centre the distance would be 0, and dividing by 0 would fling the ball to infinity!
+          </li>
+          <li>
+            <code class="ref" data-match="DRAG * dt">body.vx -= body.vx * DRAG * dt</code> is our space dust: every moment it
+            takes away a slice of the speed, so shots slow down and stop, like a golf ball on grass.
+          </li>
+          <li>
+            <code class="ref" data-match="function moveBall(body, dt)">moveBall(body, dt)</code> works on any
+            <code>body</code> with <code>x</code>, <code>y</code>, <code>vx</code> and <code>vy</code>, not just our ball.
+            That will turn out to be a superpower in Step 9.
+          </li>
+          <li><code class="ref" data-match="function makePlanet">makePlanet</code> bundles the numbers for the physics with an Actor for the picture.</li>
+        </ul>
+        <div class="tweak-row">
+          <div class="tweak" data-name="G" data-min="0" data-max="800" data-step="10" data-label="Gravity (G)" data-icon="🧲"></div>
+          <div class="tweak" data-name="DRAG" data-min="0" data-max="2" data-step="0.05" data-label="Space dust (DRAG)" data-icon="🌫️"></div>
+        </div>
+        <p class="prose muted">Set <code>DRAG</code> to 0 and click near the planet: with no dust to slow it, the ball can loop around and around.</p>
+
+        <div class="callout warn">
+          <span class="callout-icon">👻</span>
+          <div>
+            <span class="callout-title">Did the ball fly right through the planet?</span>
+            <p>It did! Nothing tells it planets are solid yet. We'll make it bounce in Step 7.</p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-inverse-square" data-answer="d">
+          <p>The ball moves until it's <strong>twice as far</strong> from the planet. What happens to the pull?</p>
+          <button data-choice="a">It stays the same</button>
+          <button data-choice="b">It becomes half as strong</button>
+          <button data-choice="c">It becomes twice as strong</button>
+          <button data-choice="d">It becomes a quarter as strong</button>
+          <div class="explain" data-for="d">The pull divides by distance <em>squared</em>. Twice as far: 2 × 2 = 4 times bigger at the bottom of the fraction, so a quarter of the pull. Try it in the explorer!</div>
+          <div class="explain" data-for="wrong">Look closely at the bottom of the fraction: <code>distance * distance</code>. What's 2 × 2?</div>
+        </div>
+
+        <div class="art-tray" data-filter="^planet"></div>
+        <div class="challenge" data-id="two-planets" data-success="A two-planet solar system!">
+          <p><strong>Add a second planet</strong> to the sky. Pick any kind from the pictures above (<code>"pink"</code>, <code>"green"</code>, <code>"ringed"</code>, <code>"purple"</code> or <code>"blue"</code>).</p>
+          <p class="hint">There's already a line that adds one planet: <code>planets.push(makePlanet(…))</code>. Copy it.</p>
+          <p class="hint">Give the copy a different x and y so the planets don't overlap, like 560 and 340.</p>
+          <pre class="answer">planets.push(makePlanet(380, 170, 60, "blue"));
+planets.push(makePlanet(560, 340, 45, "green"));</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Drag to aim">
+        <span class="step-kicker"></span>
+        <h2>Drag to aim</h2>
+        <p>
+          Now let's put the player in charge. Press anywhere on the game and pull back like a slingshot: the further you pull,
+          the harder the shot. Let go and the ball flies the <em>opposite</em> way to your pull.
+        </p>
+        <div class="cell" data-step="05-aim" data-watch="dragStart, dragNow, ball.vx, ball.vy"></div>
+        <div class="callout">
+          <span class="callout-icon">🖱️</span>
+          <div>
+            <span class="callout-title">Quick refresher: mouse hooks</span>
+            <p>
+              The game calls <code class="ref">onMouseDown</code> when you press, <code class="ref">onMouseMove</code> as you
+              move, and <code class="ref">onMouseUp</code> when you let go. Each one gets <code>pos</code>, a list of two numbers:
+              <code>pos[0]</code> is x and <code>pos[1]</code> is y. Taps on a phone count too. The scroll wheel counts as a
+              mouse button, so <code class="ref" data-match="mouse.LEFT">onMouseDown</code> ignores every
+              <code>button</code> except <code>mouse.LEFT</code>; otherwise scrolling the page would start an aim!
+            </p>
+          </div>
+        </div>
+        <ul>
+          <li>
+            When you press, we remember the spot in <code class="ref" data-match="dragStart = pos">dragStart</code>. While you
+            drag, <code>dragNow</code> follows you. When you let go, the ball gets its new velocity.
+          </li>
+          <li>
+            <code class="ref" data-match="(dragStart[0] - dragNow[0]) * POWER">dragStart − dragNow</code> is the arrow from
+            your finger back to where you pressed, which is the <em>opposite</em> of your pull. Pull left, it points right. Times
+            <code>POWER</code> turns pixels of pull into speed.
+          </li>
+          <li>
+            If the speed is over <code>MAX_SPEED</code>, we <code class="ref" data-match="vx = (vx / speed) * MAX_SPEED">shrink both parts by the same amount</code>.
+            Shrinking both keeps the direction exactly the same, only shorter.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawAim">drawAim</code> draws the aiming arrow. The arrowhead uses
+            <code>Math.atan2</code>, <code>Math.cos</code> and <code>Math.sin</code> to turn the arrow into an angle and back. You don't
+            need to understand those yet: they're the standard recipe for "draw an arrowhead".
+          </li>
+        </ul>
+        <div class="tweak-row">
+          <div class="tweak" data-name="POWER" data-min="1" data-max="12" data-step="0.5" data-label="Power per pixel" data-icon="💪"></div>
+          <div class="tweak" data-name="MAX_SPEED" data-min="100" data-max="1200" data-step="10" data-label="Max speed" data-icon="🚀" data-unit=" px/s"></div>
+        </div>
+
+        <div class="challenge" data-id="speed-text" data-success="Now you can see exactly how hard you're hitting it.">
+          <p>
+            <strong>Show the shot's speed</strong> next to the arrow while you aim, like <em>Speed: 320</em>. Then aim to see it.
+          </p>
+          <p class="hint"><code>drawAim</code> already works out <code>speed</code>. You can draw words with <code>screen.draw.text("…", [x, y])</code>.</p>
+          <p class="hint"><code>Math.round(speed)</code> turns 321.7413 into 322. Put the text next to the arrow's <code>tip</code>.</p>
+          <pre class="answer" data-label="Add this inside drawAim, just after the line that makes color:">  screen.draw.text("Speed: " + Math.round(speed), [tip[0] + 12, tip[1]], {
+    size: 18,
+    color: color,
+  });</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Strokes, stopping, lost balls">
+        <span class="step-kicker"></span>
+        <h2>Strokes, stopping, and lost balls</h2>
+        <p>
+          This is starting to feel like golf. Real golf has rules, though: you can't hit the ball while it's still rolling,
+          every hit counts as a <strong>stroke</strong>, and losing your ball costs you. Time to teach the game those rules.
+        </p>
+        <div class="cell" data-step="06-strokes" data-watch="state, strokes, ball.stillTime"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match='let state = "aiming"'>state</code> remembers what's happening: <code>"aiming"</code> or
+            <code>"flying"</code>. <code class="ref" data-match='if (state === "aiming")'>onMouseDown</code> only starts aiming when the
+            state is <code>"aiming"</code>, so you can't hit a moving ball.
+          </li>
+          <li>
+            <code class="ref" data-match="function isResting">isResting</code> is a tiny timer. While the ball is very slow,
+            <code>stillTime</code> counts up. Speed up again and it's back to 0. Slow for 0.3 seconds? The ball has stopped. (Watch
+            <code>ball.stillTime</code> in the live values at the end of a shot.)
+          </li>
+          <li>
+            <code class="ref" data-match="function lostInSpace">lostInSpace</code> asks four questions joined by <code>||</code>,
+            which means "or". Off the left, <em>or</em> off the right, <em>or</em> off the top, <em>or</em> off the bottom.
+          </li>
+          <li>
+            <code class="ref" data-match="function loseBall">loseBall</code> adds a penalty stroke and puts the ball back at
+            <code>shotFrom</code>, the spot where you hit it. <code>showMessage</code> shows a message for 2 seconds.
+          </li>
+          <li>
+            <code class="ref" data-match="function write(">write()</code> is a little helper for putting words on screen.
+            <code>anchor || "midTop"</code> means "use the anchor you were given, <em>or</em> if there isn't one, use midTop".
+          </li>
+        </ul>
+
+        <div class="quiz" data-id="q-state" data-answer="b">
+          <p>Why does <code>onMouseDown</code> check <code>if (state === "aiming")</code>?</p>
+          <button data-choice="a">To make the game run faster</button>
+          <button data-choice="b">So you can only start a shot once the ball has stopped</button>
+          <button data-choice="c">Because JavaScript needs every function to have an if</button>
+          <div class="explain" data-for="b">Exactly. Without it, you could keep whacking the ball in mid-air. A <code>state</code> variable is how a game knows which rules apply right now.</div>
+          <div class="explain" data-for="wrong">Try removing the check (or setting <code>state</code> back to "aiming" yourself) and see what the player could do mid-flight.</div>
+        </div>
+
+        <div class="challenge" data-id="strokes-hud" data-success="Strokes on the scoreboard. Very professional.">
+          <p><strong>Put the stroke count on the screen</strong>, like <em>Strokes: 2</em> in the top-right corner.</p>
+          <p class="hint">Look at <code>drawHud</code>. It writes the message. Add another <code>write(…)</code> line for <code>"Strokes: " + strokes</code>.</p>
+          <p class="hint">For the top-right corner, use <code>WIDTH - 16</code> for x and give <code>"topRight"</code> as the anchor.</p>
+          <pre class="answer" data-label="Add this as the first line inside drawHud:">  write("Strokes: " + strokes, WIDTH - 16, 12, 22, GOLD, "topRight");</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Bouncing off planets">
+        <span class="step-kicker"></span>
+        <h2>Bouncing off planets</h2>
+        <p>
+          Let's make planets solid. When the ball touches one, two things happen: we push the ball back out to the surface,
+          and we change its velocity so it bounces. The bounce is the clever bit, and it all hangs on one special arrow.
+        </p>
+        <div class="cell" data-step="07-bounce" data-watch="state, ball.vx, ball.vy"></div>
+
+        <h3>The normal: "straight out of the surface"</h3>
+        <p>
+          The arrow from the planet's centre to the ball, shrunk to 1 pixel long, points straight out of the planet's surface.
+          Game makers call it the <span class="term" tabindex="0" data-tip="An arrow pointing straight out of a surface, at a right angle to it. Every point on a planet has its own normal.">normal</span>:
+          <code class="ref" data-match="const nx = dx / distance">nx</code> and <code class="ref" data-match="const ny = dy / distance">ny</code>.
+        </p>
+        <p>
+          <code class="ref" data-match="const outward =">outward = vx × nx + vy × ny</code> measures how much of the velocity points
+          along the normal, out of the planet. If it's negative, the ball is heading <em>into</em> the planet. Then we split the
+          velocity into two pieces: the part <strong>sliding along the surface</strong>, and the part <strong>going in</strong>.
+          The going-in part flips around (shrunk by <code>BOUNCE</code>); the sliding part carries on (shrunk a little by
+          <code>GRIP</code>).
+        </p>
+
+        <div class="widget">
+          <div class="widget-title">🏓 Bounce visualizer</div>
+          <div class="widget-sub">Drag the white arrow's tail to aim the incoming ball, and drag the ball along the planet. Then press Bounce.</div>
+          <canvas id="bounce-canvas" aria-label="Bounce visualizer: the incoming velocity, the normal, and the bounced velocity"></canvas>
+          <div class="widget-controls">
+            <button class="btn btn-soft btn-small" type="button" id="bounce-play">▶ Bounce!</button>
+            <label>BOUNCE <input type="range" id="bounce-bounce" min="0" max="1.2" step="0.05" value="0.5" /></label>
+            <label>GRIP <input type="range" id="bounce-grip" min="0" max="1" step="0.05" value="0.85" /></label>
+          </div>
+          <div class="legend">
+            <span style="--swatch: #ffffff">coming in</span>
+            <span style="--swatch: #5ee0ff">the normal</span>
+            <span style="--swatch: #ff8fc8">going in</span>
+            <span style="--swatch: #ffd36e">sliding along</span>
+            <span style="--swatch: #7cf0c5">bounced out</span>
+          </div>
+          <div class="readout" id="bounce-readout" aria-live="polite"></div>
+        </div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match="if (distance >= touching">distance &gt;= touching</code> skips planets the ball isn't
+            touching. They touch when the distance between centres is less than the two radii added together.
+          </li>
+          <li>
+            <code class="ref" data-match="function bonk">bonk</code> squishes the planet a little, then
+            <code>animate(…, tween: "spring")</code> wobbles it back to its normal size. Cute and squishy!
+          </li>
+          <li>
+            Now <code>moveBall</code> <code class="ref" data-match="return bounceOffPlanets(body)">returns</code> the planet it
+            bonked (or <code>null</code>, meaning "none"), so <code>update</code> can react.
+          </li>
+        </ul>
+        <div class="tweak-row">
+          <div class="tweak" data-name="BOUNCE" data-min="0" data-max="1.2" data-step="0.05" data-label="Bounciness" data-icon="🏓"></div>
+          <div class="tweak" data-name="GRIP" data-min="0" data-max="1" data-step="0.05" data-label="Grip" data-icon="🧤"></div>
+        </div>
+
+        <div class="quiz" data-id="q-bounce-zero" data-answer="a">
+          <p>What happens if you set <code>BOUNCE</code> to <strong>0</strong>?</p>
+          <button data-choice="a">The ball doesn't bounce back out at all. It lands and slides along the surface.</button>
+          <button data-choice="b">The ball bounces twice as high.</button>
+          <button data-choice="c">The ball goes through the planet again.</button>
+          <div class="explain" data-for="a">The "going in" part gets multiplied by 0, so nothing pushes it back out, but the sliding part still carries it along. Try it with the slider!</div>
+          <div class="explain" data-for="wrong">BOUNCE only multiplies the "going in" part. What's anything times 0? Try it with the slider to check.</div>
+        </div>
+
+        <div class="challenge" data-id="ouch" data-success="Ouch! Poor little ball.">
+          <p><strong>Make the ball pull a face when it bonks a planet.</strong> There's a picture called <code>"ball_ouch"</code> ready for you.</p>
+          <p class="hint">Find <code>function bonk</code>. Inside it, change the ball's picture: an Actor's picture is its <code>image</code>.</p>
+          <pre class="answer" data-label="Add this inside bonk:">  ball.image = "ball_ouch";</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Into the wormhole">
+        <span class="step-kicker"></span>
+        <h2>Into the wormhole</h2>
+        <p>
+          Every golf course needs a hole. Ours is a swirling wormhole. Getting the ball inside it is just a distance check
+          (Pythagoras again!), and then a little celebration animation.
+        </p>
+        <div class="cell" data-step="08-wormhole" data-watch="state, strokes, wormhole.angle"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="function inWormhole">inWormhole</code> is true when the ball's centre is closer to the
+            wormhole's centre than <code>HOLE_RADIUS</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="function sinkBall">sinkBall</code> uses <code>animate</code> to change five things at once:
+            slide the ball to the middle, shrink it to almost nothing, and spin it two whole turns (720°), in 0.9 seconds.
+          </li>
+          <li>
+            <code class="ref" data-match="onFinished: finishHole">onFinished: finishHole</code> hands <code>animate</code> a function
+            to call <em>later</em>, when the animation ends. Notice there are no brackets: we're passing the function itself, not
+            calling it now.
+          </li>
+          <li>
+            <code class="ref" data-match="wormhole.angle -= 120 * dt">wormhole.angle -= 120 * dt</code> spins the wormhole 120
+            degrees every second.
+          </li>
+          <li>
+            The ball's ouch face from the last challenge is in here too. <code class="ref" data-match="scheduleUnique">clock.scheduleUnique(resetFace, 0.4)</code>
+            puts the normal face back 0.4 seconds later.
+          </li>
+        </ul>
+        <div class="tweak" data-name="HOLE_RADIUS" data-min="4" data-max="70" data-label="Wormhole catch size" data-icon="🌀" data-unit=" px"></div>
+
+        <div class="quiz" data-id="q-onfinished" data-answer="b">
+          <p>When does <code>finishHole</code> run?</p>
+          <button data-choice="a">Straight away, as soon as <code>sinkBall</code> starts</button>
+          <button data-choice="b">When the sinking animation has finished, 0.9 seconds later</button>
+          <button data-choice="c">Every frame, forever</button>
+          <div class="explain" data-for="b"><code>animate</code> holds on to the function and calls it when it's done. That's called a <em>callback</em>: "call me back when you're finished".</div>
+          <div class="explain" data-for="wrong">Read <code>onFinished</code> out loud: "on finished, do…".</div>
+        </div>
+
+        <div class="challenge" data-id="spin" data-success="Whoa, it's spinning the other way!">
+          <p><strong>Make the wormhole spin the other way, and faster</strong>: at least 200 degrees a second, clockwise on the screen.</p>
+          <p class="hint">The spin comes from <code>wormhole.angle -= 120 * dt</code> in <code>update</code>. <code>-=</code> makes the angle go down.</p>
+          <p class="hint">Change <code>-=</code> to <code>+=</code> to turn the other way, and 120 to a bigger number.</p>
+          <pre class="answer">  wormhole.angle += 300 * dt;</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Seeing the future">
+        <span class="step-kicker"></span>
+        <h2>Seeing the future</h2>
+        <p>
+          Here's a magic trick: a dotted line that shows where the ball <em>will</em> go, curves and bounces and all, before
+          you've even hit it. How can the game know the future? Easy: it plays the future, really fast, with a pretend ball.
+        </p>
+        <div class="cell" data-step="09-predict" data-watch="predicted.length, leftover"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="function predictPath">predictPath</code> makes a <code>ghost</code> object with the
+            ball's position and the velocity you're aiming with. Then a loop calls the very same
+            <code class="ref" data-match="moveBall(ghost, STEP)">moveBall</code> on it 180 times. That's 1.5 seconds of pretend flight, worked out
+            in a blink.
+          </li>
+          <li>Every 6th step it drops a dot (<code>i % 6 === 0</code> means "i divides by 6 exactly").</li>
+          <li>
+            This is the payoff from Step 4: because <code>moveBall</code> works on <em>any</em> body, the ghost follows exactly the
+            same physics as the real ball.
+          </li>
+        </ul>
+
+        <h3>Why the ball now moves in equal steps</h3>
+        <p>
+          Frames don't all take the same time: one might be 1/60 of a second, the next a bit longer. If the real ball moved by
+          whatever <code>dt</code> happened to be, its path would drift slightly away from the prediction. So the real ball now
+          moves in <strong>equal steps</strong> of <code class="ref" data-match="const STEP">STEP</code> (1/120 of a second), just
+          like the ghost.
+        </p>
+        <p>
+          <code class="ref" data-match="leftover += dt">leftover</code> works like a piggy bank of time. Each frame drops
+          <code>dt</code> in; the <code class="ref" data-match="while (leftover >= STEP">while</code> loop spends it in
+          <code>STEP</code>-sized coins, one physics step per coin, and keeps the change for next frame. Same steps, same path:
+          the prediction comes true every time.
+        </p>
+        <div class="tweak" data-name="PREDICT_TIME" data-min="0.1" data-max="6" data-step="0.1" data-label="Seconds of future to show" data-icon="🔮" data-unit=" s"></div>
+        <p class="prose muted">
+          Try 6 seconds. Now the game is <em>too</em> easy! Picking numbers like this, enough to help but not enough to
+          spoil the fun, is a big part of game design.
+        </p>
+
+        <div class="quiz" data-id="q-equal-steps" data-answer="c">
+          <p>Why do the real ball and the ghost both move in steps of exactly <code>STEP</code>?</p>
+          <button data-choice="a">Because 1/120 is a lucky number</button>
+          <button data-choice="b">To make the game use less battery</button>
+          <button data-choice="c">So that the same steps give the same path, and the prediction comes true</button>
+          <div class="explain" data-for="c">Physics done in different-sized steps lands in slightly different places. Same steps in, same path out.</div>
+          <div class="explain" data-for="wrong">Think about what would happen to the dotted line if the real ball moved differently from the ghost.</div>
+        </div>
+
+        <div class="challenge" data-id="close-dots" data-success="A dotted line so smooth it's almost solid!">
+          <p><strong>Pack the dots closer together</strong>: drop a dot every 3 steps instead of every 6. Then aim a shot to see it.</p>
+          <p class="hint">Find <code>i % 6 === 0</code> in <code>predictPath</code>.</p>
+          <pre class="answer">    if (i % 3 === 0) dots.push([ghost.x, ghost.y]);</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Six holes and a scorecard">
+        <span class="step-kicker"></span>
+        <h2>Six holes and a scorecard</h2>
+        <p>
+          One hole is a toy; six holes is a game. Instead of writing code for each hole, we describe every hole as
+          <strong>data</strong>: a list of objects saying where the tee, the wormhole and the planets are. One function,
+          <code>startHole</code>, can set up any of them.
+        </p>
+        <div class="cell" data-step="10-holes" data-watch="holeIndex, strokes, scores, bestTotal"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="const HOLES = [">HOLES</code> is a list of objects, and each object has its own list of
+            planets. <code>HOLES[0]</code> is the first hole (lists count from 0), and <code>HOLES[0].planets[0].kind</code> is
+            <code>"pink"</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="function startHole(index)">startHole(index)</code> reads one hole's data, makes its
+            planets with <code>makePlanet</code>, and moves the wormhole, flag and ball into place.
+          </li>
+          <li>
+            <code class="ref" data-match="scores.push(strokes)">scores.push(strokes)</code> remembers each hole's strokes.
+            <code class="ref" data-match="function nextHole">nextHole</code> goes on to the next one, or to the scorecard after the last.
+          </li>
+          <li>
+            <code class="ref" data-match="SCORE_NAMES[strokes - data.par]">SCORE_NAMES</code> turns "strokes minus par" into golf
+            words: one under par is a <em>birdie</em>, two under is an <em>eagle</em>.
+          </li>
+          <li>
+            <code class="ref" data-match='storage.set("bestTotal"'>storage.set</code> saves your best total so it's still there next
+            time, and <code class="ref" data-match='storage.get("bestTotal"'>storage.get</code> reads it back when the game
+            starts. Press <kbd>R</kbd> to start a hole over.
+          </li>
+        </ul>
+
+        <div class="quiz" data-id="q-hole-data" data-answer="b">
+          <p>What is <code>HOLES[2].planets[0].kind</code>?</p>
+          <button data-choice="a"><code>"pink"</code></button>
+          <button data-choice="b"><code>"green"</code></button>
+          <button data-choice="c"><code>"blue"</code></button>
+          <div class="explain" data-for="b"><code>HOLES[2]</code> is the <em>third</em> hole, "Twin Moons" (counting 0, 1, 2), and its first planet is the green one.</div>
+          <div class="explain" data-for="wrong">Lists count from 0, so <code>HOLES[2]</code> is the third hole in the list. Look for <code>"Twin Moons"</code> in the code.</div>
+        </div>
+
+        <div class="challenge" data-id="seventh-hole" data-success="A brand-new hole of your own design! Play through to reach it.">
+          <p>
+            <strong>Design a 7th hole.</strong> Add one more object to the end of the <code>HOLES</code> list, with your own tee,
+            wormhole and planets.
+          </p>
+          <p class="hint">Copy one of the existing hole objects, from its <code>{</code> to its <code>},</code>, and paste it just before the <code>];</code> that closes the list.</p>
+          <p class="hint">Then change its name and numbers. The screen is 720 wide and 480 tall.</p>
+          <pre class="answer" data-label="Paste this just before the ]; at the end of HOLES:">  {
+    name: "Moon Maze",
+    par: 3,
+    tee: [80, 80],
+    hole: [640, 400],
+    planets: [
+      { x: 240, y: 200, radius: 50, kind: "pink" },
+      { x: 450, y: 300, radius: 60, kind: "blue" },
+    ],
+  },</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Polish: sound, sparkle, title">
+        <span class="step-kicker"></span>
+        <h2>Polish: sound, sparkle, and a title screen</h2>
+        <p>
+          The game works! The last step is the sprinkles on top that make it feel finished. This is the complete game, exactly
+          the one you played at the top of the page.
+        </p>
+        <div class="cell" data-step="final" data-watch="state, holeIndex, strokes, bestTotal"></div>
+        <ul>
+          <li>
+            <strong>Sounds.</strong> <code class="ref" data-match="tone.play(330">tone.play</code> makes a beep with no sound
+            file at all: a note (a name like <code>"C3"</code> or a number of Hz) and how many seconds to play it.
+            <code class="ref" data-match="function playNotes">playNotes</code> plays a little tune by scheduling each note a bit
+            later than the last.
+          </li>
+          <li>
+            <strong>Twinkling.</strong> <code class="ref" data-match="Math.sin(time * 2 + star.twinkle)">Math.sin</code> makes a
+            number that swings smoothly up and down forever as <code>time</code> grows, like a wave. Each star gets its own
+            <code>twinkle</code> head start, so they don't all blink together.
+          </li>
+          <li>
+            <strong>Sparkles and clouds.</strong> <code class="ref" data-match="function drawSparkle">drawSparkle</code> draws a
+            4-pointed star from 8 points, and the soft clouds are see-through circles stacked on top of each other.
+          </li>
+          <li>
+            <strong>Standing tall.</strong> <code class="ref" data-match="function standUp">standUp</code> uses
+            <code>angleTo</code> to stand the ball upright on whatever planet it lands on, like a tiny astronaut.
+          </li>
+          <li>
+            <strong>A title screen</strong> is just one more state, <code class="ref" data-match='let state = "title"'>"title"</code>.
+            <strong>Rounded panels</strong> come from <code class="ref" data-match="function roundBox">roundBox</code>: two
+            rectangles in a plus shape with a circle on each corner.
+          </li>
+          <li>
+            <strong>A rounded font.</strong> Adding <code class="ref" data-match='fontname: "fredoka"'>fontname: "fredoka"</code>
+            to <code>write()</code> changes every word in the game at once. That's the payoff of a helper function!
+          </li>
+        </ul>
+
+        <div class="challenge" data-id="bonk-sound" data-success="That's your sound now.">
+          <p><strong>Give the bonk your own sound.</strong> Change the note or waveform of the <code>tone.play</code> in <code>bonk</code>, then bonk a planet to hear it.</p>
+          <p class="hint">Waveforms are <code>"sine"</code>, <code>"square"</code>, <code>"triangle"</code> and <code>"sawtooth"</code>. Notes go from low like <code>"C2"</code> to high like <code>"C6"</code>.</p>
+          <pre class="answer">  tone.play("G2", 0.15, { waveform: "sawtooth", volume: 0.15 });</pre>
+        </div>
+        <div class="challenge" data-id="twinkle-fast" data-success="Twinkle mode: maximum!">
+          <p><strong>Make the stars twinkle faster</strong>: at least twice as fast as now.</p>
+          <p class="hint">In <code>drawSky</code>, <code>Math.sin(time * 2 + …)</code> sets the speed. A bigger number than 2 makes a faster wave.</p>
+          <pre class="answer">    const glow = 0.55 + 0.45 * Math.sin(time * 6 + star.twinkle);</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="finale">
+        <h2>You built a physics game! 🎉</h2>
+        <p class="prose">
+          Look at what's in your toolkit now: velocity and acceleration, gravity that fades with distance, bouncing with
+          normals, equal physics steps, and seeing the future by simulating it. That's the same physics behind racing games,
+          platformers, pinball and space shooters.
+        </p>
+        <h3>Ideas to try next</h3>
+        <div class="idea-grid">
+          <div class="idea"><b>🪐 Moving planets</b>Give a planet its own <code>vx</code> and <code>vy</code>, or make it circle another with <code>Math.cos</code> and <code>Math.sin</code>.</div>
+          <div class="idea"><b>🕳️ Black holes</b>A planet that doesn't bounce the ball, it swallows it! Lose a stroke and start again.</div>
+          <div class="idea"><b>💨 Boost pads</b>A zone that multiplies the ball's velocity by 2 when it flies through.</div>
+          <div class="idea"><b>🧲 Push planets</b>A planet with negative mass pushes the ball away instead of pulling it in.</div>
+          <div class="idea"><b>✏️ Level editor</b>Click to place planets, then <code>console.log</code> the hole's data so you can paste it into <code>HOLES</code>.</div>
+          <div class="idea"><b>👯 Two players</b>Take turns on each hole and keep two scorecards.</div>
+        </div>
+        <div class="finale-actions">
+          <button class="btn btn-primary" type="button" id="download-final">⬇ Download your game</button>
+          <a class="btn btn-soft" href="firefly-flash.html">🌟 Firefly Flash</a>
+          <a class="btn btn-soft" href="penguin-slide.html">🐧 Penguin Slide</a>
+          <a class="btn btn-soft" href="index.html">All tutorials</a>
+        </div>
+        <p class="muted" style="margin-top: 16px">
+          The download is a folder with <code>main.js</code>, the <code>images</code> and <code>fonts</code> folders, and a
+          README. It runs in the js-game-zero sandbox, or with <code>jgz test planet_putt</code>. It includes any changes you
+          made in the last step!
+        </p>
+
+        <h3>Words you learned</h3>
+        <dl class="glossary">
+          <div><dt>Velocity</dt><dd>How fast something moves and which way, as two numbers: <code>vx</code> across and <code>vy</code> down.</dd></div>
+          <div><dt>Acceleration</dt><dd>How fast the velocity changes. Gravity is an acceleration.</dd></div>
+          <div><dt>dt</dt><dd>Seconds since the last frame. Multiply speeds by it so games run the same everywhere.</dd></div>
+          <div><dt>Pythagoras</dt><dd>distance = √(dx² + dy²): the length of the slanted side of a right-angled triangle.</dd></div>
+          <div><dt>Inverse square</dt><dd>A pull that divides by distance × distance: twice as far, a quarter as strong.</dd></div>
+          <div><dt>Direction (unit vector)</dt><dd>An arrow exactly 1 long. Divide dx and dy by the distance to get one.</dd></div>
+          <div><dt>Normal</dt><dd>An arrow pointing straight out of a surface. Bounces flip the part of the velocity along it.</dd></div>
+          <div><dt>Drag</dt><dd>A force that slows things down a bit every moment, like our space dust.</dd></div>
+          <div><dt>Fixed time step</dt><dd>Doing physics in equal-sized steps, so the same shot always takes the same path.</dd></div>
+          <div><dt>Simulation</dt><dd>Running pretend physics ahead of time, like the prediction line's ghost ball.</dd></div>
+          <div><dt>Callback</dt><dd>A function you hand over to be called later, like <code>onFinished</code>.</dd></div>
+          <div><dt>Data-driven levels</dt><dd>Describing levels as lists and objects, so one function can build them all.</dd></div>
+        </dl>
+      </section>
+
+      <footer class="page-footer">
+        Made with <a href="https://github.com/taharafiq/js-game-zero">js-game-zero</a>. Font: Fredoka (SIL Open Font License).
+        · <button type="button" data-reset-progress>Start this tutorial over</button>
+      </footer>
+    </main>
+
+    <script src="lib/jgz.js"></script>
+    <script src="lib/tutorial.js"></script>
+    <script src="lib/data/planet_putt.js"></script>
+    <script>
+      // ------------------------------------------------------------------
+      // Challenge checks. Each runs a few times a second while its cell's
+      // game is running: true = passed, a string = a gentle nudge.
+      // ------------------------------------------------------------------
+      const texts = (game) =>
+        game
+          .drawn()
+          .filter((d) => d.kind === "text")
+          .map((d) => String(d.text));
+
+      JGZT.challenge("giant-stars", (game) =>
+        game.drawn().some((d) => d.kind === "circle" && d.radius >= 6),
+      );
+
+      JGZT.challenge("straight-up", (game) => {
+        const vx = game.read("ball.vx");
+        const vy = game.read("ball.vy");
+        if (vx === 0 && vy >= 0) return "No sideways speed, nice! Now make vy negative so it goes up.";
+        return vx === 0 && vy < 0;
+      });
+
+      // A bounce is the falling speed (positive vy) suddenly turning into
+      // rising speed near the bottom of the screen.
+      let lastFallSpeed = 0;
+      JGZT.challenge("floor-bounce", (game) => {
+        const vy = game.read("ball.vy");
+        const y = game.read("ball.y");
+        const bounced = lastFallSpeed > 0 && vy < 0 && y > 260;
+        lastFallSpeed = vy;
+        return bounced && /\bif\s*\(/.test(game.code);
+      });
+
+      JGZT.challenge("two-planets", (game) => game.read("planets.length") >= 2);
+
+      JGZT.challenge("speed-text", (game) => {
+        if (texts(game).some((t) => /speed/i.test(t) && /\d/.test(t))) return true;
+        const drawAim = game.code.match(/function drawAim\(\) \{[\s\S]*?\n\}/);
+        return drawAim && /draw\.text|screen\.text/.test(drawAim[0])
+          ? "Looks good! Now press and drag on the game to aim, and watch for your words."
+          : false;
+      });
+
+      JGZT.challenge("strokes-hud", (game) => texts(game).some((t) => /strokes/i.test(t) && /\d/.test(t)));
+
+      JGZT.challenge("ouch", (game) => {
+        if (game.read("ball.image") === "ball_ouch") return true;
+        return /ball_ouch/.test(game.code) ? 'Now whack the ball into the planet to see the face!' : false;
+      });
+
+      // Spin speed is measured between two checks: how far the angle moved
+      // divided by the time in between.
+      let lastSpin = null;
+      JGZT.on("run", () => {
+        lastSpin = null;
+        lastFallSpeed = 0;
+      });
+      JGZT.challenge("spin", (game) => {
+        const angle = game.read("wormhole.angle");
+        const now = performance.now();
+        let passed = false;
+        if (lastSpin && typeof angle === "number") {
+          const perSecond = (angle - lastSpin.angle) / ((now - lastSpin.time) / 1000);
+          if (perSecond > 0 && perSecond < 200) {
+            lastSpin = { angle, time: now };
+            return "It's turning the other way! Now make it faster: 200 or more.";
+          }
+          passed = perSecond >= 200;
+        }
+        lastSpin = { angle, time: now };
+        return passed;
+      });
+
+      JGZT.challenge("close-dots", (game) => {
+        const match = game.code.match(/i\s*%\s*(\d+)\s*===\s*0/);
+        if (!match || Number(match[1]) > 3) return false;
+        return game.read("predicted.length") > 0 || "Nice! Now press and drag to aim, and look at the dots.";
+      });
+
+      JGZT.challenge("seventh-hole", (game) => game.read("HOLES.length") >= 7);
+
+      const ORIGINAL_BONK = /tone\.play\("C3",\s*0\.12,\s*\{\s*waveform:\s*"square",\s*volume:\s*0\.15\s*\}\)/;
+      JGZT.challenge("bonk-sound", (game) => {
+        const bonk = game.code.match(/function bonk\(planet\) \{[\s\S]*?\n\}/);
+        if (!bonk || !/tone\.play\(/.test(bonk[0]) || ORIGINAL_BONK.test(bonk[0])) return false;
+        if (game.read("ball.image") === "ball_ouch") return true;
+        return "New sound ready. Now start a hole and bonk a planet to hear it!";
+      });
+
+      JGZT.challenge("twinkle-fast", (game) => {
+        const match = game.code.match(/Math\.sin\(time \* ([\d.]+)/);
+        return Boolean(match && Number(match[1]) >= 4);
+      });
+
+      // ------------------------------------------------------------------
+      // Widget helpers
+      // ------------------------------------------------------------------
+      const ART = JGZT.games.planet_putt.assets;
+      const picture = (name) => {
+        const image = new Image();
+        image.src = ART[`images/${name}.svg`];
+        return image;
+      };
+      const BALL_PICTURE = picture("ball");
+      const COLORS = {
+        white: "#ffffff",
+        pink: "#ff8fc8",
+        hotPink: "#ff6fb5",
+        cyan: "#5ee0ff",
+        gold: "#ffd36e",
+        green: "#7cf0c5",
+        lilac: "#b9b0e8",
+      };
+
+      // Sizes a canvas for sharp drawing on any screen. The widget then
+      // draws in its own logical width × height, whatever size it's shown at.
+      function setupCanvas(canvas, width, height) {
+        const ratio = Math.min(2, window.devicePixelRatio || 1);
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
+        canvas.dataset.width = width;
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        return ctx;
+      }
+
+      // Where the pointer is, in the widget's own logical units.
+      function pointerAt(canvas, event, width, height) {
+        const box = canvas.getBoundingClientRect();
+        return [((event.clientX - box.left) / box.width) * width, ((event.clientY - box.top) / box.height) * height];
+      }
+
+      // Calls onDrag(point, phase) for pointer down, move and up on a canvas.
+      function onDrag(canvas, width, height, handler) {
+        let active = false;
+        canvas.addEventListener("pointerdown", (event) => {
+          active = handler(pointerAt(canvas, event, width, height), "down") !== false;
+          if (active) canvas.setPointerCapture(event.pointerId);
+        });
+        canvas.addEventListener("pointermove", (event) => {
+          if (active) handler(pointerAt(canvas, event, width, height), "move");
+        });
+        const end = (event) => {
+          if (!active) return;
+          active = false;
+          handler(pointerAt(canvas, event, width, height), "up");
+        };
+        canvas.addEventListener("pointerup", end);
+        canvas.addEventListener("pointercancel", end);
+      }
+
+      function spaceBackground(ctx, width, height, seed) {
+        const sky = ctx.createLinearGradient(0, 0, 0, height);
+        sky.addColorStop(0, "#0d0b24");
+        sky.addColorStop(1, "#251b52");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, width, height);
+        // The same "random" stars every time, from a tiny seeded generator.
+        let s = seed;
+        const next = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+        ctx.fillStyle = "rgba(255, 248, 225, 0.7)";
+        for (let i = 0; i < 60; i++) {
+          ctx.beginPath();
+          ctx.arc(next() * width, next() * height, next() < 0.8 ? 1 : 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function arrow(ctx, from, to, color, width = 3, head = 10) {
+        const dx = to[0] - from[0];
+        const dy = to[1] - from[1];
+        const length = Math.hypot(dx, dy);
+        if (length < 1) return;
+        const angle = Math.atan2(dy, dx);
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(from[0], from[1]);
+        ctx.lineTo(to[0] - Math.cos(angle) * head * 0.6, to[1] - Math.sin(angle) * head * 0.6);
+        ctx.stroke();
+        const size = Math.min(head, length);
+        ctx.beginPath();
+        ctx.moveTo(to[0], to[1]);
+        ctx.lineTo(to[0] - Math.cos(angle - 0.45) * size, to[1] - Math.sin(angle - 0.45) * size);
+        ctx.lineTo(to[0] - Math.cos(angle + 0.45) * size, to[1] - Math.sin(angle + 0.45) * size);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function label(ctx, text, x, y, color, align = "center") {
+        // On a narrow screen the widget is shrunk, so grow its words to match.
+        const shrink = Number(ctx.canvas.dataset.width) / Math.max(1, ctx.canvas.clientWidth);
+        const size = 13 * Math.max(1, Math.min(1.8, shrink * 0.8));
+        ctx.font = `600 ${size}px Nunito, system-ui, sans-serif`;
+        ctx.textAlign = align;
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "rgba(13, 11, 36, 0.85)";
+        ctx.strokeText(text, x, y);
+        ctx.fillStyle = color;
+        ctx.fillText(text, x, y);
+      }
+
+      function dashed(ctx, from, to, color) {
+        ctx.save();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(from[0], from[1]);
+        ctx.lineTo(to[0], to[1]);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawBall(ctx, x, y, size = 40) {
+        if (BALL_PICTURE.complete) ctx.drawImage(BALL_PICTURE, x - size / 2, y - size / 2, size, size);
+      }
+
+      const round = (n) => Math.round(n);
+      // Negative numbers need brackets before squaring: (-97)², not -97².
+      const squared = (n) => (round(n) < 0 ? `(${round(n)})²` : `${round(n)}²`);
+
+      // ------------------------------------------------------------------
+      // Widget 1: the velocity playground. The ball's path is just
+      // "start + velocity × time" (plus falling, if switched on).
+      // ------------------------------------------------------------------
+      (function velocityPlayground() {
+        const W = 640;
+        const H = 320;
+        const canvas = document.getElementById("velocity-canvas");
+        const readout = document.getElementById("velocity-readout");
+        const fallBox = document.getElementById("velocity-fall");
+        const ctx = setupCanvas(canvas, W, H);
+        const start = [90, 230];
+        const ARROW_SCALE = 0.5; // arrow pixels for each px/s of speed
+        const FALL = 300;
+        let velocity = [150, -60];
+        let flight = null; // the time a "Fly!" started
+
+        const positionAt = (t) => [
+          start[0] + velocity[0] * t,
+          start[1] + velocity[1] * t + (fallBox.checked ? 0.5 * FALL * t * t : 0),
+        ];
+        const tip = () => [start[0] + velocity[0] * ARROW_SCALE, start[1] + velocity[1] * ARROW_SCALE];
+
+        function draw() {
+          spaceBackground(ctx, W, H, 7);
+          // The future path: a dot every tenth of a second, a big one each second.
+          for (let step = 1; step <= 40; step++) {
+            const t = step / 10;
+            const [x, y] = positionAt(t);
+            if (x < -10 || x > W + 10 || y < -10 || y > H + 10) break;
+            const whole = step % 10 === 0;
+            ctx.fillStyle = whole ? COLORS.gold : "rgba(255, 255, 255, 0.75)";
+            ctx.beginPath();
+            ctx.arc(x, y, whole ? 5 : 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            if (whole) label(ctx, `${t} s`, x, y - 14, COLORS.gold);
+          }
+          const flying = flight !== null ? (performance.now() - flight) / 1000 : null;
+          const ballAt = flying === null ? start : positionAt(flying);
+          drawBall(ctx, ballAt[0], ballAt[1]);
+          if (flying === null) {
+            const [tx, ty] = tip();
+            arrow(ctx, start, [tx, ty], COLORS.gold, 4, 14);
+            ctx.strokeStyle = "rgba(255, 211, 110, 0.9)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(tx, ty, 11, 0, Math.PI * 2);
+            ctx.stroke();
+            label(ctx, "drag me", tx, ty + 24, COLORS.gold);
+          }
+          if (flying !== null) {
+            const [x, y] = ballAt;
+            if (flying > 4 || x < -30 || x > W + 30 || y < -30 || y > H + 30) flight = null;
+            requestAnimationFrame(draw);
+          }
+        }
+
+        function describe() {
+          const [vx, vy] = velocity;
+          const across = vx === 0 ? "doesn't move sideways" : `moves ${Math.abs(vx)} px to the ${vx > 0 ? "right" : "left"}`;
+          const upDown = vy === 0 ? "doesn't move up or down" : `${Math.abs(vy)} px ${vy > 0 ? "down" : "up"}`;
+          const fall = fallBox.checked ? `<br>…and <b>vy</b> grows by ${FALL} every second, so the path bends down.` : "";
+          readout.innerHTML =
+            `<b>ball.vx</b> = ${vx}; <b>ball.vy</b> = ${vy};<br>` +
+            `Every second the ball ${across}${vy === 0 ? " and " : ", and "}${upDown}.${fall}`;
+        }
+
+        onDrag(canvas, W, H, (point, phase) => {
+          if (flight !== null) return false;
+          if (phase === "up") return;
+          // Snap to tens so the numbers stay friendly.
+          let vx = Math.round((point[0] - start[0]) / ARROW_SCALE / 10) * 10;
+          let vy = Math.round((point[1] - start[1]) / ARROW_SCALE / 10) * 10;
+          const speed = Math.hypot(vx, vy);
+          if (speed > 600) {
+            vx = Math.round((vx / speed) * 60) * 10;
+            vy = Math.round((vy / speed) * 60) * 10;
+          }
+          velocity = [vx, vy];
+          describe();
+          draw();
+        });
+        document.getElementById("velocity-fly").addEventListener("click", () => {
+          if (flight !== null) return;
+          flight = performance.now();
+          draw();
+        });
+        fallBox.addEventListener("change", () => {
+          describe();
+          draw();
+        });
+        BALL_PICTURE.addEventListener("load", draw);
+        describe();
+        draw();
+      })();
+
+      // ------------------------------------------------------------------
+      // Widget 2: the gravity explorer. The same three sums as moveBall:
+      // which way (dx, dy), how far (Pythagoras), how hard (G × mass ÷ d²).
+      // ------------------------------------------------------------------
+      (function gravityExplorer() {
+        const W = 640;
+        const H = 360;
+        const canvas = document.getElementById("gravity-canvas");
+        const readout = document.getElementById("gravity-readout");
+        const radiusInput = document.getElementById("gravity-radius");
+        const gInput = document.getElementById("gravity-g");
+        const fieldBox = document.getElementById("gravity-field");
+        const ctx = setupCanvas(canvas, W, H);
+        const planetPicture = picture("planet_blue");
+        const planet = [300, 200];
+        let ball = [480, 110];
+
+        // Exactly the game's gravity, for a ball at (x, y).
+        function pullAt(x, y) {
+          const radius = Number(radiusInput.value);
+          const dx = planet[0] - x;
+          const dy = planet[1] - y;
+          const actual = Math.hypot(dx, dy) || 1;
+          const distance = Math.max(actual, radius);
+          const pull = (Number(gInput.value) * radius * radius) / (distance * distance);
+          return { dx, dy, distance: actual, pull, dirX: dx / actual, dirY: dy / actual };
+        }
+
+        function draw() {
+          const radius = Number(radiusInput.value);
+          spaceBackground(ctx, W, H, 21);
+          if (fieldBox.checked) {
+            for (let x = 20; x < W; x += 40) {
+              for (let y = 20; y < H; y += 40) {
+                const p = pullAt(x, y);
+                if (p.distance < radius + 6) continue;
+                const length = Math.min(p.pull * 0.15, 17);
+                const alpha = Math.min(1, 0.25 + p.pull / 120);
+                arrow(ctx, [x, y], [x + p.dirX * length, y + p.dirY * length], `rgba(255, 111, 181, ${alpha})`, 2, 6);
+              }
+            }
+          }
+          const size = radius * 2.5; // the planet pictures are 2.5 × the radius
+          if (planetPicture.complete) ctx.drawImage(planetPicture, planet[0] - size / 2, planet[1] - size / 2, size, size);
+
+          const p = pullAt(ball[0], ball[1]);
+          const corner = [planet[0], ball[1]];
+          dashed(ctx, ball, corner, COLORS.pink);
+          dashed(ctx, corner, planet, COLORS.cyan);
+          dashed(ctx, ball, planet, COLORS.gold);
+          label(ctx, `dx = ${round(p.dx)}`, (ball[0] + corner[0]) / 2, ball[1] - 14, COLORS.pink);
+          label(ctx, `dy = ${round(p.dy)}`, corner[0] + 12, (corner[1] + planet[1]) / 2, COLORS.cyan, "left");
+          const length = Math.min(p.pull * 1.5, 190);
+          arrow(ctx, ball, [ball[0] + p.dirX * length, ball[1] + p.dirY * length], COLORS.hotPink, 5, 16);
+          drawBall(ctx, ball[0], ball[1]);
+          if (p.distance < radius + 15) label(ctx, "too close: the pull stops growing inside the planet", W / 2, H - 18, COLORS.lilac);
+
+          const g = Number(gInput.value);
+          readout.innerHTML =
+            `<span class="hi-pink">dx</span> = ${round(p.dx)}, <span class="hi-cyan">dy</span> = ${round(p.dy)}<br>` +
+            `<span class="hi-gold">distance</span> = √(${squared(p.dx)} + ${squared(p.dy)}) = <b>${round(p.distance)}</b><br>` +
+            `mass = radius × radius = ${radius} × ${radius} = ${radius * radius}<br>` +
+            `pull = G × mass ÷ distance² = ${g} × ${radius * radius} ÷ ${round(Math.max(p.distance, radius))}² = <b>${p.pull.toFixed(1)}</b> px/s every second`;
+        }
+
+        onDrag(canvas, W, H, (point) => {
+          ball = [Math.max(10, Math.min(W - 10, point[0])), Math.max(10, Math.min(H - 10, point[1]))];
+          draw();
+        });
+        for (const input of [radiusInput, gInput, fieldBox]) input.addEventListener("input", draw);
+        planetPicture.addEventListener("load", draw);
+        BALL_PICTURE.addEventListener("load", draw);
+        draw();
+      })();
+
+      // ------------------------------------------------------------------
+      // Widget 3: the bounce visualizer. Splits the incoming velocity into
+      // "going in" (along the normal) and "sliding along" (the rest), then
+      // builds the bounce exactly like bounceOffPlanets does.
+      // ------------------------------------------------------------------
+      (function bounceVisualizer() {
+        const W = 640;
+        const H = 360;
+        const canvas = document.getElementById("bounce-canvas");
+        const readout = document.getElementById("bounce-readout");
+        const bounceInput = document.getElementById("bounce-bounce");
+        const gripInput = document.getElementById("bounce-grip");
+        const ctx = setupCanvas(canvas, W, H);
+        const center = [320, 700]; // a huge planet, mostly below the widget
+        const R = 420;
+        const BALL = 15;
+        const SCALE = 0.45; // arrow pixels per px/s
+        let angle = -Math.PI / 2 - 0.25; // where on the surface the ball touches
+        let velocity = [260, 300];
+        let dragging = null; // "ball" or "tail"
+        let play = null;
+
+        const normal = () => [Math.cos(angle), Math.sin(angle)];
+        const ballAt = () => {
+          const [nx, ny] = normal();
+          return [center[0] + nx * (R + BALL), center[1] + ny * (R + BALL)];
+        };
+
+        // The same sums as bounceOffPlanets in the game.
+        function bounce() {
+          const [nx, ny] = normal();
+          const [vx, vy] = velocity;
+          const outward = vx * nx + vy * ny;
+          const slide = [vx - outward * nx, vy - outward * ny];
+          const goingIn = [outward * nx, outward * ny];
+          const grip = Number(gripInput.value);
+          const bounciness = Number(bounceInput.value);
+          const out =
+            outward < 0
+              ? [slide[0] * grip - outward * bounciness * nx, slide[1] * grip - outward * bounciness * ny]
+              : [vx, vy];
+          return { nx, ny, outward, slide, goingIn, out };
+        }
+
+        function draw() {
+          spaceBackground(ctx, W, H, 33);
+          // The planet's surface: a big green curve.
+          const ground = ctx.createRadialGradient(center[0] - 80, center[1] - 300, 60, center[0], center[1], R);
+          ground.addColorStop(0, "#c4ee8a");
+          ground.addColorStop(1, "#80bf48");
+          ctx.fillStyle = ground;
+          ctx.strokeStyle = "#2a2140";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(center[0], center[1], R, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          const b = ballAt();
+          const result = bounce();
+          const now = play !== null ? (performance.now() - play) / 1000 : null;
+          if (now === null) {
+            const tail = [b[0] - velocity[0] * SCALE, b[1] - velocity[1] * SCALE];
+            arrow(ctx, b, [b[0] + result.nx * 70, b[1] + result.ny * 70], COLORS.cyan, 3, 10);
+            label(ctx, "normal", b[0] + result.nx * 86, b[1] + result.ny * 86, COLORS.cyan);
+            arrow(ctx, tail, b, COLORS.white, 4, 13);
+            ctx.strokeStyle = "rgba(255,255,255,0.9)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(tail[0], tail[1], 10, 0, Math.PI * 2);
+            ctx.stroke();
+            label(ctx, "drag", tail[0], tail[1] - 20, COLORS.white);
+            if (result.outward < 0) {
+              arrow(ctx, b, [b[0] + result.goingIn[0] * SCALE, b[1] + result.goingIn[1] * SCALE], COLORS.pink, 3, 10);
+              arrow(ctx, b, [b[0] + result.slide[0] * SCALE, b[1] + result.slide[1] * SCALE], COLORS.gold, 3, 10);
+              arrow(ctx, b, [b[0] + result.out[0] * SCALE, b[1] + result.out[1] * SCALE], COLORS.green, 5, 15);
+            }
+            drawBall(ctx, b[0], b[1], BALL * 2.6);
+          } else {
+            // Replay: travel in along the incoming arrow, then out along the bounce.
+            const inTime = 0.8;
+            let pos;
+            if (now < inTime) {
+              const left = inTime - now;
+              pos = [b[0] - velocity[0] * left * 0.6, b[1] - velocity[1] * left * 0.6];
+            } else {
+              const t = now - inTime;
+              pos = [b[0] + result.out[0] * t * 0.6, b[1] + result.out[1] * t * 0.6];
+            }
+            drawBall(ctx, pos[0], pos[1], BALL * 2.6);
+            if (now > 2.6) play = null;
+            requestAnimationFrame(draw);
+          }
+
+          const fmt = (n) => (Math.abs(n) < 0.5 ? "0" : String(round(n)));
+          const inSpeed = Math.abs(result.outward);
+          const slideSpeed = Math.hypot(result.slide[0], result.slide[1]);
+          readout.innerHTML =
+            `<span class="hi-cyan">normal</span> = (${result.nx.toFixed(2)}, ${result.ny.toFixed(2)})<br>` +
+            `outward = vx × nx + vy × ny = ${fmt(velocity[0])} × ${result.nx.toFixed(2)} + ${fmt(velocity[1])} × ${result.ny.toFixed(2)} = <b>${fmt(result.outward)}</b>` +
+            (result.outward < 0
+              ? ` (negative: heading in!)<br>` +
+                `<span class="hi-pink">going in</span> at ${fmt(inSpeed)} → bounces out at ${fmt(inSpeed * bounceInput.value)} (× BOUNCE ${bounceInput.value})<br>` +
+                `<span class="hi-gold">sliding along</span> at ${fmt(slideSpeed)} → keeps ${fmt(slideSpeed * gripInput.value)} (× GRIP ${gripInput.value})`
+              : ` (not negative: the ball is already moving away, so no bounce)`);
+        }
+
+        onDrag(canvas, W, H, (point, phase) => {
+          if (play !== null) return false;
+          const b = ballAt();
+          // Press on the ball to slide it along the planet; anywhere else
+          // moves the incoming arrow's tail.
+          if (phase === "down") dragging = Math.hypot(point[0] - b[0], point[1] - b[1]) < 26 ? "ball" : "tail";
+          if (phase === "up") {
+            dragging = null;
+            return;
+          }
+          if (dragging === "ball") {
+            const a = Math.atan2(point[1] - center[1], point[0] - center[0]);
+            angle = Math.max(-Math.PI / 2 - 0.55, Math.min(-Math.PI / 2 + 0.55, a));
+          } else {
+            velocity = [(b[0] - point[0]) / SCALE, (b[1] - point[1]) / SCALE];
+          }
+          draw();
+        });
+        document.getElementById("bounce-play").addEventListener("click", () => {
+          if (play !== null) return;
+          play = performance.now();
+          draw();
+        });
+        for (const input of [bounceInput, gripInput]) input.addEventListener("input", draw);
+        BALL_PICTURE.addEventListener("load", draw);
+        draw();
+      })();
+
+      document.getElementById("download-final").addEventListener("click", () => {
+        JGZT.downloadProject(JGZT.cell("cell-final").code);
+      });
+
+      JGZT.start();
+    </script>
+  </body>
+</html>

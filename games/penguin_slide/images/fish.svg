@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30" viewBox="0 0 40 30">
+  <defs>
+    <clipPath id="fishbody"><ellipse cx="21" cy="15" rx="13.5" ry="10"/></clipPath>
+  </defs>
+  <path d="M10 15 L2.5 7 Q0.5 15 2.5 23 Z" fill="#ff8a4c" stroke="#2a2140" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M15 7 Q20 1.5 27 5.5 L25 8 Z" fill="#ff8a4c" stroke="#2a2140" stroke-width="2" stroke-linejoin="round"/>
+  <ellipse cx="21" cy="15" rx="13.5" ry="10" fill="#ffa266"/>
+  <g clip-path="url(#fishbody)">
+    <ellipse cx="22" cy="23" rx="14" ry="6" fill="#ffd3a8"/>
+    <path d="M28 27 C36 24 37 12 33 4 L40 4 L40 28 Z" fill="#f2884f" opacity="0.6"/>
+    <ellipse cx="14" cy="9.5" rx="4" ry="2" fill="#ffffff" opacity="0.45" transform="rotate(-20 14 9.5)"/>
+  </g>
+  <path d="M13 12 Q15 15 13 18 M17 11 Q19.5 15 17 19" fill="none" stroke="#f07c3e" stroke-width="1.6" stroke-linecap="round"/>
+  <ellipse cx="21" cy="15" rx="13.5" ry="10" fill="none" stroke="#2a2140" stroke-width="2.2"/>
+  <ellipse cx="27" cy="12.5" rx="2.6" ry="3" fill="#2a2140"/>
+  <circle cx="27.9" cy="11.4" r="1.1" fill="#ffffff"/>
+  <circle cx="26.3" cy="13.8" r="0.5" fill="#ffffff"/>
+  <ellipse cx="26" cy="18.5" rx="2.4" ry="1.4" fill="#ff8fab" opacity="0.6"/>
+  <path d="M30.5 17 Q32 18.5 33.5 17" fill="none" stroke="#2a2140" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

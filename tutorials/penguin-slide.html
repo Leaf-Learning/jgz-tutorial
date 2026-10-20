@@ -1,0 +1,1823 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Penguin Slide — build a sliding puzzle game</title>
+    <meta
+      name="description"
+      content="A playful, interactive tutorial: build Penguin Slide, an ice-sliding puzzle game, with js-game-zero. Learn grids, while loops, animation, levels, undo and saving."
+    />
+    <link rel="stylesheet" href="lib/tutorial.css" />
+    <style>
+      /* ---- Page-only styles for this tutorial's widgets ---- */
+
+      /* Programming ligatures turn !== into a single glyph, which hides the
+         real characters from beginners who need to type them. */
+      code,
+      pre,
+      kbd,
+      .readout {
+        font-variant-ligatures: none;
+      }
+
+      /* Six concept cards: three per row on wide screens, never an orphan. */
+      @media (min-width: 900px) {
+        .learn-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      .hero-mascots {
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+        margin: 6px 0 0;
+      }
+      .hero-mascots img {
+        width: 64px;
+        height: 64px;
+        animation: waddle 2.4s ease-in-out infinite;
+      }
+      .hero-mascots img:nth-child(2) {
+        animation-delay: -0.6s;
+      }
+      .hero-mascots img:nth-child(3) {
+        animation-delay: -1.2s;
+        width: 52px;
+        height: 40px;
+      }
+      @keyframes waddle {
+        0%,
+        100% {
+          transform: rotate(-6deg) translateY(0);
+        }
+        50% {
+          transform: rotate(6deg) translateY(-4px);
+        }
+      }
+
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 8px;
+        margin: 18px 0;
+        padding: 0;
+        list-style: none;
+      }
+      .legend li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+        padding: 8px 12px;
+        border-radius: 12px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        font-size: 0.92rem;
+      }
+      .legend img {
+        width: 34px;
+        height: 34px;
+        background: #d3efff;
+        border-radius: 8px;
+      }
+      .legend code {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      /* Grid explorer + painter canvases */
+      .widget canvas.board {
+        background: #eaf6ff;
+        cursor: crosshair;
+      }
+
+      /* While-loop stepper */
+      .stepper {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+      @media (max-width: 760px) {
+        .stepper {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .stepper-code {
+        margin: 0;
+        padding: 12px 0;
+        border-radius: 14px;
+        background: var(--ed-bg);
+        color: var(--ed-ink);
+        font: 14px/26px var(--font-code);
+        font-variant-ligatures: none; /* after the font shorthand, which resets it */
+        overflow-x: auto;
+      }
+      .stepper-code .sl {
+        display: block;
+        padding: 0 14px;
+        border-left: 4px solid transparent;
+        transition: background 0.2s;
+        white-space: pre;
+      }
+      .stepper-code .sl.is-on {
+        background: rgba(249, 226, 175, 0.18);
+        border-left-color: #f9e2af;
+      }
+      .stepper-code .sl.is-false {
+        background: rgba(243, 139, 168, 0.22);
+        border-left-color: #f38ba8;
+      }
+      .dir-pad {
+        display: inline-flex;
+        gap: 6px;
+      }
+      .dir-pad .btn[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .verdict {
+        font-weight: 800;
+      }
+      .verdict.is-true {
+        color: #1f9d6b;
+      }
+      .verdict.is-false {
+        color: #e0446a;
+      }
+
+      /* Tween race */
+      .race-lanes {
+        display: grid;
+        gap: 6px;
+      }
+      .race-row {
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+      }
+      .race-row .lane-name {
+        font: 600 0.9rem/1 var(--font-code);
+        color: #2f5580;
+        text-align: right;
+      }
+      .race-lane {
+        position: relative;
+        height: 54px;
+        border-radius: 12px;
+        background: repeating-linear-gradient(90deg, #d3efff 0 46px, #c4e7fb 46px 48px);
+        overflow: hidden;
+      }
+      .race-lane img.runner {
+        position: absolute;
+        top: 3px;
+        left: 0;
+        width: 48px;
+        height: 48px;
+      }
+      .race-lane img.rock {
+        position: absolute;
+        right: 4px;
+        top: 3px;
+        width: 48px;
+        height: 48px;
+      }
+
+      /* Level painter */
+      .painter {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+      @media (max-width: 760px) {
+        .painter {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .palette {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .palette button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 6px 8px;
+        border-radius: 12px;
+        border: 2px solid var(--line);
+        background: var(--card-2);
+        color: var(--ink);
+        font: 700 0.75rem/1.1 var(--font-body);
+        cursor: pointer;
+      }
+      .palette button img {
+        width: 36px;
+        height: 36px;
+        background: #d3efff;
+        border-radius: 8px;
+      }
+      .palette button[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 14%, var(--card));
+      }
+      .painter-status {
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 800;
+        margin-bottom: 10px;
+        background: var(--card-2);
+      }
+      .painter-status.is-good {
+        background: color-mix(in srgb, #36c2b4 18%, var(--card));
+      }
+      .painter-status.is-bad {
+        background: color-mix(in srgb, #ff7a8a 16%, var(--card));
+      }
+      .painter pre.code-block {
+        margin: 10px 0 0;
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+    </style>
+  </head>
+  <body class="theme-ice" data-game="penguin_slide" data-tutorial="Penguin Slide">
+    <main class="page">
+      <!-- ================================================================ -->
+      <section class="hero">
+        <div class="hero-kicker">🐧 Tutorial 2 of 3 · Grid puzzles</div>
+        <h1>Penguin <span class="pop">Slide</span></h1>
+        <p class="hero-lede">
+          A hungry penguin, a rink of slippery ice, and fish just out of reach. Press an arrow and
+          the penguin <em>whooshes</em> until something stops it — so getting to the fish is a
+          puzzle. You'll build the whole game yourself, one small step at a time, right here in
+          this page.
+        </p>
+        <ul class="hero-meta">
+          <li>⏱ 60–90 minutes</li>
+          <li>🧩 Beginner friendly (best after Firefly Flash)</li>
+          <li>💻 Nothing to install — the code runs in this page</li>
+        </ul>
+        <div class="hero-mascots" aria-hidden="true">
+          <img data-art="penguin_happy" alt="" />
+          <img data-art="penguin_right" alt="" />
+          <img data-art="fish" alt="" />
+        </div>
+      </section>
+
+      <p class="prose">
+        <strong>Here's what you'll make.</strong> Click the game and use the arrow keys (or swipe).
+        Eat every fish to clear a level. How few moves can you do it in?
+      </p>
+      <div class="cell" id="hero-game" data-step="final" data-play-only></div>
+
+      <div class="learn-grid">
+        <div class="learn-card">
+          <span class="emoji">🔲</span><b>Grids</b>Rows, columns and loops inside loops — the
+          backbone of puzzle games.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">🔤</span><b>Levels as text</b>Draw a whole level with your keyboard,
+          then turn the letters into a game.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">🔁</span><b>while loops</b>"Keep going until something stops you" —
+          which is exactly how ice works.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">🎞</span><b>Smooth motion</b>Glide and wobble with
+          <code>animate()</code> and its tweens.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">🧠</span><b>Game rules</b>Snow, holes, fish and winning — each rule
+          is a few lines of code.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">💾</span><b>Undo &amp; saving</b>Snapshots, a history stack, and
+          <code>storage</code> that remembers your progress.
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="callout-icon">👋</span>
+        <div>
+          <span class="callout-title">How this page works</span>
+          <p>
+            Every step has a <strong>live code editor</strong> on the left and the
+            <strong>real game</strong> on the right. Change the code, press
+            <strong>▶ Run</strong> (or <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>), and see
+            what happens. Lines that are new in a step glow green. You can't break anything —
+            <strong>↺ Reset</strong> always puts a step back.
+          </p>
+          <p>
+            New to coding? Start with <a href="firefly-flash.html">Firefly Flash</a>, which covers
+            the basics this one builds on. Words with a dotted underline, like
+            <span class="term" tabindex="0" data-tip="A named box that holds a value, like let moves = 0;">variable</span>,
+            explain themselves when you hover or tap them.
+          </p>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="A grid of ice">
+        <span class="step-kicker"></span>
+        <h2>A grid of ice tiles</h2>
+        <p>
+          Every puzzle in Penguin Slide happens on a <strong>grid</strong> — like squared paper,
+          or a chessboard. Grids are everywhere in games: Minesweeper, Tetris, Pokémon, Candy
+          Crush… so this is a trick you'll use again and again.
+        </p>
+        <p>
+          Each square is a <strong>tile</strong>. We describe a tile by its
+          <strong>row</strong> (how far down) and its <strong>column</strong> (how far across).
+          Like most things in JavaScript, we count them from <strong>0</strong>: the top row is
+          row 0, the next is row 1, and so on.
+        </p>
+
+        <div class="callout">
+          <span class="callout-icon">🔁</span>
+          <div>
+            <span class="callout-title">Quick refresher</span>
+            <p>
+              <code>draw()</code> runs about 60 times a second and paints the whole screen.
+              <code>screen.rect(x, y, width, height, color)</code> paints a filled rectangle whose
+              top-left corner is at <code>x, y</code>. The point <code>0, 0</code> is the
+              top-left of the game; <code>x</code> grows to the right and <code>y</code> grows
+              <em>down</em>.
+            </p>
+          </div>
+        </div>
+
+        <div class="cell" data-step="01-grid"></div>
+
+        <p>
+          The magic is <strong>two loops, one inside the other</strong>.
+          <code class="ref" data-match="for (let row">for (let row …)</code> runs once for each
+          row. Inside it, <code class="ref" data-match="for (let col">for (let col …)</code> runs
+          once for each column. So the code in the middle runs <code>ROWS × COLUMNS</code> = 60
+          times — once for every tile.
+        </p>
+        <p>
+          To place a tile we multiply:
+          <code class="ref" data-match="col * TILE">x = LEFT + col * TILE</code>. Column 0 sits at
+          <code>LEFT</code>, column 1 is one tile further right, column 2 is two tiles further…
+          and the same idea gives <code class="ref" data-match="row * TILE">y</code> for rows.
+          (Each tile is drawn 2 pixels smaller than <code>TILE</code> so you can see the gaps.)
+        </p>
+
+        <div class="widget" id="grid-explorer">
+          <div class="widget-title">🔍 Grid explorer</div>
+          <div class="widget-sub">
+            Hover over (or tap) a tile to see its row and column, and the maths that turns them
+            into pixels.
+          </div>
+          <canvas class="board" width="720" height="480"></canvas>
+          <div class="readout" aria-live="polite">Point at a tile…</div>
+        </div>
+
+        <p>Now play with the grid. Each slider rewrites a number in the code and reruns it:</p>
+        <div class="tweak-row">
+          <div class="tweak" data-name="TILE" data-min="16" data-max="64" data-label="Tile size" data-unit="px" data-icon="📏"></div>
+          <div class="tweak" data-name="COLUMNS" data-min="1" data-max="12" data-label="Columns" data-icon="↔️"></div>
+          <div class="tweak" data-name="ROWS" data-min="1" data-max="8" data-label="Rows" data-icon="↕️"></div>
+        </div>
+
+        <div class="quiz" data-id="q-col3" data-answer="c">
+          <p>With <code>LEFT = 120</code> and <code>TILE = 48</code>, what is the x of the tile in column 3?</p>
+          <button data-choice="a">3</button>
+          <button data-choice="b">144</button>
+          <button data-choice="c">264</button>
+          <button data-choice="d">168</button>
+          <div class="explain" data-for="c">
+            <code>120 + 3 × 48 = 120 + 144 = 264</code>. Column 3 is the <em>fourth</em> column,
+            because counting starts at 0.
+          </div>
+          <div class="explain" data-for="b">
+            That's <code>3 × 48</code> — don't forget to add <code>LEFT</code>, where the grid
+            starts!
+          </div>
+          <div class="explain" data-for="wrong">Try the formula: <code>LEFT + col × TILE</code>.</div>
+        </div>
+
+        <div class="challenge" data-id="grid-size" data-success="A big 12 × 8 rink — room for lots of puzzles.">
+          <p>Make the rink <strong>12 columns wide</strong> and <strong>8 rows tall</strong>.</p>
+          <p class="hint">Change the numbers in <code>const COLUMNS</code> and <code>const ROWS</code> — or just use the sliders.</p>
+          <pre class="answer">const COLUMNS = 12;
+const ROWS = 8;</pre>
+        </div>
+
+        <div class="challenge" data-id="checkerboard" data-kicker="Bonus challenge" data-success="A checkerboard! You just used % and if/else together.">
+          <p>Paint the grid like a <strong>checkerboard</strong>, alternating two colours of ice.</p>
+          <p class="hint"><code>%</code> gives the remainder after dividing. <code>(row + col) % 2</code> is <code>0</code> on every other tile, and <code>1</code> on the ones in between.</p>
+          <p class="hint">Use <code>if</code>/<code>else</code> inside the loops: one <code>screen.rect</code> with a colour when <code>(row + col) % 2 === 0</code>, and one with a different colour otherwise.</p>
+          <pre class="answer">if ((row + col) % 2 === 0) {
+  screen.rect(x + 1, y + 1, TILE - 2, TILE - 2, "#d3efff");
+} else {
+  screen.rect(x + 1, y + 1, TILE - 2, TILE - 2, "#a9dcf7");
+}</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="A level made of letters">
+        <span class="step-kicker"></span>
+        <h2>A level made of letters</h2>
+        <p>
+          A puzzle needs rocks and fish in <em>particular</em> places. We could write a
+          <code>screen.rect</code> line for every single rock… or we could draw the level with
+          our keyboard!
+        </p>
+        <p>
+          Look at <code class="ref" data-match="const LEVEL">LEVEL</code> below. It's an
+          <span class="term" tabindex="0" data-tip="A list of values in order, written inside [ ]. You get one item by its position: list[0] is the first.">array</span>
+          of
+          <span class="term" tabindex="0" data-tip="Text, written inside quote marks, like &quot;hello&quot;.">strings</span>.
+          Each string is one row of the rink and each letter is one tile. Squint and you can see
+          the rink!
+        </p>
+        <ul class="legend">
+          <li><img data-art="rock" alt="" /><span><code>#</code> rock</span></li>
+          <li><img data-art="ice" alt="" /><span><code>.</code> ice</span></li>
+          <li><img data-art="fish" alt="" /><span><code>F</code> fish</span></li>
+          <li><img data-art="penguin_down" alt="" /><span><code>P</code> penguin</span></li>
+        </ul>
+
+        <div class="cell" data-step="02-letters"></div>
+
+        <p>
+          To get one letter we index twice: <code>LEVEL[row]</code> picks one row (a string), and
+          <code class="ref" data-match="LEVEL[row][col]">LEVEL[row][col]</code> picks one letter
+          out of it. Then
+          <code class="ref" data-match='letter === "#"'>if (letter === "#")</code> decides how to
+          paint it: <code>===</code> asks "are these exactly the same?"
+        </p>
+        <div class="callout tip">
+          <span class="callout-icon">📐</span>
+          <div>
+            <code>LEVEL.length</code> is the number of rows, and <code>LEVEL[row].length</code> is
+            the number of letters in a row — so the loops automatically fit whatever level you
+            draw. Bigger level? No other code changes needed.
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-index" data-answer="b">
+          <p>What is <code>LEVEL[1][1]</code>?</p>
+          <button data-choice="a"><code>"#"</code></button>
+          <button data-choice="b"><code>"P"</code></button>
+          <button data-choice="c"><code>"."</code></button>
+          <button data-choice="d"><code>"F"</code></button>
+          <div class="explain" data-for="b">
+            <code>LEVEL[1]</code> is the second row, <code>"#P.....#.#"</code>, and letter
+            <code>[1]</code> of that is its second letter: <code>"P"</code>.
+          </div>
+          <div class="explain" data-for="a">
+            That's <code>LEVEL[0][0]</code> — remember, <code>[1]</code> is the <em>second</em>
+            item.
+          </div>
+          <div class="explain" data-for="wrong">Count from 0: row 1 is the second string. Which letter is second in it?</div>
+        </div>
+
+        <div class="challenge" data-id="add-rock" data-success="New rock in place. You just level-designed!">
+          <p>Add a <strong>rock</strong> somewhere in the middle of the rink — anywhere that isn't the outer wall.</p>
+          <p class="hint">Change one <code>.</code> into a <code>#</code> in one of the middle strings. Keep every row the same length!</p>
+          <pre class="answer">const LEVEL = [
+  "##########",
+  "#P.....#.#",
+  "#........#",
+  "#...#....#",
+  "#.....F..#",
+  "#........#",
+  "##########",
+];</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Pictures for every tile">
+        <span class="step-kicker"></span>
+        <h2>Pictures for every tile</h2>
+        <p>
+          Rectangles are fine for testing, but our penguin deserves better. Here's all the art for
+          this game. Each picture is a file in the game's <code>images</code> folder, and you use
+          it by its name:
+        </p>
+        <div class="art-tray"></div>
+        <p>
+          <code class="ref" data-match="screen.blit">screen.blit(name, [x, y])</code> draws a
+          picture with its top-left corner at <code>x, y</code>. ("Blit" is an old
+          game-programmer word for copying a picture onto the screen.) Unlike
+          <code>screen.rect</code>, its position goes in square brackets: one
+          <code>[x, y]</code> pair.
+        </p>
+
+        <div class="cell" data-step="03-pictures"></div>
+
+        <p>
+          We draw <strong>ice on every tile first</strong>, then a rock, fish or penguin on top.
+          The rock picture has see-through corners, so the ice shows around it.
+        </p>
+        <p>
+          Two more upgrades: the rink is now centred —
+          <code class="ref" data-match="const LEFT">LEFT</code> is the leftover space divided by
+          two — and the title uses the game's rounded font, by giving
+          <code class="ref" data-match="fontname">fontname: FONT</code> to
+          <code>screen.draw.text</code>. (The font is the file <code>fonts/fredoka.ttf</code>.)
+        </p>
+
+        <div class="quiz" data-id="q-order" data-answer="b">
+          <p>Why does the code draw the ice <em>first</em> and the rock <em>second</em>?</p>
+          <button data-choice="a">Ice pictures load faster.</button>
+          <button data-choice="b">Things drawn later cover things drawn earlier, so the rock lands on top of the ice.</button>
+          <button data-choice="c">JavaScript draws pictures in alphabetical order.</button>
+          <div class="explain" data-for="b">
+            Exactly — it's like painting. Swap the two lines and the ice would cover the rock up
+            completely!
+          </div>
+          <div class="explain" data-for="wrong">Think of painting a picture: what happens to paint you put on first?</div>
+        </div>
+
+        <div class="challenge" data-id="snow-pic" data-success="Fluffy! Snow will matter later — the penguin stops on it.">
+          <p>Put a <strong>snow patch</strong> on the rink: add a <code>*</code> to the level, and draw it with the <code>"snow"</code> picture.</p>
+          <p class="hint">First change a <code>.</code> to a <code>*</code> in <code>LEVEL</code>.</p>
+          <p class="hint">Then, inside the loops, copy the rock line and change it: if the letter is <code>"*"</code>, blit <code>"snow"</code>.</p>
+          <pre class="answer">if (letter === "*") screen.blit("snow", [x, y]);</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="The penguin waddles">
+        <span class="step-kicker"></span>
+        <h2>Meet the penguin</h2>
+        <p>
+          Time to move! The penguin isn't part of the floor any more. It's an
+          <span class="term" tabindex="0" data-tip="A picture that knows where it is: it has x, y, an image, an angle… and can be moved and drawn.">Actor</span>
+          — a picture that knows where it is and can move around, just like the fireflies in
+          Firefly Flash.
+        </p>
+        <p>
+          We give the penguin two extra
+          <span class="term" tabindex="0" data-tip="A named value stored on an object, read with a dot: penguin.row">properties</span>,
+          <code>row</code> and <code>col</code>, so it always knows which tile it's on. Then
+          <code class="ref" data-match="function tileX">tileX()</code> and
+          <code class="ref" data-match="function tileY">tileY()</code> turn a column or row into
+          pixels, and <code class="ref" data-match="function tileAt">tileAt(row, col)</code> tells
+          us what's on a tile.
+        </p>
+        <p>
+          Strings can't be changed once they're made, so
+          <code class="ref" data-match="function loadLevel">loadLevel()</code> copies the level
+          into <code>grid</code> — an array of arrays of letters, made with
+          <code class="ref" data-match='split("")'>split("")</code> — and swaps the
+          <code>P</code> for plain ice. The <code>P</code> only tells us where the penguin
+          <em>starts</em>.
+        </p>
+
+        <div class="cell" data-step="04-penguin" data-watch="penguin.row, penguin.col, penguin.image"></div>
+
+        <p>
+          When you press a key, <code class="ref" data-match="function onKeyDown">onKeyDown(key)</code>
+          runs once. Each arrow calls
+          <code class="ref" data-match="function step">step(dx, dy)</code>: <code>dx</code> is how
+          many columns to move (−1 left, +1 right) and <code>dy</code> how many rows (−1 up, +1
+          down). If <code>tileAt</code> says the next tile is a rock,
+          <code class="ref" data-match="return;">return</code> leaves the function early and the
+          penguin stays put.
+        </p>
+        <div class="callout big-idea">
+          <span class="callout-icon">🧠</span>
+          <div>
+            <span class="callout-title">Rows go with y, columns go with x</span>
+            Moving right adds 1 to <code>col</code>. Moving down adds 1 to <code>row</code>. Keep
+            an eye on the <strong>Live values</strong> panel while you move.
+          </div>
+        </div>
+
+        <div class="challenge" data-id="walk-to-fish" data-kicker="Play time" data-success="Lunch time! (In the next step, eating gets trickier…)">
+          <p>Click the game, then waddle the penguin onto the fish's tile.</p>
+          <p class="hint">The fish is 5 columns right and 3 rows down from where the penguin starts.</p>
+          <pre class="answer" data-label="The route:">→ → → → →   ↓ ↓ ↓</pre>
+        </div>
+
+        <div class="challenge" data-id="wasd" data-success="WASD works! Players everywhere thank you.">
+          <p>Lots of players like <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> instead of the arrows. Make those keys work too.</p>
+          <p class="hint"><code>keys.W</code>, <code>keys.A</code>, <code>keys.S</code> and <code>keys.D</code> exist, just like <code>keys.LEFT</code>.</p>
+          <p class="hint"><code>||</code> means "or": <code>if (key === keys.LEFT || key === keys.A)</code> is true for either key.</p>
+          <pre class="answer">function onKeyDown(key) {
+  if (key === keys.LEFT || key === keys.A) step(-1, 0);
+  if (key === keys.RIGHT || key === keys.D) step(1, 0);
+  if (key === keys.UP || key === keys.W) step(0, -1);
+  if (key === keys.DOWN || key === keys.S) step(0, 1);
+}</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Sliding with while">
+        <span class="step-kicker"></span>
+        <h2>Slippery ice: the <code>while</code> loop</h2>
+        <p>
+          Here's the twist that makes Penguin Slide a puzzle: <strong>on ice, you can't
+          stop!</strong> The penguin keeps sliding until the next tile is a rock.
+        </p>
+        <p>
+          That's exactly what a <code>while</code> loop is for. A <code>for</code> loop repeats a
+          set number of times. A <code>while</code> loop repeats <em>as long as something is
+          true</em>:
+        </p>
+        <pre class="code-block">while (tileAt(row + dy, col + dx) !== "#") {
+  row += dy;
+  col += dx;
+}</pre>
+        <p>
+          Read it aloud: <em>"while the next tile is not a rock, take one more step."</em>
+          (<code>!==</code> means "is not".) When the next tile <em>is</em> a rock, the condition
+          is false, the loop ends, and <code>row</code> and <code>col</code> are on the last ice
+          tile before it. Step through it yourself:
+        </p>
+
+        <div class="widget" id="loop-stepper">
+          <div class="widget-title">🐾 While-loop stepper</div>
+          <div class="widget-sub">
+            Pick a direction, then press <strong>Step</strong> to run the loop one line at a
+            time. Watch the condition get checked before every step.
+          </div>
+          <canvas class="board" width="432" height="240"></canvas>
+          <div class="stepper" style="margin-top: 12px">
+            <pre class="stepper-code" aria-label="The slide loop"><span class="sl" data-line="while">while (tileAt(row + dy, col + dx) !== "#") {</span><span class="sl" data-line="row">  row += dy;</span><span class="sl" data-line="col">  col += dx;</span><span class="sl" data-line="end">}</span></pre>
+            <div>
+              <div class="readout" aria-live="polite">Choose a direction to start.</div>
+            </div>
+          </div>
+          <div class="widget-controls">
+            <span class="dir-pad" role="group" aria-label="Direction">
+              <button class="btn btn-soft btn-small" data-dir="-1,0" aria-pressed="false" aria-label="Left">←</button>
+              <button class="btn btn-soft btn-small" data-dir="0,-1" aria-pressed="false" aria-label="Up">↑</button>
+              <button class="btn btn-soft btn-small" data-dir="0,1" aria-pressed="false" aria-label="Down">↓</button>
+              <button class="btn btn-soft btn-small" data-dir="1,0" aria-pressed="true" aria-label="Right">→</button>
+            </span>
+            <button class="btn btn-primary btn-small" data-action="step">Step ▶</button>
+            <button class="btn btn-soft btn-small" data-action="all">Run the whole loop</button>
+            <button class="btn btn-soft btn-small" data-action="reset">↺ Start over</button>
+          </div>
+        </div>
+
+        <div class="cell" data-step="05-slide" data-watch="penguin.row, penguin.col"></div>
+
+        <p>
+          In the code, <code class="ref" data-match="function slide">slide(dx, dy)</code> replaces
+          <code>step()</code>. It copies the penguin's position into <code>row</code> and
+          <code>col</code>, lets the <code>while</code> loop push them along, then moves the
+          penguin to the end in one jump. (Next step, we'll make it glide.)
+        </p>
+
+        <div class="quiz" data-id="q-wall" data-answer="b">
+          <p>What would happen if a level had a gap in its outer wall of rocks?</p>
+          <button data-choice="a">The penguin would stop at the edge of the screen.</button>
+          <button data-choice="b">The loop would look past the end of the map, find nothing there, and the game would stop with an error.</button>
+          <button data-choice="c">The penguin would wrap around to the other side.</button>
+          <div class="explain" data-for="b">
+            Right. Past the edge, <code>grid[row]</code> is <code>undefined</code>, and asking
+            <code>undefined</code> for a letter is an error. That's why every level is wrapped in
+            rock. Try it: change a <code>#</code> in the wall to <code>.</code>, slide through
+            the gap, read the error… then press ↺ Reset.
+          </div>
+          <div class="explain" data-for="wrong">The loop only stops when it sees a <code>#</code>. What does it find past the last row?</div>
+        </div>
+
+        <div class="challenge" data-id="move-counter" data-success="Every slide counted. Now you can tell how clever you're being!">
+          <p>Add a <strong>move counter</strong>: a variable <code>moves</code> that goes up by 1 every slide, shown on the screen.</p>
+          <p class="hint">Make it near the top, next to <code>grid</code>: <code>let moves = 0;</code></p>
+          <p class="hint">In <code>slide()</code>, after the loop: <code>moves += 1;</code></p>
+          <p class="hint">At the end of <code>draw()</code>, show it with <code>screen.draw.text</code>, using <code>`Moves: ${moves}`</code> as the text.</p>
+          <pre class="answer">let moves = 0; // at the top
+
+moves += 1; // in slide(), after the loop
+
+// at the end of draw():
+screen.draw.text(`Moves: ${moves}`, {
+  center: [WIDTH / 2, HEIGHT - 32],
+  fontname: FONT,
+  size: 24,
+  color: "#2f5580",
+});</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Smooth sliding">
+        <span class="step-kicker"></span>
+        <h2>Smooth sliding with <code>animate()</code></h2>
+        <p>
+          Right now the penguin teleports. Let's make it really <em>slide</em>!
+          <code class="ref" data-match="animate(penguin, {">animate(object, {…})</code> changes
+          numbers on an object smoothly over time — here, the penguin's <code>x</code> and
+          <code>y</code>. You tell it where to end up, how long to take
+          (<code>duration</code>, in seconds), the style of motion (<code>tween</code>), and what
+          to do when it's finished (<code>onFinished</code>).
+        </p>
+        <div class="callout big-idea">
+          <span class="callout-icon">🧠</span>
+          <div>
+            <span class="callout-title">Brain and legs</span>
+            The <code>while</code> loop is the <strong>brain</strong>: it works out where the
+            penguin will stop, instantly. <code>animate()</code> is the <strong>legs</strong>: it
+            glides there over time, then calls
+            <code class="ref" data-match="function stopSliding">stopSliding()</code>.
+          </div>
+        </div>
+
+        <div class="cell" data-step="06-animate" data-watch="sliding, penguin.x, penguin.y, moves"></div>
+        <div class="tweak" data-name="SLIDE_TIME" data-min="0.02" data-max="0.4" data-step="0.01" data-label="Seconds per tile" data-icon="⏱"></div>
+
+        <p>
+          Longer slides should take longer, so
+          <code class="ref" data-match="duration: distance">duration = distance × SLIDE_TIME</code>.
+          <code class="ref" data-match="const distance">distance</code> counts tiles;
+          <code>Math.abs</code> turns negative numbers positive, so sliding 3 tiles left is a
+          distance of 3, not −3.
+        </p>
+        <p>
+          While the penguin glides, <code class="ref" data-match="sliding = true">sliding</code>
+          is <code>true</code> and <code class="ref" data-match="if (sliding) return">slide()</code>
+          returns straight away — otherwise you could start a new slide halfway across a tile!
+          And if you press towards a rock you're already touching, <code>distance</code> is 0: no
+          move, just a <code class="ref" data-match="function bonk">bonk()</code>, which squashes
+          the penguin (<code>scale</code> 0.82) and lets a <code>"spring"</code> tween boing it
+          back to normal. Game-makers call little touches like this <strong>juice</strong>.
+        </p>
+
+        <div class="widget" id="tween-race">
+          <div class="widget-title">🏁 Tween race</div>
+          <div class="widget-sub">
+            Every penguin slides the same distance in the same time — only the <code>tween</code>
+            is different. Which one feels the most like ice?
+          </div>
+          <div class="race-lanes"></div>
+          <div class="widget-controls">
+            <button class="btn btn-primary btn-small" data-action="race">Race! 🏁</button>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-duration" data-answer="a">
+          <p>Why is the duration <code>distance * SLIDE_TIME</code>, instead of the same time for every slide?</p>
+          <button data-choice="a">So every slide moves at the same speed: a 6-tile slide takes 6 times as long as a 1-tile slide.</button>
+          <button data-choice="b"><code>animate()</code> only works with big numbers.</button>
+          <button data-choice="c">To make the penguin slow down near rocks.</button>
+          <div class="explain" data-for="a">
+            Yes! With a fixed duration, short slides would crawl and long ones would zoom. Try
+            setting the slider very high to see each slide in slow motion.
+          </div>
+          <div class="explain" data-for="wrong">Imagine a 1-tile slide and a 9-tile slide that both take half a second. Which one moves faster?</div>
+        </div>
+
+        <div class="challenge" data-id="tween" data-success="New moves! Pick whichever tween feels best — it's your game.">
+          <p>Give the slide a different <strong>tween</strong>. Try <code>"easeOut"</code> (glides to a gentle stop), <code>"bounce"</code> (bounces off the rock) or <code>"accelerate"</code> (picks up speed).</p>
+          <p class="hint">Find <code>tween: "linear"</code> inside the <code>animate(penguin, …)</code> call in <code>slide()</code>, change the word, and press Run.</p>
+          <pre class="answer">tween: "bounce",</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Fish &amp; winning">
+        <span class="step-kicker"></span>
+        <h2>Fish, and how to win</h2>
+        <p>
+          A penguin's gotta eat. Fish become Actors too, each with <code>row</code>,
+          <code>col</code> and an <code>eaten</code> flag, kept together in the
+          <code class="ref" data-match="let fishes">fishes</code> array.
+        </p>
+        <p>
+          Every frame, <code class="ref" data-match="function update">update()</code> asks: is
+          the sliding penguin touching a fish?
+          <code class="ref" data-match="penguin.touches">penguin.touches(fish.pos)</code> is true
+          when the middle of the fish is inside the penguin's picture. That fish is eaten — and
+          the penguin <em>keeps sliding</em>, so you can gobble fish on the way past.
+        </p>
+
+        <div class="cell" data-step="07-fish" data-watch="state, moves, sliding, fishes.length"></div>
+
+        <p>
+          After each slide, <code class="ref" data-match="fishLeft() === 0">stopSliding()</code>
+          counts the fish left. None? You win!
+          <code class="ref" data-match='state = "won"'>state</code> switches from
+          <code>"playing"</code> to <code>"won"</code>, and <code>slide()</code> ignores the keys
+          from then on. A variable like <code>state</code> is how games keep track of which
+          "mode" they're in.
+        </p>
+        <div class="callout tip">
+          <span class="callout-icon">〰️</span>
+          <div>
+            <span class="callout-title">A wiggle for free</span>
+            Each fish's angle is <code class="ref" data-match="Math.sin(time">Math.sin(time * 5 + fish.col) * 12</code>.
+            <code>Math.sin</code> swings smoothly between −1 and 1 as time passes, so the fish
+            rocks between −12° and 12°. Adding <code>fish.col</code> makes neighbouring fish
+            wiggle out of step.
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-last-fish" data-answer="a">
+          <p>Why does <code>stopSliding()</code> call <code>eatFishUnderPenguin()</code> again, when <code>update()</code> already checks every frame?</p>
+          <button data-choice="a">The slide might end right on a fish, and update() may not have checked that last spot yet.</button>
+          <button data-choice="b">So each fish gets eaten twice.</button>
+          <button data-choice="c">It doesn't need to — it's a mistake.</button>
+          <div class="explain" data-for="a">
+            Exactly. The animation can finish between two <code>update()</code> calls, so we
+            check once more before deciding whether you've won.
+          </div>
+          <div class="explain" data-for="wrong">Think about the very last tile of a slide — the order things happen in a frame matters.</div>
+        </div>
+
+        <div class="challenge" data-id="third-fish" data-success="Three fish, one happy penguin.">
+          <p>Add a <strong>third fish</strong> to the level — then eat all three to win.</p>
+          <p class="hint">Change a <code>.</code> into an <code>F</code>.</p>
+          <p class="hint">The penguin can only stop next to rocks, so put the fish on a line it can slide along — for example the bottom row.</p>
+          <pre class="answer">const LEVEL = [
+  "##########",
+  "#P.....#.#",
+  "#........#",
+  "#.......F#",
+  "#.....F..#",
+  "#..F.....#",
+  "##########",
+];</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Snow, holes &amp; your level">
+        <span class="step-kicker"></span>
+        <h2>Snow, water holes — and your own level</h2>
+        <p>Two new tiles make the puzzles much more interesting:</p>
+        <ul class="legend">
+          <li><img data-art="snow" alt="" /><span><code>*</code> snow: the penguin sinks in and stops <em>on</em> it</span></li>
+          <li><img data-art="hole" alt="" /><span><code>O</code> water hole: splash! The level starts again</span></li>
+        </ul>
+        <p>
+          Both are new rules inside the <code>while</code> loop. After each step,
+          <code class="ref" data-match="break;">if (…) break;</code> checks the tile we just slid
+          onto. <code>break</code> jumps straight out of the loop, so the slide ends right there.
+          <code>||</code> means "or", so <code>tile === "*" || tile === "O"</code> is true for
+          either one.
+        </p>
+
+        <div class="cell" data-step="08-snow-holes" data-watch="state, moves, effects.length"></div>
+
+        <p>
+          Then <code class="ref" data-match='if (tile === "O")'>stopSliding()</code> looks at
+          where we landed. A hole calls
+          <code class="ref" data-match="function fallIn">fallIn()</code>, which spins and shrinks
+          the penguin and uses
+          <code class="ref" data-match="clock.schedule">clock.schedule(restartLevel, 1.2)</code>
+          to start the level again 1.2 seconds later. Notice there are no brackets after
+          <code>restartLevel</code>: we're handing over the function itself, for the clock to
+          call later. You can also press <kbd>R</kbd> to restart any time.
+        </p>
+        <p>
+          The rings that puff out for snow, splashes and fish are
+          <code class="ref" data-match="function addRing">effects</code>: each one grows and fades
+          for 0.6 seconds, then
+          <code class="ref" data-match="effects.filter">filter</code> drops it from the list.
+        </p>
+
+        <div class="widget" id="painter">
+          <div class="widget-title">🎨 Level painter</div>
+          <div class="widget-sub">
+            Paint your own rink. A little solver works out whether it can be beaten — and the
+            fewest moves it takes. Then press <strong>Play it</strong> to send your level into
+            the code above.
+          </div>
+          <div class="painter">
+            <div>
+              <div class="palette" role="group" aria-label="Tile to paint"></div>
+              <canvas class="board" width="576" height="336"></canvas>
+            </div>
+            <div>
+              <div class="painter-status" aria-live="polite">…</div>
+              <div class="widget-controls" style="margin-top: 0">
+                <button class="btn btn-primary btn-small" data-action="play">▶ Play it</button>
+                <button class="btn btn-soft btn-small" data-action="surprise">🎲 Surprise me</button>
+                <button class="btn btn-soft btn-small" data-action="clear">Clear</button>
+              </div>
+              <pre class="code-block" aria-label="Your level as code"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-fish-hole" data-answer="b">
+          <p>The penguin slides over a fish and then straight into a hole. What happens?</p>
+          <button data-choice="a">It eats the fish and stops just before the hole.</button>
+          <button data-choice="b">It eats the fish, splashes into the hole, and the whole level restarts — fish and all.</button>
+          <button data-choice="c">The fish blocks the penguin.</button>
+          <div class="explain" data-for="b">
+            Yep — fish are eaten on the way past, but a hole ends the slide with a splash, and
+            <code>restartLevel()</code> builds everything fresh from <code>LEVEL</code>.
+          </div>
+          <div class="explain" data-for="wrong">Fish don't stop the slide. What does the loop do when it reaches an <code>O</code>?</div>
+        </div>
+
+        <div class="challenge" data-id="own-level" data-success="A level designer is born! Your puzzle has snow, a hole, and you beat it.">
+          <p>Make a <strong>new</strong> level with at least one <strong>snow</strong> patch and one <strong>hole</strong> that needs <strong>3 or more moves</strong> — then beat it!</p>
+          <p class="hint">Use the level painter: paint, watch the solver's verdict, then press ▶ Play it.</p>
+          <p class="hint">Not getting 3 moves? Put the fish somewhere the penguin can only reach by stopping on snow first. Or try 🎲 Surprise me.</p>
+          <pre class="answer" data-label="One level that works (↓ → ↑ beats it):">const LEVEL = [
+  "############",
+  "#P.....#...#",
+  "#..........#",
+  "#....*...O.#",
+  "#.........F#",
+  "#.F........#",
+  "############",
+];</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Lots of levels">
+        <span class="step-kicker"></span>
+        <h2>Lots of levels</h2>
+        <p>
+          One level is a puzzle. Lots of levels is a <em>game</em>!
+          <code class="ref" data-match="const LEVELS">LEVELS</code> is an array of
+          <span class="term" tabindex="0" data-tip="A bundle of named values inside { }, like { name: &quot;Snow Day&quot;, par: 2 }. Read one with a dot: level.name">objects</span>.
+          Each object bundles one level's <code>name</code>, its <code>par</code> (the fewest
+          moves that eats every fish) and its <code>map</code>.
+        </p>
+        <p>
+          <code class="ref" data-match="let levelIndex">levelIndex</code> says which level we're
+          on. <code class="ref" data-match="function loadLevel">loadLevel(index)</code> builds
+          that one. When you win, <kbd>Space</kbd> calls
+          <code class="ref" data-match="function nextLevel">nextLevel()</code>, which loads
+          <code>levelIndex + 1</code> — or shows the ending after the last level.
+        </p>
+
+        <div class="cell" data-step="09-levels" data-watch="levelIndex, state, moves"></div>
+
+        <p>
+          Levels come in different sizes now, so the board's position can't be a fixed number.
+          <code class="ref" data-match="function boardLeft">boardLeft()</code> and
+          <code class="ref" data-match="function boardTop">boardTop()</code> are functions that
+          work it out from the current <code>grid</code> every time they're asked.
+        </p>
+        <p>
+          There's a <strong>HUD</strong> (heads-up display) along the top too, showing the level,
+          the fish left and your moves. Most text in the game is centred in the same font, so
+          instead of repeating six lines every time, there's a helper:
+          <code class="ref" data-match="function say">say(text, x, y, size, color)</code>.
+        </p>
+        <div class="callout tip">
+          <span class="callout-icon">✂️</span>
+          <div>
+            When you notice yourself writing the same few lines for the third time, that's a sign
+            they want to be a function.
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-levels" data-answer="b">
+          <p>What is <code>LEVELS[2].name</code>?</p>
+          <button data-choice="a"><code>"Rock Stop"</code></button>
+          <button data-choice="b"><code>"Snow Day"</code></button>
+          <button data-choice="c"><code>"Mind the Hole"</code></button>
+          <div class="explain" data-for="b">
+            <code>LEVELS[0]</code> is First Slide, <code>[1]</code> is Rock Stop, so
+            <code>[2]</code> is Snow Day. Then <code>.name</code> reads that level's name.
+          </div>
+          <div class="explain" data-for="wrong">Arrays count from 0. Which level is the third one?</div>
+        </div>
+
+        <div class="challenge" data-id="fifth-level" data-success="Five levels — and one of them is all yours.">
+          <p>Add a <strong>fifth level</strong> of your own at the end of <code>LEVELS</code>, with a name, a par and a map. It needs to be beatable!</p>
+          <p class="hint">Copy one whole <code>{ name, par, map }</code> object, paste it after the last one (mind the commas between them), then change it.</p>
+          <p class="hint">Not sure what <code>par</code> should be? Design it in the level painter above — it counts the fewest moves for you.</p>
+          <pre class="answer">  {
+    name: "My Level",
+    par: 3,
+    map: [
+      "###########",
+      "#P....O..F#",
+      "#.........#",
+      "#.........#",
+      "#....*....#",
+      "#.....F...#",
+      "###########",
+    ],
+  },</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Undo, stars &amp; saving">
+        <span class="step-kicker"></span>
+        <h2>Undo, stars and saving</h2>
+        <p>Three features that make a puzzle game feel finished:</p>
+        <p>
+          <strong>⭐ Stars.</strong> <code class="ref" data-match="function starsFor">starsFor(moves, par)</code>
+          gives 3 stars for matching par, 2 stars for up to half as many moves again, and 1 star
+          for any win. <code class="ref" data-match="function drawStar(">drawStar()</code> draws a
+          star as a polygon whose 10 points alternate between far out (the tips) and close in
+          (the dips).
+        </p>
+        <p>
+          <strong>↶ Undo.</strong> Before every move,
+          <code class="ref" data-match="function snapshot">snapshot()</code> writes down everything
+          the move could change — where the penguin is, which fish are eaten, the move count —
+          and <code class="ref" data-match="history.push">pushes</code> it onto
+          <code>history</code>. Press <kbd>Z</kbd> and
+          <code class="ref" data-match="history.pop">undo()</code> pops the last snapshot off and
+          puts everything back. A list you only add to and take from the top of is called a
+          <span class="term" tabindex="0" data-tip="A list where the last thing in is the first thing out — like a stack of plates.">stack</span>.
+        </p>
+        <p>
+          <strong>💾 Saving.</strong> <code>storage</code> remembers small things even after you
+          close the page. When you win,
+          <code class="ref" data-match='storage.set("best"'>best</code> keeps your fewest moves
+          for that level and <code class="ref" data-match='storage.set("unlocked"'>unlocked</code>
+          remembers the furthest level you've reached. At the start,
+          <code class="ref" data-match="loadLevel(unlocked)">loadLevel(unlocked)</code> carries on
+          where you left off.
+        </p>
+
+        <div class="cell" data-step="10-undo-stars" data-watch="levelIndex, moves, history.length, unlocked"></div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🧪</span>
+          <div>
+            Try it: beat a level, then press <strong>▶ Run</strong> again. You start on the next
+            level, because <code>storage</code> remembered! (The finished game at the top of the
+            page shares the same storage, so your progress there counts too.)
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-snapshot" data-answer="a">
+          <p>Why do we take the snapshot <em>before</em> the move, not after it?</p>
+          <button data-choice="a">Undo should put things back the way they were before the move.</button>
+          <button data-choice="b">After the move, the penguin is invisible.</button>
+          <button data-choice="c">It doesn't matter when we take it.</button>
+          <div class="explain" data-for="a">
+            Right — a snapshot taken after the move would just "undo" you to where you already
+            are!
+          </div>
+          <div class="explain" data-for="wrong">What should pressing Z show you: where you are now, or where you were?</div>
+        </div>
+
+        <div class="challenge" data-id="three-stars" data-kicker="Play time" data-success="Three stars! Par-perfect penguin.">
+          <p>Earn <strong>three stars</strong>: clear any level in <em>par</em> moves or fewer.</p>
+          <p class="hint">Used too many moves? Press <kbd>Z</kbd> to undo, or <kbd>R</kbd> to restart, and try a cleverer route.</p>
+          <p class="hint">First Slide needs just 1 move: →. Rock Stop needs 2.</p>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" id="the-finished-game" data-title="The finished game">
+        <span class="step-kicker"></span>
+        <h2>The finishing touches</h2>
+        <p>
+          This is the complete game — the very same code as the one at the top of the page. Here's
+          what the last step added:
+        </p>
+        <ul>
+          <li>
+            <strong>A title screen.</strong> A new state, <code>"title"</code>, shows the name, a
+            bobbing penguin, and a level picker: <kbd>←</kbd>/<kbd>→</kbd> choose any level up to
+            <code>unlocked</code>.
+          </li>
+          <li>
+            <strong>Swipes for phones.</strong>
+            <code class="ref" data-match="function onMouseDown">onMouseDown</code> remembers where a
+            drag starts; <code class="ref" data-match="function onMouseUp">onMouseUp</code>
+            measures it. A short drag is a tap; otherwise the longer side picks the direction.
+            Touches arrive as mouse events, so fingers work too.
+          </li>
+          <li>
+            <strong>Undo and Reset buttons</strong> in the HUD, for players without a keyboard.
+          </li>
+          <li>
+            <strong>Falling snow</strong>: <code class="ref" data-match="const SNOWFLAKES">SNOWFLAKES</code>
+            little circles drifting down and wrapping back to the top.
+          </li>
+          <li><strong>Four more levels</strong>, each checked by a solver so par is truly the fewest moves.</li>
+        </ul>
+
+        <div class="cell" id="final" data-step="final" data-watch="state, levelIndex, moves, unlocked"></div>
+
+        <div class="tweak-row">
+          <div class="tweak" data-cell="final" data-name="SNOWFLAKES" data-min="0" data-max="400" data-label="Snowflakes" data-icon="❄️"></div>
+          <div class="tweak" data-cell="final" data-name="SWIPE_DISTANCE" data-min="4" data-max="160" data-label="Swipe distance" data-unit="px" data-icon="👆"></div>
+          <div class="tweak" data-cell="final" data-name="SLIDE_TIME" data-min="0.02" data-max="0.4" data-step="0.01" data-label="Seconds per tile" data-icon="⏱"></div>
+        </div>
+
+        <div class="quiz" data-id="q-swipe" data-answer="a">
+          <p>What makes a drag count as a <em>swipe</em> rather than a <em>tap</em>?</p>
+          <button data-choice="a">It travels at least <code>SWIPE_DISTANCE</code> pixels.</button>
+          <button data-choice="b">It lasts longer than one second.</button>
+          <button data-choice="c">It starts on top of the penguin.</button>
+          <div class="explain" data-for="a">
+            Yes: <code>onMouseUp</code> takes the longer of the sideways and up-down distances,
+            and anything shorter than <code>SWIPE_DISTANCE</code> is treated as a tap.
+          </div>
+          <div class="explain" data-for="wrong">Look at the first <code>if</code> in <code>onMouseUp</code>.</div>
+        </div>
+
+        <div class="challenge" data-id="blizzard" data-success="Blizzard! Wrap up warm, little penguin.">
+          <p>Make a <strong>blizzard</strong>: more than 200 snowflakes.</p>
+          <p class="hint">Use the ❄️ slider, or change <code>const SNOWFLAKES</code> near the top of the code.</p>
+          <pre class="answer">const SNOWFLAKES = 300;</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="finale">
+        <h2>You built Penguin Slide! 🐧🎉</h2>
+        <p>
+          Look at everything you used: <strong>grids</strong> and loops inside loops,
+          <strong>levels as text</strong>, <strong>while loops</strong>, smooth motion with
+          <code>animate()</code>, game <strong>states</strong>, a solver-checked
+          <strong>par</strong>, an <strong>undo stack</strong>, and <strong>saving</strong> with
+          <code>storage</code>. That's the toolkit behind a huge number of real puzzle games.
+        </p>
+        <h3>Ideas to make it your own</h3>
+        <div class="idea-grid">
+          <div class="idea"><b>🧊 Cracking ice</b>A tile that turns into a hole after you slide over it once. (Change the letter in <code>grid</code>!)</div>
+          <div class="idea"><b>🗝 Keys &amp; doors</b>Door tiles act like rocks until the penguin collects a key.</div>
+          <div class="idea"><b>🌀 Teleporters</b>Two <code>T</code> tiles: slide into one, pop out of the other and keep sliding.</div>
+          <div class="idea"><b>📦 Pushable blocks</b>Ice blocks that slide when you bump them — part Penguin Slide, part Sokoban.</div>
+          <div class="idea"><b>⏱ Time attack</b>A timer on each level, with the best time saved in <code>storage</code>.</div>
+          <div class="idea"><b>🎨 In-game editor</b>Turn the level painter into a game screen, so players can make and share levels.</div>
+        </div>
+        <div class="finale-actions">
+          <button class="btn btn-primary" type="button" id="download-final">⬇ Download your game (.zip)</button>
+          <a class="btn btn-soft" href="planet-putt.html">Next: Planet Putt 🪐</a>
+          <a class="btn btn-soft" href="firefly-flash.html">Back to Firefly Flash ✨</a>
+          <a class="btn btn-soft" href="index.html">All tutorials</a>
+        </div>
+        <p class="muted" style="margin-top: 18px">
+          The zip has your <code>main.js</code>, the art and the font. Open it in the js-game-zero
+          sandbox, or run it with <code>jgz test penguin_slide</code>.
+        </p>
+
+        <h3>Glossary</h3>
+        <dl class="glossary">
+          <dt>Grid</dt>
+          <dd>Rows and columns of equal-sized tiles. Tile (row, col) sits at x = left + col × size, y = top + row × size.</dd>
+          <dt>Nested loop</dt>
+          <dd>A loop inside a loop. The inner one runs completely, every time the outer one goes round once.</dd>
+          <dt>Array</dt>
+          <dd>A list in order, inside <code>[ ]</code>. <code>list[0]</code> is the first item; <code>list.length</code> counts them.</dd>
+          <dt>Object</dt>
+          <dd>Named values bundled inside <code>{ }</code>, like <code>{ name: "Snow Day", par: 2 }</code>.</dd>
+          <dt>while loop</dt>
+          <dd>Repeats as long as its condition is true. <code>break</code> leaves it early.</dd>
+          <dt>Actor</dt>
+          <dd>A picture with a position that can move, turn, scale, fade and check what it touches.</dd>
+          <dt>animate()</dt>
+          <dd>Smoothly changes numbers on an object over time, with a tween for the style of motion.</dd>
+          <dt>State</dt>
+          <dd>A variable saying what "mode" the game is in, like <code>"title"</code>, <code>"playing"</code> or <code>"won"</code>.</dd>
+          <dt>Stack</dt>
+          <dd>A list you add to and take from the top of: last in, first out. Perfect for undo.</dd>
+          <dt>storage</dt>
+          <dd>js-game-zero's memory that survives closing the page, for progress and high scores.</dd>
+          <dt>Par</dt>
+          <dd>The fewest moves that solve a level, found by trying every possible move in order (a "breadth-first search").</dd>
+        </dl>
+      </section>
+
+      <footer class="page-footer">
+        Made with <a href="https://github.com/taharafiq/js-game-zero">js-game-zero</a>. Art drawn
+        for this tutorial; the font is Fredoka (SIL Open Font License).
+        <br />
+        <button type="button" data-reset-progress>Start this tutorial over</button>
+      </footer>
+    </main>
+
+    <script src="lib/jgz.js"></script>
+    <script src="lib/tutorial.js"></script>
+    <script src="lib/data/penguin_slide.js"></script>
+    <script>
+      (() => {
+        "use strict";
+        const GAME = JGZT.games.penguin_slide;
+        const art = (name) => GAME.assets[`images/${name}.svg`];
+        const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+
+        // Small pictures in the prose (<img data-art="fish">).
+        for (const img of document.querySelectorAll("img[data-art]")) img.src = art(img.dataset.art);
+
+        // Loaded <img> elements for drawing into widget canvases.
+        const pictures = {};
+        for (const name of ["ice", "rock", "snow", "hole", "fish", "penguin_down", "penguin_left", "penguin_right", "penguin_up", "penguin_happy"]) {
+          pictures[name] = new Image();
+          pictures[name].src = art(name);
+        }
+        const whenLoaded = Promise.all(Object.values(pictures).map((img) => img.decode().catch(() => {})));
+
+        /** Maps a pointer event to the canvas's own (unscaled) coordinates. */
+        function canvasPoint(canvas, event) {
+          const box = canvas.getBoundingClientRect();
+          return [((event.clientX - box.left) / box.width) * canvas.width, ((event.clientY - box.top) / box.height) * canvas.height];
+        }
+
+        /* ---------------------------------------------------------------
+         * The solver: the same rules as the game, tried in every order
+         * (breadth-first), so the first answer found uses the fewest moves.
+         * ------------------------------------------------------------- */
+        function slideFrom(map, col, row, dx, dy) {
+          const passed = [];
+          let splash = false;
+          while (map[row + dy] && map[row + dy][col + dx] !== undefined && map[row + dy][col + dx] !== "#") {
+            col += dx;
+            row += dy;
+            passed.push([col, row]);
+            const tile = map[row][col];
+            if (tile === "O") {
+              splash = true;
+              break;
+            }
+            if (tile === "*") break;
+          }
+          return { col, row, passed, splash };
+        }
+
+        function solve(map) {
+          let start = null;
+          const fish = [];
+          map.forEach((line, row) =>
+            [...line].forEach((tile, col) => {
+              if (tile === "P") start = [col, row];
+              if (tile === "F") fish.push(`${col},${row}`);
+            }),
+          );
+          if (!start || !fish.length || fish.length > 12) return null;
+          const all = (1 << fish.length) - 1;
+          const seen = new Set([`${start[0]},${start[1]},0`]);
+          let frontier = [{ col: start[0], row: start[1], eaten: 0, path: [] }];
+          while (frontier.length) {
+            const next = [];
+            for (const state of frontier) {
+              for (const [name, [dx, dy]] of Object.entries(DIRS)) {
+                const result = slideFrom(map, state.col, state.row, dx, dy);
+                if (result.splash || !result.passed.length) continue;
+                let eaten = state.eaten;
+                for (const [c, r] of result.passed) {
+                  const index = fish.indexOf(`${c},${r}`);
+                  if (index >= 0) eaten |= 1 << index;
+                }
+                const path = [...state.path, name];
+                if (eaten === all) return { moves: path.length, path };
+                const key = `${result.col},${result.row},${eaten}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                next.push({ col: result.col, row: result.row, eaten, path });
+              }
+            }
+            frontier = next;
+          }
+          return null;
+        }
+
+        /** A level is usable if it's a rectangle walled in by rock with one penguin. */
+        function walledIn(map) {
+          if (!Array.isArray(map) || map.length < 3) return false;
+          const width = map[0].length;
+          return map.every(
+            (line, row) =>
+              typeof line === "string" &&
+              line.length === width &&
+              line[0] === "#" &&
+              line[width - 1] === "#" &&
+              (row > 0 && row < map.length - 1 ? true : /^#+$/.test(line)),
+          );
+        }
+
+        /* ---------------------------------------------------------------
+         * Widget 1: grid explorer
+         * ------------------------------------------------------------- */
+        (() => {
+          const root = document.getElementById("grid-explorer");
+          const canvas = root.querySelector("canvas");
+          const ctx = canvas.getContext("2d");
+          const readout = root.querySelector(".readout");
+          const TILE = 48;
+          const LEFT = 120;
+          const TOP = 96;
+          const COLS = 10;
+          const ROWS = 6;
+          let hover = null;
+
+          function draw() {
+            ctx.fillStyle = "#e3f3fd";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.font = "600 15px Fredoka, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            for (let row = 0; row < ROWS; row++) {
+              for (let col = 0; col < COLS; col++) {
+                const x = LEFT + col * TILE;
+                const y = TOP + row * TILE;
+                ctx.fillStyle = "#d3efff";
+                ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+              }
+            }
+            // Column and row numbers around the edge.
+            ctx.fillStyle = "#557091";
+            for (let col = 0; col < COLS; col++) ctx.fillText(col, LEFT + col * TILE + TILE / 2, TOP - 16);
+            for (let row = 0; row < ROWS; row++) ctx.fillText(row, LEFT - 18, TOP + row * TILE + TILE / 2);
+            ctx.fillText("col →", LEFT + COLS * TILE + 32, TOP - 16);
+            ctx.save();
+            ctx.translate(LEFT - 18, TOP + ROWS * TILE + 28);
+            ctx.fillText("row ↓", 0, 0);
+            ctx.restore();
+            if (!hover) return;
+            const x = LEFT + hover.col * TILE;
+            const y = TOP + hover.row * TILE;
+            // Guides from the screen edges to the tile, showing x and y.
+            ctx.strokeStyle = "#ff8a3d";
+            ctx.setLineDash([6, 6]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(x, y);
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = "rgba(255, 138, 61, 0.25)";
+            ctx.fillRect(x, y, TILE, TILE);
+            ctx.strokeRect(x, y, TILE, TILE);
+            if (pictures.penguin_down.complete) ctx.drawImage(pictures.penguin_down, x, y, TILE, TILE);
+            ctx.fillStyle = "#ff8a3d";
+            ctx.fillText(`x = ${x}`, x / 2, y - 12);
+            ctx.save();
+            ctx.translate(x - 14, y / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(`y = ${y}`, 0, 0);
+            ctx.restore();
+          }
+
+          function point(event) {
+            const [px, py] = canvasPoint(canvas, event);
+            const col = Math.floor((px - LEFT) / TILE);
+            const row = Math.floor((py - TOP) / TILE);
+            if (col < 0 || col >= COLS || row < 0 || row >= ROWS) {
+              hover = null;
+              readout.innerHTML = `Mouse at x = <b>${Math.round(px)}</b>, y = <b>${Math.round(py)}</b> — that's outside the grid.`;
+            } else {
+              hover = { row, col };
+              readout.innerHTML =
+                `row = <b>${row}</b>, col = <b>${col}</b><br>` +
+                `x = LEFT + col × TILE = 120 + ${col} × 48 = <b>${LEFT + col * TILE}</b><br>` +
+                `y = TOP + row × TILE = 96 + ${row} × 48 = <b>${TOP + row * TILE}</b><br>` +
+                `<span class="muted">…and backwards: col = Math.floor((${Math.round(px)} − 120) / 48) = ${col}</span>`;
+            }
+            draw();
+          }
+          canvas.addEventListener("pointermove", point);
+          canvas.addEventListener("pointerdown", point);
+          canvas.addEventListener("pointerleave", () => {
+            hover = null;
+            draw();
+          });
+          whenLoaded.then(draw);
+          document.fonts?.ready.then(draw);
+          draw();
+        })();
+
+        /* ---------------------------------------------------------------
+         * Widget 2: while-loop stepper
+         * ------------------------------------------------------------- */
+        (() => {
+          const root = document.getElementById("loop-stepper");
+          const canvas = root.querySelector("canvas");
+          const ctx = canvas.getContext("2d");
+          const readout = root.querySelector(".readout");
+          const lines = {};
+          for (const line of root.querySelectorAll(".sl")) lines[line.dataset.line] = line;
+          const MAP = ["#########", "#P......#", "#...#...#", "#.......#", "#########"];
+          const T = 48;
+          const startCol = 1;
+          const startRow = 1;
+          let penguin = { col: startCol, row: startRow };
+          let row = startRow;
+          let col = startCol;
+          let dir = [1, 0];
+          let phase = "ready"; // "ready", "checked-true", "moved-row", "done"
+          let timer = 0;
+
+          const tileAt = (r, c) => MAP[r][c] === "P" ? "." : MAP[r][c];
+
+          function highlight(name, isFalse = false) {
+            for (const [key, node] of Object.entries(lines)) {
+              node.classList.toggle("is-on", key === name && !isFalse);
+              node.classList.toggle("is-false", key === name && isFalse);
+            }
+          }
+
+          function draw(checkCell) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let r = 0; r < MAP.length; r++) {
+              for (let c = 0; c < MAP[r].length; c++) {
+                ctx.drawImage(pictures.ice, c * T, r * T, T, T);
+                if (MAP[r][c] === "#") ctx.drawImage(pictures.rock, c * T, r * T, T, T);
+              }
+            }
+            if (checkCell) {
+              ctx.lineWidth = 4;
+              ctx.strokeStyle = checkCell.ok ? "#1f9d6b" : "#e0446a";
+              ctx.strokeRect(checkCell.c * T + 3, checkCell.r * T + 3, T - 6, T - 6);
+            }
+            // A faint penguin where the slide started, a solid one at row/col.
+            ctx.globalAlpha = 0.35;
+            ctx.drawImage(pictures.penguin_down, penguin.col * T, penguin.row * T, T, T);
+            ctx.globalAlpha = 1;
+            const facing = dir[0] < 0 ? "penguin_left" : dir[0] > 0 ? "penguin_right" : dir[1] < 0 ? "penguin_up" : "penguin_down";
+            ctx.drawImage(pictures[facing], col * T, row * T, T, T);
+          }
+
+          function vars() {
+            return `row = <b>${row}</b>, col = <b>${col}</b> &nbsp;·&nbsp; dx = <b>${dir[0]}</b>, dy = <b>${dir[1]}</b>`;
+          }
+
+          function step() {
+            const [dx, dy] = dir;
+            if (phase === "done") return reset(false);
+            if (phase === "ready" || phase === "moved-col") {
+              const tile = tileAt(row + dy, col + dx);
+              const ok = tile !== "#";
+              highlight("while", !ok);
+              draw({ r: row + dy, c: col + dx, ok });
+              readout.innerHTML =
+                `${vars()}<br>Checking the next tile: <code>tileAt(${row + dy}, ${col + dx})</code> is <b>"${tile}"</b><br>` +
+                `<code>"${tile}" !== "#"</code> is <span class="verdict ${ok ? "is-true" : "is-false"}">${ok}</span> → ` +
+                (ok ? "go round the loop again." : "the loop stops! The penguin rests here.");
+              phase = ok ? "checked-true" : "done";
+              if (!ok) {
+                penguin = { row, col };
+                stopAuto();
+              }
+            } else if (phase === "checked-true") {
+              row += dy;
+              highlight("row");
+              draw();
+              readout.innerHTML = `${vars()}<br><code>row += dy</code> → row is now <b>${row}</b>`;
+              phase = "moved-row";
+            } else if (phase === "moved-row") {
+              col += dx;
+              highlight("col");
+              draw();
+              readout.innerHTML = `${vars()}<br><code>col += dx</code> → col is now <b>${col}</b>`;
+              phase = "moved-col";
+            }
+          }
+
+          function stopAuto() {
+            clearInterval(timer);
+            timer = 0;
+          }
+
+          function reset(toStart = true) {
+            stopAuto();
+            if (toStart) penguin = { col: startCol, row: startRow };
+            row = penguin.row;
+            col = penguin.col;
+            phase = "ready";
+            highlight(null);
+            draw();
+            readout.innerHTML = `${vars()}<br>Press <b>Step ▶</b> to check the loop's condition.`;
+          }
+
+          root.querySelectorAll("[data-dir]").forEach((button) =>
+            button.addEventListener("click", () => {
+              dir = button.dataset.dir.split(",").map(Number);
+              root.querySelectorAll("[data-dir]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+              if (phase === "done") penguin = { row, col };
+              reset(false);
+            }),
+          );
+          root.querySelector('[data-action="step"]').addEventListener("click", () => {
+            stopAuto();
+            step();
+          });
+          root.querySelector('[data-action="all"]').addEventListener("click", () => {
+            stopAuto();
+            if (phase === "done") reset(false);
+            step();
+            timer = setInterval(step, 420);
+          });
+          root.querySelector('[data-action="reset"]').addEventListener("click", () => reset(true));
+          whenLoaded.then(() => reset(true));
+        })();
+
+        /* ---------------------------------------------------------------
+         * Widget 3: tween race (the same easing curves animate() uses)
+         * ------------------------------------------------------------- */
+        (() => {
+          const root = document.getElementById("tween-race");
+          const lanes = root.querySelector(".race-lanes");
+          const bounce = (t) => {
+            const n = 7.5625;
+            const d = 2.75;
+            if (t < 1 / d) return n * t * t;
+            if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75;
+            if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375;
+            return n * (t -= 2.625 / d) * t + 0.984375;
+          };
+          const tweens = {
+            linear: (t) => t,
+            easeOut: (t) => 1 - (1 - t) * (1 - t),
+            accelerate: (t) => t * t,
+            bounce,
+            spring: (t) => (t === 0 || t === 1 ? t : Math.pow(2, -10 * t) * Math.sin(((t * 10 - 0.75) * 2 * Math.PI) / 3) + 1),
+          };
+          const runners = [];
+          for (const name of Object.keys(tweens)) {
+            const row = document.createElement("div");
+            row.className = "race-row";
+            row.innerHTML = `<span class="lane-name">"${name}"</span><div class="race-lane"><img class="runner" alt="" src="${art("penguin_right")}"><img class="rock" alt="" src="${art("rock")}"></div>`;
+            lanes.append(row);
+            const lane = row.querySelector(".race-lane");
+            runners.push({ name, lane, img: lane.querySelector(".runner") });
+          }
+          let raf = 0;
+          root.querySelector('[data-action="race"]').addEventListener("click", () => {
+            cancelAnimationFrame(raf);
+            const start = performance.now();
+            const DURATION = 1600;
+            const frame = (now) => {
+              const t = Math.min(1, (now - start) / DURATION);
+              for (const runner of runners) {
+                const track = runner.lane.clientWidth - 48 - 52;
+                runner.img.style.transform = `translateX(${tweens[runner.name](t) * track}px)`;
+              }
+              if (t < 1) raf = requestAnimationFrame(frame);
+            };
+            raf = requestAnimationFrame(frame);
+          });
+        })();
+
+        /* ---------------------------------------------------------------
+         * Widget 4: level painter
+         * ------------------------------------------------------------- */
+        (() => {
+          const root = document.getElementById("painter");
+          const canvas = root.querySelector("canvas");
+          const ctx = canvas.getContext("2d");
+          const status = root.querySelector(".painter-status");
+          const codeBox = root.querySelector("pre.code-block");
+          const palette = root.querySelector(".palette");
+          const COLS = 12;
+          const ROWS = 7;
+          const T = 48;
+          const TOOLS = [
+            [".", "ice", "Ice"],
+            ["#", "rock", "Rock"],
+            ["*", "snow", "Snow"],
+            ["O", "hole", "Hole"],
+            ["F", "fish", "Fish"],
+            ["P", "penguin_down", "Penguin"],
+          ];
+          const EXAMPLE = ["############", "#P.....#...#", "#..........#", "#....*...O.#", "#.........F#", "#.F........#", "############"];
+          let tiles = EXAMPLE.map((line) => line.split(""));
+          let tool = "#";
+          let painting = false;
+
+          for (const [letter, picture, label] of TOOLS) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.setAttribute("aria-pressed", String(letter === tool));
+            button.innerHTML = `<img alt="" src="${art(picture)}"><span>${label} <code>${letter}</code></span>`;
+            button.addEventListener("click", () => {
+              tool = letter;
+              palette.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+            });
+            palette.append(button);
+          }
+
+          const level = () => tiles.map((row) => row.join(""));
+
+          function levelCode(map) {
+            return `const LEVEL = [\n${map.map((line) => `  "${line}",`).join("\n")}\n];`;
+          }
+
+          function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let r = 0; r < ROWS; r++) {
+              for (let c = 0; c < COLS; c++) {
+                const x = c * T;
+                const y = r * T;
+                const letter = tiles[r][c];
+                ctx.drawImage(pictures.ice, x, y, T, T);
+                if (letter === "#") ctx.drawImage(pictures.rock, x, y, T, T);
+                if (letter === "*") ctx.drawImage(pictures.snow, x, y, T, T);
+                if (letter === "O") ctx.drawImage(pictures.hole, x, y, T, T);
+                if (letter === "F") ctx.drawImage(pictures.fish, x + 4, y + 9, 40, 30);
+                if (letter === "P") ctx.drawImage(pictures.penguin_down, x, y, T, T);
+              }
+            }
+            const map = level();
+            codeBox.innerHTML = JGZT.highlight(levelCode(map));
+            const fish = map.join("").split("F").length - 1;
+            const hasPenguin = map.join("").includes("P");
+            let verdict;
+            let good = false;
+            if (!hasPenguin) verdict = "🐧 Place the penguin somewhere.";
+            else if (!fish) verdict = "🐟 Add at least one fish.";
+            else {
+              const solution = solve(map);
+              if (solution) {
+                good = true;
+                verdict = `✅ Beatable in <b>${solution.moves}</b> move${solution.moves === 1 ? "" : "s"}: ${solution.path.map((d) => ({ up: "↑", down: "↓", left: "←", right: "→" })[d]).join(" ")}`;
+              } else verdict = "❌ No way to eat every fish. Try moving a rock or a fish.";
+            }
+            status.innerHTML = verdict;
+            status.className = `painter-status ${good ? "is-good" : hasPenguin && fish ? "is-bad" : ""}`;
+          }
+
+          function paint(event) {
+            const [px, py] = canvasPoint(canvas, event);
+            const c = Math.floor(px / T);
+            const r = Math.floor(py / T);
+            if (r <= 0 || c <= 0 || r >= ROWS - 1 || c >= COLS - 1) return; // the wall stays rock
+            if (tool === "P") for (const row of tiles) for (let i = 0; i < row.length; i++) if (row[i] === "P") row[i] = ".";
+            if (tiles[r][c] === tool) return;
+            tiles[r][c] = tool;
+            render();
+          }
+
+          canvas.addEventListener("pointerdown", (event) => {
+            painting = true;
+            canvas.setPointerCapture(event.pointerId);
+            paint(event);
+          });
+          canvas.addEventListener("pointermove", (event) => painting && paint(event));
+          canvas.addEventListener("pointerup", () => (painting = false));
+          canvas.addEventListener("pointercancel", () => (painting = false));
+
+          root.querySelector('[data-action="clear"]').addEventListener("click", () => {
+            tiles = Array.from({ length: ROWS }, (_, r) =>
+              Array.from({ length: COLS }, (_, c) => (r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1 ? "#" : r === 1 && c === 1 ? "P" : ".")),
+            );
+            render();
+          });
+
+          // Random levels until one is beatable in 3–9 moves.
+          root.querySelector('[data-action="surprise"]').addEventListener("click", () => {
+            for (let attempt = 0; attempt < 4000; attempt++) {
+              const grid = Array.from({ length: ROWS }, (_, r) =>
+                Array.from({ length: COLS }, (_, c) => (r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1 ? "#" : ".")),
+              );
+              const place = (letter, count) => {
+                for (let i = 0; i < count; i++) {
+                  for (;;) {
+                    const r = 1 + Math.floor(Math.random() * (ROWS - 2));
+                    const c = 1 + Math.floor(Math.random() * (COLS - 2));
+                    if (grid[r][c] === ".") {
+                      grid[r][c] = letter;
+                      break;
+                    }
+                  }
+                }
+              };
+              place("#", 5);
+              place("*", 2);
+              place("O", 2);
+              place("F", 2);
+              place("P", 1);
+              const solution = solve(grid.map((row) => row.join("")));
+              if (solution && solution.moves >= 3 && solution.moves <= 9) {
+                tiles = grid;
+                break;
+              }
+            }
+            render();
+          });
+
+          root.querySelector('[data-action="play"]').addEventListener("click", () => {
+            const cell = JGZT.cell("08-snow-holes");
+            const code = cell.code;
+            const pattern = /const LEVEL = \[[\s\S]*?\n\];/;
+            if (!pattern.test(code)) {
+              status.innerHTML = "Can't find <code>const LEVEL = [ … ];</code> in the code above — press ↺ Reset there first.";
+              status.className = "painter-status is-bad";
+              return;
+            }
+            cell.setCode(code.replace(pattern, levelCode(level())));
+            cell.root.scrollIntoView({ behavior: "smooth", block: "center" });
+            cell.stage.focus({ preventScroll: true });
+          });
+
+          whenLoaded.then(render);
+          render();
+        })();
+
+        /* ---------------------------------------------------------------
+         * Challenge checks: each one reads the live game.
+         * ------------------------------------------------------------- */
+        const levelOf = (game) => game.read("LEVEL");
+
+        JGZT.challenge("grid-size", (game) => game.read("COLUMNS") === 12 && game.read("ROWS") === 8);
+
+        JGZT.challenge("checkerboard", (game) => {
+          const rects = game.drawn().filter((d) => d.kind === "rect" && d.filled);
+          if (rects.length < 4) return false;
+          const colorAt = new Map(rects.map((d) => [`${Math.round(d.x)},${Math.round(d.y)}`, String(d.color)]));
+          const tile = game.read("TILE") || 48;
+          let compared = 0;
+          for (const d of rects) {
+            const right = colorAt.get(`${Math.round(d.x + tile)},${Math.round(d.y)}`);
+            const below = colorAt.get(`${Math.round(d.x)},${Math.round(d.y + tile)}`);
+            for (const other of [right, below]) {
+              if (other === undefined) continue;
+              compared += 1;
+              if (other === String(d.color)) return false;
+            }
+          }
+          return compared > 0 || "Each tile should be a different colour from its neighbours.";
+        });
+
+        JGZT.challenge("add-rock", (game) => {
+          const map = levelOf(game);
+          if (!walledIn(map)) return "Keep every row the same length, with rock (#) all around the edge.";
+          let inside = 0;
+          map.forEach((line, row) => {
+            if (row === 0 || row === map.length - 1) return;
+            for (let col = 1; col < line.length - 1; col++) if (line[col] === "#") inside += 1;
+          });
+          return inside >= 2;
+        });
+
+        JGZT.challenge("snow-pic", (game) => game.drawn().some((d) => d.kind === "image" && /^snow/.test(d.image)));
+
+        JGZT.challenge("walk-to-fish", (game) => {
+          const map = levelOf(game);
+          if (!map) return false;
+          let fish = null;
+          map.forEach((line, row) => {
+            const col = line.indexOf("F");
+            if (col >= 0 && !fish) fish = { row, col };
+          });
+          return Boolean(fish) && game.read("penguin.row") === fish.row && game.read("penguin.col") === fish.col;
+        });
+
+        JGZT.challenge("wasd", (game) => ["W", "A", "S", "D"].every((k) => new RegExp(`keys\\.${k}\\b`).test(game.code)));
+
+        JGZT.challenge("move-counter", (game) => {
+          const moves = game.read("moves");
+          if (typeof moves !== "number") return false;
+          if (moves < 1) return "Now slide around a little — the counter should go up.";
+          return game.drawn().some((d) => d.kind === "text" && String(d.text).includes(String(moves))) || "Show the moves on the screen with screen.draw.text.";
+        });
+
+        JGZT.challenge("tween", (game) => {
+          const match = game.code.match(/duration:\s*distance\s*\*\s*SLIDE_TIME,\s*tween:\s*"(\w+)"/);
+          return Boolean(match) && match[1] !== "linear" && game.running;
+        });
+
+        JGZT.challenge("third-fish", (game) => {
+          const fishes = game.read("fishes");
+          if (!Array.isArray(fishes) || fishes.length < 3) return false;
+          return game.read("state") === "won" || "Three fish! Now eat them all.";
+        });
+
+        // The level this step starts with, so the challenge needs a new one.
+        const startingLevel = GAME.steps["08-snow-holes"].match(/const LEVEL = (\[[\s\S]*?\n\]);/)[1];
+
+        JGZT.challenge("own-level", (game) => {
+          const map = levelOf(game);
+          if (!walledIn(map)) return false;
+          if (JSON.stringify(map) === JSON.stringify(new Function(`return ${startingLevel}`)())) return false;
+          const text = map.join("");
+          if (!text.includes("*") || !text.includes("O")) return "Your level needs at least one snow patch (*) and one hole (O).";
+          const solution = solve(map);
+          if (!solution) return "The solver can't find a way to eat every fish in this level.";
+          if (solution.moves < 3) return `This one only takes ${solution.moves} move${solution.moves === 1 ? "" : "s"} — make it need at least 3.`;
+          return game.read("state") === "won" || `Great level: ${solution.moves} moves at best. Now beat it!`;
+        });
+
+        JGZT.challenge("fifth-level", (game) => {
+          const levels = game.read("LEVELS");
+          if (!Array.isArray(levels) || levels.length < 5) return false;
+          const last = levels[levels.length - 1];
+          if (!last || !walledIn(last.map)) return "Your new level's map needs equal-length rows with rock all around.";
+          return Boolean(solve(last.map)) || "The solver can't beat your new level yet — check the fish can be reached.";
+        });
+
+        JGZT.challenge("three-stars", (game) => {
+          const levels = game.read("LEVELS");
+          const index = game.read("levelIndex");
+          if (!Array.isArray(levels) || typeof index !== "number" || !levels[index]) return false;
+          return game.read("state") === "won" && game.read("moves") <= levels[index].par;
+        });
+
+        JGZT.challenge("blizzard", (game) => game.read("SNOWFLAKES") > 200 && game.read("snowflakes.length") > 200);
+
+        document.getElementById("download-final").addEventListener("click", () => JGZT.downloadProject(JGZT.cell("final").code));
+
+        JGZT.start();
+      })();
+    </script>
+  </body>
+</html>

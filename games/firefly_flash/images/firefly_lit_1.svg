@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <!-- wings, raised -->
+  <g fill="#e3efff" fill-opacity="0.9" stroke="#2a2140" stroke-width="1.6" stroke-linejoin="round">
+    <ellipse cx="9.5" cy="12.5" rx="8" ry="5" transform="rotate(-32 9.5 12.5)"/>
+    <ellipse cx="30.5" cy="12.5" rx="8" ry="5" transform="rotate(32 30.5 12.5)"/>
+  </g>
+  <ellipse cx="7.8" cy="11" rx="3" ry="1.3" fill="#fff" transform="rotate(-32 7.8 11)"/>
+  <ellipse cx="32.2" cy="11" rx="3" ry="1.3" fill="#fff" transform="rotate(32 32.2 11)"/>
+  <!-- glowing tail -->
+  <circle cx="20" cy="29.5" r="8.5" fill="#fff36a" stroke="#2a2140" stroke-width="2"/>
+  <circle cx="20" cy="30" r="5" fill="#fffde0"/>
+  <path d="M13.6 26.4 Q20 23.6 26.4 26.4" fill="none" stroke="#f0cf3a" stroke-width="1.6" stroke-linecap="round"/>
+  <ellipse cx="16.6" cy="31.2" rx="2.6" ry="1.7" fill="#fff" opacity="0.9"/>
+  <!-- antennae -->
+  <g fill="none" stroke="#2a2140" stroke-width="1.5" stroke-linecap="round">
+    <path d="M17 8.4 Q15.2 4.6 12.6 3.6"/>
+    <path d="M23 8.4 Q24.8 4.6 27.4 3.6"/>
+  </g>
+  <circle cx="12.4" cy="3.5" r="1.9" fill="#ffd34d" stroke="#2a2140" stroke-width="1.2"/>
+  <circle cx="27.6" cy="3.5" r="1.9" fill="#ffd34d" stroke="#2a2140" stroke-width="1.2"/>
+  <!-- head -->
+  <circle cx="20" cy="16" r="9.5" fill="#ffb27e" stroke="#2a2140" stroke-width="2"/>
+  <path d="M28.7 18.1 A9 9 0 0 1 16.2 24.2 A11 11 0 0 0 28.7 18.1 Z" fill="#e97a4d" opacity="0.6"/>
+  <ellipse cx="15.6" cy="11.4" rx="3" ry="1.8" fill="#fff" opacity="0.45" transform="rotate(-30 15.6 11.4)"/>
+  <!-- face -->
+  <path d="M14.6 17 Q16.6 14.2 18.6 17" fill="none" stroke="#2a2140" stroke-width="1.7" stroke-linecap="round"/>
+  <path d="M21.4 17 Q23.4 14.2 25.4 17" fill="none" stroke="#2a2140" stroke-width="1.7" stroke-linecap="round"/>
+  <ellipse cx="13.3" cy="19.4" rx="2.2" ry="1.3" fill="#ff7f9f" opacity="0.8"/>
+  <ellipse cx="26.7" cy="19.4" rx="2.2" ry="1.3" fill="#ff7f9f" opacity="0.8"/>
+  <path d="M18.1 19.3 Q20 23.2 21.9 19.3 Z" fill="#c4466a" stroke="#2a2140" stroke-width="1.1" stroke-linejoin="round"/>
+</svg>
+
