@@ -4,10 +4,13 @@
   "type": "module",
   "scripts": {
     "jgz": "bun ../js-game-zero/packages/cli/src/cli.ts",
+    "new": "bun scripts/new-tutorial.ts",
     "build": "bun scripts/build.ts",
-    "check:steps": "bun scripts/check-steps.ts",
     "test:games": "bun test tests",
+    "check:steps": "bun scripts/check-steps.ts",
     "check:tutorials": "bun scripts/check-tutorials.ts",
+    "check:challenges": "bun scripts/check-challenges.ts",
+    "check": "bun scripts/build.ts && bun test tests && bun scripts/check-steps.ts && bun scripts/check-tutorials.ts && bun scripts/check-challenges.ts",
     "format": "../js-game-zero/node_modules/.bin/prettier --write games tutorials/steps scripts tests"
   },
   "devDependencies": {

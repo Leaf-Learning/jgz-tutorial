@@ -250,7 +250,7 @@
     <main class="page">
       <!-- ================================================================ -->
       <section class="hero">
-        <div class="hero-kicker">🐧 Tutorial 2 of 3 · Grid puzzles</div>
+        <div class="hero-kicker">🐧 Tutorial 2 · Grid puzzles</div>
         <h1>Penguin <span class="pop">Slide</span></h1>
         <p class="hero-lede">
           A hungry penguin, a rink of slippery ice, and fish just out of reach. Press an arrow and
@@ -807,7 +807,9 @@ screen.draw.text(`Moves: ${moves}`, {
           <code class="ref" data-match='state = "won"'>state</code> switches from
           <code>"playing"</code> to <code>"won"</code>, and <code>slide()</code> ignores the keys
           from then on. A variable like <code>state</code> is how games keep track of which
-          "mode" they're in.
+          "mode" they're in. The win message sits on a white box from
+          <code class="ref" data-match="screen.draw.filledRect">screen.draw.filledRect</code>, which takes the box as a
+          list: <code>[left, top, width, height]</code>.
         </p>
         <div class="callout tip">
           <span class="callout-icon">〰️</span>
@@ -967,7 +969,10 @@ screen.draw.text(`Moves: ${moves}`, {
           There's a <strong>HUD</strong> (heads-up display) along the top too, showing the level,
           the fish left and your moves. Most text in the game is centred in the same font, so
           instead of repeating six lines every time, there's a helper:
-          <code class="ref" data-match="function say">say(text, x, y, size, color)</code>.
+          <code class="ref" data-match="function say">say(text, x, y, size, color)</code>. Pop-up
+          panels, like the win message, get a dark border from
+          <code class="ref" data-match="screen.draw.rect(">screen.draw.rect</code>, which only draws a rectangle's
+          outline (its last number is how thick).
         </p>
         <div class="callout tip">
           <span class="callout-icon">✂️</span>
@@ -1017,9 +1022,13 @@ screen.draw.text(`Moves: ${moves}`, {
         <p>
           <strong>⭐ Stars.</strong> <code class="ref" data-match="function starsFor">starsFor(moves, par)</code>
           gives 3 stars for matching par, 2 stars for up to half as many moves again, and 1 star
-          for any win. <code class="ref" data-match="function drawStar(">drawStar()</code> draws a
+          for any win. <code>Math.ceil</code> rounds <em>up</em> to a whole number, so with a par of 3,
+          <code>Math.ceil(3 * 1.5)</code> is 5 moves for two stars.
+          <code class="ref" data-match="function drawStar(">drawStar()</code> draws a
           star as a polygon whose 10 points alternate between far out (the tips) and close in
-          (the dips).
+          (the dips). <code>Math.cos</code>, <code>Math.sin</code> and <code>Math.PI</code> place those points
+          around a circle; you can use the function without following the maths.
+          <code>screen.draw.filledPolygon</code> fills the shape and <code>screen.draw.polygon</code> outlines it.
         </p>
         <p>
           <strong>↶ Undo.</strong> Before every move,
@@ -1038,7 +1047,9 @@ screen.draw.text(`Moves: ${moves}`, {
           for that level and <code class="ref" data-match='storage.set("unlocked"'>unlocked</code>
           remembers the furthest level you've reached. At the start,
           <code class="ref" data-match="loadLevel(unlocked)">loadLevel(unlocked)</code> carries on
-          where you left off.
+          where you left off. <code class="ref" data-match="let unlocked = clamp">clamp(value, low, high)</code>
+          keeps a number between two limits, in case the saved level is from a version of the game with
+          more levels.
         </p>
 
         <div class="cell" data-step="10-undo-stars" data-watch="levelIndex, moves, history.length, unlocked"></div>
@@ -1083,13 +1094,14 @@ screen.draw.text(`Moves: ${moves}`, {
           <li>
             <strong>A title screen.</strong> A new state, <code>"title"</code>, shows the name, a
             bobbing penguin, and a level picker: <kbd>←</kbd>/<kbd>→</kbd> choose any level up to
-            <code>unlocked</code>.
+            <code>unlocked</code>. Its little arrows are <code>screen.triangle</code>s: three corners and a colour.
           </li>
           <li>
             <strong>Swipes for phones.</strong>
             <code class="ref" data-match="function onMouseDown">onMouseDown</code> remembers where a
             drag starts; <code class="ref" data-match="function onMouseUp">onMouseUp</code>
-            measures it. A short drag is a tap; otherwise the longer side picks the direction.
+            measures it. A short drag is a tap; otherwise the longer side picks the direction, and
+            <code>Math.sign</code> turns the distance into just its direction: 1, −1 or 0.
             Touches arrive as mouse events, so fingers work too.
           </li>
           <li>

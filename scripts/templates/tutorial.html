@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{TITLE}}</title>
+    <meta name="description" content="TODO: one sentence — build what, learning what — for total beginners." />
+    <link rel="stylesheet" href="lib/tutorial.css" />
+    <style>
+      /* ---- Page-only styles for {{TITLE}}'s widgets ---- */
+    </style>
+  </head>
+  <body class="{{THEME}}" data-game="{{ID}}" data-tutorial="{{TITLE}}">
+    <main class="page">
+      <!-- ============================================================ -->
+      <section class="hero">
+        <div class="hero-kicker">TODO-emoji Tutorial {{NUMBER}} · TODO: a few words</div>
+        <h1>{{TITLE}}</h1>
+        <p class="hero-lede">TODO: what the learner will build, in one or two warm sentences.</p>
+        <ul class="hero-meta">
+          <li>⏱ About TODO minutes</li>
+          <li>🌱 Total beginners welcome</li>
+          <li>💻 Nothing to install — the code runs right on this page</li>
+        </ul>
+
+        <h3>Play it first</h3>
+        <p class="prose">TODO: how to play, in two or three sentences.</p>
+        <div class="cell" id="hero-game" data-step="final" data-play-only></div>
+
+        <div class="learn-grid">
+          <div class="learn-card"><span class="emoji">TODO</span><b>TODO concept</b>TODO: one line on what it is.</div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🧭</span>
+          <div>
+            <span class="callout-title">How this page works</span>
+            <p>
+              Each step has <strong>code on the left</strong> and <strong>the game on the right</strong>. Change anything you
+              like, then press <strong>▶ Run</strong> (or <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>). Lines that are
+              new in a step glow green, and hovering a dotted code word in the text lights up the matching lines.
+              <strong>🎯 Challenges check themselves</strong> while your game runs. You can't break anything:
+              <strong>↺ Reset</strong> always brings the step back.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- One <section class="step"> per file in tutorials/steps/{{ID}}/. -->
+      <section class="step" data-title="TODO short title">
+        <span class="step-kicker"></span>
+        <h2>TODO step title</h2>
+        <p>TODO: why we need this step, then what to do. Press <strong>Run</strong>:</p>
+        <div class="cell" data-step="01-start"></div>
+        <ul>
+          <li><code class="ref">TITLE</code> TODO: explain each new line, hovering refs light it up.</li>
+        </ul>
+      </section>
+
+      <!-- The last step: the whole finished game, editable. -->
+      <section class="step" data-title="TODO: the finished game">
+        <span class="step-kicker"></span>
+        <h2>TODO</h2>
+        <p>TODO</p>
+        <div class="cell" data-step="final"></div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="finale">
+        <h2>You made {{TITLE}}! 🎉</h2>
+        <p class="prose">TODO: celebrate, naming every big idea they used.</p>
+        <h3>Ideas to try next</h3>
+        <div class="idea-grid">
+          <div class="idea"><b>TODO-emoji TODO idea</b>TODO: one line with a pointer to how.</div>
+        </div>
+        <div class="finale-actions">
+          <button class="btn btn-primary" type="button" id="download-final">⬇ Download your game</button>
+          <a class="btn btn-soft" href="index.html">All tutorials</a>
+        </div>
+        <p class="muted" style="margin-top: 16px">
+          The download is a folder with <code>main.js</code>, the game's art and font, and a README. It runs in the
+          js-game-zero sandbox, or with <code>jgz test {{ID}}</code>. It includes any changes you made in the last step!
+        </p>
+
+        <h3>Words you learned</h3>
+        <dl class="glossary">
+          <div><dt>TODO word</dt><dd>TODO: a plain-English definition.</dd></div>
+        </dl>
+      </section>
+
+      <footer class="page-footer">
+        Made with <a href="https://github.com/taharafiq/js-game-zero">js-game-zero</a>. Font: Fredoka (SIL Open Font License).
+        · <button type="button" data-reset-progress>Start this tutorial over</button>
+      </footer>
+    </main>
+
+    <script src="lib/jgz.js"></script>
+    <script src="lib/tutorial.js"></script>
+    <script src="lib/data/{{ID}}.js"></script>
+    <script>
+      // ------------------------------------------------------------------
+      // Challenge checks. Each runs a few times a second while its cell's
+      // game is running: true = passed, a string = a gentle nudge.
+      // Model solutions live in tests/challenges/{{ID}}.js.
+      // ------------------------------------------------------------------
+
+      JGZT.start();
+
+      document.getElementById("download-final").addEventListener("click", () => {
+        JGZT.downloadProject(JGZT.cell("cell-final").code);
+      });
+    </script>
+  </body>
+</html>

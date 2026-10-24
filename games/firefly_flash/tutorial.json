@@ -1,0 +1,25 @@
+{
+  "title": "Firefly Flash",
+  "page": "firefly-flash.html",
+  "order": 1,
+  "theme": "theme-night",
+  "tagline": "One click, one flash, one big chain reaction.",
+  "help": "One click per night: your flash lights the fireflies it touches, and their light catches more. Light up enough to clear the night!",
+  "topics": [
+    "🎨 Drawing",
+    "🔁 The game loop",
+    "📦 Variables",
+    "🧺 Lists & loops",
+    "🤔 if",
+    "🎵 Sound",
+    "🏆 Levels"
+  ],
+  "card": {
+    "background": "radial-gradient(circle at 276px 142px, rgba(255, 244, 207, 0.3) 0 40px, transparent 80px), linear-gradient(#0d0a24, #3a2b6e)",
+    "sprites": [
+      ["images/firefly_lit_1.svg", 46, 70, 56],
+      ["images/firefly_1.svg", 170, 40, 48],
+      ["images/moon.svg", 230, 96, 92]
+    ]
+  }
+}

@@ -22,6 +22,10 @@ export type JgzSession = {
     extra?: Record<string, unknown>,
   ): Promise<Json>;
   inspect(path: string): Promise<Json>;
+  /** Calls one of the game's top-level functions that takes no arguments. */
+  call(binding: string): Promise<Json>;
+  /** Saves the canvas as a PNG (to `path`, or a temporary file) and returns where. */
+  screenshot(path?: string): Promise<string>;
   close(): Promise<void>;
 };
 
@@ -105,6 +109,19 @@ export async function openGame(
       const response = await send({ command: "inspect", path });
       if (!response.ok) throw new Error(JSON.stringify(response));
       return response.result;
+    },
+    async call(binding) {
+      const response = await send({ command: "call", binding });
+      if (!response.ok) throw new Error(JSON.stringify(response));
+      return response.result;
+    },
+    async screenshot(path) {
+      const response = await send({
+        command: "screenshot",
+        ...(path ? { path } : {}),
+      });
+      if (!response.ok) throw new Error(JSON.stringify(response));
+      return response.result.path;
     },
     async close() {
       try {

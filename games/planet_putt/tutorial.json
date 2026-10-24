@@ -1,0 +1,26 @@
+{
+  "title": "Planet Putt",
+  "page": "planet-putt.html",
+  "order": 3,
+  "after": ["firefly_flash", "penguin_slide"],
+  "theme": "theme-space",
+  "tagline": "Mini-golf in space, where planets bend every shot.",
+  "help": "Press, drag back and let go to shoot. Planets pull on your ball. Sink it in the wormhole in as few strokes as you can.",
+  "topics": [
+    "🚀 Velocity",
+    "🌍 Gravity",
+    "🖱️ Drag to aim",
+    "🏓 Bouncing",
+    "🔮 Predicting paths",
+    "⛳ Levels as data"
+  ],
+  "card": {
+    "background": "radial-gradient(circle at 20% 30%, rgba(255, 111, 181, 0.35), transparent 40%), radial-gradient(circle at 80% 70%, rgba(94, 224, 255, 0.3), transparent 45%), #0e0c22",
+    "sprites": [
+      ["images/planet_ringed.svg", 196, 28, 140],
+      ["images/wormhole.svg", 92, 104, 70],
+      ["images/ball_happy.svg", 40, 46, 52],
+      ["images/planet_pink.svg", 128, 8, 60]
+    ]
+  }
+}

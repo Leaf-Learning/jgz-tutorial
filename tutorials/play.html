@@ -93,36 +93,20 @@
       <p class="play-help" data-help></p>
     </main>
     <script src="lib/jgz.js"></script>
+    <script src="lib/data/games.js"></script>
     <script>
-      // Which game to play comes from the address: play.html?game=penguin_slide
-      const GAMES = {
-        firefly_flash: {
-          title: "Firefly Flash",
-          tutorial: "firefly-flash.html",
-          theme: "theme-night",
-          help: "One click per night: your flash lights the fireflies it touches, and their light catches more. Light up enough to clear the night!",
-        },
-        penguin_slide: {
-          title: "Penguin Slide",
-          tutorial: "penguin-slide.html",
-          theme: "theme-ice",
-          help: "Arrow keys or WASD (or swipe) to slide. The penguin keeps going until something stops it. Eat every fish! R restarts, Z undoes.",
-        },
-        planet_putt: {
-          title: "Planet Putt",
-          tutorial: "planet-putt.html",
-          theme: "theme-space",
-          help: "Press, drag back and let go to shoot. Planets pull on your ball. Sink it in the wormhole in as few strokes as you can.",
-        },
-      };
-      const key = new URLSearchParams(location.search).get("game") || "firefly_flash";
-      const info = GAMES[key] || GAMES.firefly_flash;
-      const gameKey = GAMES[key] ? key : "firefly_flash";
+      // Which game to play comes from the address: play.html?game=penguin_slide.
+      // lib/data/games.js lists every game, from each one's tutorial.json.
+      const games = window.JGZT_GAMES || [];
+      const requested = new URLSearchParams(location.search).get("game");
+      const info = games.find((game) => game.id === requested) || games[0];
+      if (!info) throw new Error("No games listed. Run `bun scripts/build.ts` first.");
+      const gameKey = info.id;
       document.body.className = info.theme;
       document.title = info.title;
       document.querySelector("[data-title]").textContent = info.title;
       document.querySelector("[data-help]").textContent = info.help;
-      document.querySelector("[data-tutorial-link]").href = info.tutorial;
+      document.querySelector("[data-tutorial-link]").href = info.page;
 
       // The game's data file calls JGZT.register(...) with its art and code.
       window.JGZT = {
@@ -145,6 +129,8 @@
       }
 
       function start(data) {
+        // Every picture loads before the first frame, so the poster is complete.
+        const preload = Object.keys(data.assets).filter((path) => path.startsWith("images/"));
         const canvas = document.createElement("canvas");
         stage.prepend(canvas);
         let handle;
@@ -152,6 +138,7 @@
           handle = JGZ.run(data.steps.final, {
             canvas,
             assetUrls: data.assets,
+            preload,
             // The same storage scope as the tutorial, so progress is shared.
             projectId: `jgzt-${gameKey}`,
             keyboardTarget: stage,
@@ -179,6 +166,7 @@
           JGZ.run(data.steps.final, {
             canvas: live,
             assetUrls: data.assets,
+            preload,
             projectId: `jgzt-${gameKey}`,
             keyboardTarget: stage,
           });

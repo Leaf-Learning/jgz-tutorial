@@ -79,7 +79,7 @@
   <body class="theme-space" data-game="planet_putt" data-tutorial="Planet Putt">
     <main class="page">
       <section class="hero">
-        <div class="hero-kicker">🪐 Tutorial 3 of 3 · Space physics</div>
+        <div class="hero-kicker">🪐 Tutorial 3 · Space physics</div>
         <h1>Planet <span class="pop">Putt</span></h1>
         <p class="hero-lede">
           Mini-golf among the stars. You'll build a game where planets pull the ball with gravity, bounce it off their
@@ -155,7 +155,9 @@
           </li>
           <li>
             In <code class="ref" data-match="function drawSky">drawSky()</code>, <code>for (const star of stars)</code> visits every
-            star in the list, one at a time, and draws a little circle for it.
+            star in the list, one at a time, and draws a little circle for it with
+            <code class="ref" data-match="screen.draw.filledCircle">screen.draw.filledCircle</code>, which takes the
+            middle as a list, <code>[x, y]</code>.
           </li>
         </ul>
         <div class="tweak" data-name="STAR_COUNT" data-min="0" data-max="400" data-label="How many stars?" data-icon="✨"></div>
@@ -437,7 +439,11 @@ planets.push(makePlanet(560, 340, 45, "green"));</pre>
             Shrinking both keeps the direction exactly the same, only shorter.
           </li>
           <li>
-            <code class="ref" data-match="function drawAim">drawAim</code> draws the aiming arrow. The arrowhead uses
+            <code class="ref" data-match="function drawAim">drawAim</code> draws the aiming arrow with
+            <code class="ref" data-match="screen.draw.line(ball.pos">screen.draw.line</code> (from, to, colour, thickness).
+            <code class="ref" data-match="Math.hypot">Math.hypot(a, b)</code> is Pythagoras in one go: the same
+            <code>√(a² + b²)</code> as in the gravity step, here giving the shot's speed (pink means nearly full power). The
+            arrowhead uses
             <code>Math.atan2</code>, <code>Math.cos</code> and <code>Math.sin</code> to turn the arrow into an angle and back. You don't
             need to understand those yet: they're the standard recipe for "draw an arrowhead".
           </li>
@@ -788,8 +794,9 @@ planets.push(makePlanet(560, 340, 45, "green"));</pre>
             4-pointed star from 8 points, and the soft clouds are see-through circles stacked on top of each other.
           </li>
           <li>
-            <strong>Standing tall.</strong> <code class="ref" data-match="function standUp">standUp</code> uses
-            <code>angleTo</code> to stand the ball upright on whatever planet it lands on, like a tiny astronaut.
+            <strong>Standing tall.</strong> <code class="ref" data-match="function standUp">standUp</code> asks each planet
+            how far away the ball is with <code>distanceTo</code> (Pythagoras again, built into every Actor), then uses
+            <code>angleTo</code> to stand the ball upright on the planet it's touching, like a tiny astronaut.
           </li>
           <li>
             <strong>A title screen</strong> is just one more state, <code class="ref" data-match='let state = "title"'>"title"</code>.

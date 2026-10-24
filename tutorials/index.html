@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Make Games</title>
-    <meta name="description" content="Three playful, hands-on tutorials that teach total beginners to program by building real games with js-game-zero." />
+    <meta name="description" content="Playful, hands-on tutorials that teach total beginners to program by building real games with js-game-zero." />
     <link rel="stylesheet" href="lib/tutorial.css" />
     <style>
       .hub-hero {
@@ -79,22 +79,6 @@
         color: #2b2140;
         font: 600 0.85rem/1 var(--font-display);
       }
-      .art-night {
-        background:
-          radial-gradient(circle at 276px 142px, rgba(255, 244, 207, 0.3) 0 40px, transparent 80px),
-          linear-gradient(#0d0a24, #3a2b6e);
-      }
-      .art-ice {
-        background:
-          repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0 2px, transparent 2px 22px),
-          linear-gradient(#bfe6ff, #e8f6ff);
-      }
-      .art-space {
-        background:
-          radial-gradient(circle at 20% 30%, rgba(255, 111, 181, 0.35), transparent 40%),
-          radial-gradient(circle at 80% 70%, rgba(94, 224, 255, 0.3), transparent 45%),
-          #0e0c22;
-      }
       .card-body {
         flex: 1;
         display: flex;
@@ -164,8 +148,8 @@
         <div class="hero-kicker">🕹 Learn to code by making games</div>
         <h1>Make <span class="pop">real</span> games</h1>
         <p class="hero-lede">
-          Three playful tutorials for people who have never programmed before. Each one builds a complete, cute little game
-          from an empty screen, one small step at a time, right here in your browser.
+          Playful tutorials for people who have never programmed before. Each one builds a complete, cute little game from
+          an empty screen, one small step at a time, right here in your browser.
         </p>
         <ul class="hero-meta">
           <li>🌱 No experience needed</li>
@@ -174,77 +158,7 @@
         </ul>
       </section>
 
-      <div class="cards">
-        <article class="card" data-game="firefly_flash">
-          <div class="card-art art-night" data-art="images/firefly_lit_1.svg 46 70 56|images/firefly_1.svg 170 40 48|images/moon.svg 230 96 92">
-            <span class="card-number">Tutorial 1</span>
-          </div>
-          <div class="card-body">
-            <h2>Firefly Flash</h2>
-            <div class="card-tag">One click, one flash, one big chain reaction.</div>
-            <ul class="chips">
-              <li>🎨 Drawing</li>
-              <li>🔁 The game loop</li>
-              <li>📦 Variables</li>
-              <li>🧺 Lists &amp; loops</li>
-              <li>🤔 if</li>
-              <li>🎵 Sound</li>
-              <li>🏆 Levels</li>
-            </ul>
-            <div class="card-progress" data-progress></div>
-            <div class="card-actions">
-              <a class="btn btn-primary" href="firefly-flash.html" data-start>Start learning →</a>
-              <a class="btn btn-soft" href="play.html?game=firefly_flash">▶ Play</a>
-            </div>
-          </div>
-        </article>
-
-        <article class="card" data-game="penguin_slide">
-          <div class="card-art art-ice" data-art="images/igloo.svg 200 66 140|images/penguin_happy.svg 64 72 100|images/fish.svg 168 34 56">
-            <span class="card-number">Tutorial 2</span>
-          </div>
-          <div class="card-body">
-            <h2>Penguin Slide</h2>
-            <div class="card-tag">An icy puzzle: once you start sliding, you can't stop!</div>
-            <ul class="chips">
-              <li>🧩 Grids</li>
-              <li>📝 Levels as text</li>
-              <li>🔄 while loops</li>
-              <li>⌨️ Keys &amp; swipes</li>
-              <li>✨ Smooth animation</li>
-              <li>↩️ Undo &amp; saving</li>
-            </ul>
-            <div class="card-progress" data-progress></div>
-            <div class="card-actions">
-              <a class="btn btn-primary" href="penguin-slide.html" data-start>Start learning →</a>
-              <a class="btn btn-soft" href="play.html?game=penguin_slide">▶ Play</a>
-            </div>
-          </div>
-        </article>
-
-        <article class="card" data-game="planet_putt">
-          <div class="card-art art-space" data-art="images/planet_ringed.svg 196 28 140|images/wormhole.svg 92 104 70|images/ball_happy.svg 40 46 52|images/planet_pink.svg 128 8 60">
-            <span class="card-number">Tutorial 3</span>
-          </div>
-          <div class="card-body">
-            <h2>Planet Putt</h2>
-            <div class="card-tag">Mini-golf in space, where planets bend every shot.</div>
-            <ul class="chips">
-              <li>🚀 Velocity</li>
-              <li>🌍 Gravity</li>
-              <li>🖱️ Drag to aim</li>
-              <li>🏓 Bouncing</li>
-              <li>🔮 Predicting paths</li>
-              <li>⛳ Levels as data</li>
-            </ul>
-            <div class="card-progress" data-progress></div>
-            <div class="card-actions">
-              <a class="btn btn-primary" href="planet-putt.html" data-start>Start learning →</a>
-              <a class="btn btn-soft" href="play.html?game=planet_putt">▶ Play</a>
-            </div>
-          </div>
-        </article>
-      </div>
+      <div class="cards" data-cards></div>
 
       <h2 class="section-title">How the tutorials work</h2>
       <div class="how">
@@ -264,8 +178,16 @@
       </footer>
     </main>
 
+    <script src="lib/data/games.js"></script>
     <script>
-      // Progress: each tutorial page saves its list of items and the ones done.
+      // One card per game in lib/data/games.js, which scripts/build.ts makes
+      // from each game's tutorial.json.
+      function h(tag, attrs = {}, ...children) {
+        const node = document.createElement(tag);
+        for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+        node.append(...children);
+        return node;
+      }
       function read(key, fallback) {
         try {
           const raw = localStorage.getItem(key);
@@ -274,44 +196,69 @@
           return fallback;
         }
       }
-      for (const card of document.querySelectorAll(".card")) {
-        const game = card.dataset.game;
-        const items = read(`jgzt:${game}:items`, []);
-        const done = new Set(read(`jgzt:${game}:progress`, []));
-        const box = card.querySelector("[data-progress]");
-        if (!items.length || !items.some((item) => done.has(item))) {
-          box.textContent = "Not started yet";
-          continue;
-        }
-        const percent = Math.round((items.filter((item) => done.has(item)).length / items.length) * 100);
-        box.innerHTML = `${percent === 100 ? "Finished! 🎉" : `${percent}% done`}<div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>`;
-        if (percent < 100) card.querySelector("[data-start]").textContent = "Continue →";
-      }
 
-      // Card art: each tutorial's own sprites, loaded from its data file.
-      // data-art is "asset x y width|asset x y width|…"
+      const cards = document.querySelector("[data-cards]");
+      const games = window.JGZT_GAMES || [];
+      games.forEach((game, index) => {
+        const art = h("div", { class: "card-art" }, h("span", { class: "card-number" }, `Tutorial ${index + 1}`));
+        art.style.background = game.card?.background || "var(--card-2)";
+        const start = h("a", { class: "btn btn-primary", href: game.page }, "Start learning →");
+        const progressBox = h("div", { class: "card-progress" });
+        cards.append(
+          h(
+            "article",
+            { class: "card", "data-game": game.id },
+            art,
+            h(
+              "div",
+              { class: "card-body" },
+              h("h2", {}, game.title),
+              h("div", { class: "card-tag" }, game.tagline),
+              h("ul", { class: "chips" }, ...(game.topics || []).map((topic) => h("li", {}, topic))),
+              progressBox,
+              h(
+                "div",
+                { class: "card-actions" },
+                start,
+                h("a", { class: "btn btn-soft", href: `play.html?game=${encodeURIComponent(game.id)}` }, "▶ Play"),
+              ),
+            ),
+          ),
+        );
+
+        // Progress: each tutorial page saves its list of items and the ones done.
+        const items = read(`jgzt:${game.id}:items`, []);
+        const done = new Set(read(`jgzt:${game.id}:progress`, []));
+        if (!items.length || !items.some((item) => done.has(item))) {
+          progressBox.textContent = "Not started yet";
+        } else {
+          const percent = Math.round((items.filter((item) => done.has(item)).length / items.length) * 100);
+          progressBox.append(
+            percent === 100 ? "Finished! 🎉" : `${percent}% done`,
+            h("div", { class: "progress-track" }, h("div", { class: "progress-fill", style: `width:${percent}%` })),
+          );
+          if (percent < 100) start.textContent = "Continue →";
+        }
+
+        // Card art: the game's own sprites, loaded from its data file.
+        const script = document.createElement("script");
+        script.src = `lib/data/${game.id}.js`;
+        document.body.append(script);
+      });
+
       window.JGZT = {
-        register(name, data) {
-          const art = document.querySelector(`.card[data-game="${name}"] .card-art`);
-          if (!art || !art.dataset.art) return;
-          for (const spec of art.dataset.art.split("|")) {
-            const [path, x, y, width] = spec.trim().split(/\s+/);
+        register(id, data) {
+          const game = games.find((entry) => entry.id === id);
+          const art = document.querySelector(`.card[data-game="${id}"] .card-art`);
+          if (!game || !art) return;
+          for (const [path, x, y, width] of game.card?.sprites || []) {
             if (!data.assets[path]) continue;
-            const img = document.createElement("img");
-            img.src = data.assets[path];
-            img.alt = "";
-            img.style.left = `${x}px`;
-            img.style.top = `${y}px`;
-            img.style.width = `${width}px`;
+            const img = h("img", { src: data.assets[path], alt: "" });
+            Object.assign(img.style, { left: `${x}px`, top: `${y}px`, width: `${width}px` });
             art.append(img);
           }
         },
       };
-      for (const game of ["firefly_flash", "penguin_slide", "planet_putt"]) {
-        const script = document.createElement("script");
-        script.src = `lib/data/${game}.js`;
-        document.body.append(script);
-      }
     </script>
   </body>
 </html>

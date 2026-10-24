@@ -12,6 +12,7 @@ page. Pages open straight from disk; nothing needs a server.
 | `tutorial.js`            | The framework (`window.JGZT`).                                         |
 | `tutorial.css`           | Shared styles and the four themes.                                     |
 | `data/<game>.js`         | Generated: the game's images as data URLs + every step's code.         |
+| `data/games.js`          | Generated: every game's `tutorial.json`, for the hub and `play.html`.  |
 
 Step code lives in `tutorials/steps/<game>/NN-name.js`, each one a complete,
 runnable `main.js`. The finished `games/<game>/main.js` is always added as the
@@ -97,7 +98,9 @@ JGZT.challenge("moon-left", (game) => {
 ```
 
 **Code reference** — `<code class="ref">clampIp</code>` (or `data-match="…"`,
-or `data-lines="5-7"`) highlights matching lines on hover/focus.
+or `data-lines="5-7"`) highlights matching lines on hover/focus. A match is a
+plain substring of a single line: every line containing it lights up, and a
+needle spanning two lines matches nothing.
 
 Refs, tweaks and challenges find their cell the same way: `data-cell="KEY"`
 if given; otherwise, inside a `.step`, the nearest code cell above them in
@@ -116,17 +119,38 @@ game's images with their asset names.
 
 **Widgets** — page-specific interactive figures: a `.widget` box with
 `.widget-title`, `.widget-sub`, a `<canvas>`, `.widget-controls`, `.readout`.
-Write their code in the page's own `<script>`.
+Write their code in the page's own `<script>`, with the helpers below:
+
+```js
+const W = 760, H = 240;                       // the widget's own units
+const canvas = document.querySelector("#tongue-lab canvas");
+const ctx = JGZT.setupCanvas(canvas, W, H);   // sharp on every screen
+JGZT.onDrag(canvas, W, H, ([x, y], phase) => { … draw(); });
+ctx.fillStyle = JGZT.themeColor("--accent");
+const frog = new Image();                     // the game's own art
+frog.src = JGZT.games.frog_feast.assets["images/frog_idle.svg"];
+frog.onload = draw;
+```
 
 ## JavaScript API
 
-`JGZT.cell(idOrStepKey)` → the cell (`.code`, `.setCode(code)`, `.run()`,
-`.view()`), `JGZT.on("run" | "first-run" | "stop" | "change" | "challenge" | "complete", fn)`,
+`JGZT.cell(idOrStepKey)` → the cell (`.code`, `.original`, `.setCode(code)`,
+`.run()`, `.view()`), `JGZT.on("run" | "first-run" | "stop" | "change" | "challenge" | "complete", fn)`,
 `JGZT.celebrate(element)`, `JGZT.sfx.success()`, `JGZT.highlight(code)`,
-`JGZT.downloadProject(code)`, `JGZT.store.get/set`.
+`JGZT.downloadProject(code)`, `JGZT.store.get/set`,
+`JGZT.games[<game>].assets` (asset path → data URL), and the widget helpers
+`JGZT.setupCanvas`, `JGZT.pointerAt`, `JGZT.onDrag`, `JGZT.themeColor`.
 
 ## Checks
 
 - `bun scripts/check-steps.ts [game]` — runs every step through `jgz test`.
 - `bun scripts/check-tutorials.ts [page.html] [--shots dir]` — opens each page
-  in Chromium, runs every cell, and fails on errors.
+  in Chromium, runs every cell, and fails on errors, refs that match nothing,
+  leftover TODOs, and sideways scrolling at phone width.
+- `bun scripts/check-challenges.ts [game]` — applies each model solution in
+  `tests/challenges/<game>.js` and expects its challenge to pass (and not to
+  pass before the change).
+- `bun scripts/syntax-report.ts <game>` — lists the syntax and engine calls
+  each step uses for the first time, and flags the ones the page never
+  mentions in inline code (tutorials listed under `after` in `tutorial.json`
+  count as already taught).

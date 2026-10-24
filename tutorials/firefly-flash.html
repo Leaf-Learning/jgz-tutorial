@@ -151,7 +151,7 @@
     <main class="page">
       <!-- ============================================================ -->
       <section class="hero">
-        <div class="hero-kicker">✨ Tutorial 1 of 3 · Your very first game</div>
+        <div class="hero-kicker">✨ Tutorial 1 · Your very first game</div>
         <h1>Firefly <span class="pop">Flash</span></h1>
         <p class="hero-lede">
           Build a cozy chain-reaction game from a completely empty screen, one small step at a time. No experience
@@ -620,8 +620,10 @@ const MAX_SPEED = 20;</pre>
             <p>
               The stars now shimmer. <code class="ref" data-match="Math.sin(time * 2">Math.sin</code> gives a number that swings
               smoothly between −1 and 1 as time goes on, like a wave. <code>150 + 100 × that</code> swings between 50 and 250, and
-              we use it as each star's see-through-ness. Each star starts at a different point of the wave
-              (<code>star.twinkle</code>), so they don't all blink together.
+              we use it as each star's see-through-ness (<code>Math.round</code> rounds it to a whole number for <code>rgb</code>).
+              Each star starts at a different point of the wave, so they don't all blink together:
+              <code class="ref" data-match="twinkle: Math.random() * 6">twinkle: Math.random() * 6</code> picks a random start.
+              <code>Math.random()</code> gives a random fraction between 0 and 1, so times 6 it's anywhere from 0 to 6.
             </p>
           </div>
         </div>
@@ -667,11 +669,18 @@ const MAX_SPEED = 20;</pre>
             runs its code when there <em>is</em> one.
           </li>
           <li>Each frame, <code>update</code> makes the spark older (<code>spark.age += dt</code>) and works out its size. Once it's older than <code>FLASH_TIME</code>, it's set back to <code>null</code>: gone.</li>
+          <li>
+            <code class="ref" data-match="function drawLight">drawLight</code> paints a soft pool of light: three see-through
+            circles, biggest first, then a thin ring around the edge. The ring uses
+            <code class="ref" data-match="screen.draw.circle">screen.draw.circle</code>, which draws only an outline, while
+            <code>screen.circle</code> always fills.
+          </li>
         </ul>
         <p>
           The size comes from <code class="ref" data-match="function flashRadius">flashRadius(age)</code>, a function that
           <em>answers a question</em>: "how big is a flash that is this many seconds old?" It checks which part of its life the
-          flash is in, and <code>return</code>s the answer. Drag through time on this graph to see it:
+          flash is in, and <code>return</code>s the answer. At the end, <code>Math.max(0, …)</code> picks the bigger of two
+          numbers, so the size never drops below zero. Drag through time on this graph to see it:
         </p>
         <div class="widget" id="flash-graph">
           <div class="widget-title">📈 A flash's life</div>
@@ -735,7 +744,9 @@ const MAX_SPEED = 20;</pre>
           <li>
             Each firefly now has a <code class="ref" data-match='fly.state = "drifting"'>state</code>: <code>"drifting"</code>, then
             <code>"flashing"</code>, then <code>"done"</code>. <code>===</code> asks "are these exactly equal?", and
-            <code>&amp;&amp;</code> means "and": both sides must be true.
+            <code>&amp;&amp;</code> means "and": both sides must be true. In
+            <code class="ref" data-match='} else if (fly.state === "flashing")'>else if</code>, <code>else</code> means
+            "otherwise": a drifting firefly moves, <em>otherwise</em>, if it's flashing, it glows.
           </li>
           <li>
             <code class="ref" data-match="function touchesLight">touchesLight(fly)</code> returns <code>true</code> or
@@ -885,7 +896,8 @@ const MAX_SPEED = 20;</pre>
           <li>
             <code class="ref" data-match="function onMouseDown">onMouseDown</code> is now a chain of <code>if … else if …</code>:
             it checks the state and does the right thing. The click only makes a spark in the <code>"aiming"</code> state, and
-            that switches the state to <code>"chain"</code>, so you can't click twice.
+            that switches the state to <code>"chain"</code>, so you can't click twice. <code>||</code> means "or": a click on
+            the title <em>or</em> the finished screen starts from night 1.
           </li>
           <li><code class="ref" data-match="function startNight">startNight()</code> fills the sky with fresh fireflies and resets <code>lit</code> and <code>spark</code>.</li>
           <li>
@@ -895,7 +907,11 @@ const MAX_SPEED = 20;</pre>
             every light is out (<code>!</code> means "not").
           </li>
           <li><code class="ref" data-match="function endNight">endNight()</code> compares <code>lit</code> with the goal (<code>&gt;=</code> means "at least") and picks the next state.</li>
-          <li><code class="ref" data-match="function write">write()</code> is our own helper for centred text, so drawing words takes one short line each time.</li>
+          <li>
+            <code class="ref" data-match="function write">write()</code> is our own helper for centred text, so drawing words
+            takes one short line each time. Inside, <code class="ref" data-match="screen.draw.text(text">screen.draw.text</code>
+            takes its settings as an object: where its <code>center</code> goes, its <code>size</code> and its <code>color</code>.
+          </li>
         </ul>
         <div class="quiz" data-id="q-lost" data-answer="c">
           <p>The game is in the <code>"lost"</code> state and you click. What happens?</p>

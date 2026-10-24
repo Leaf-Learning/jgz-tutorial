@@ -625,6 +625,10 @@
         handle = JGZ.run(code, {
           canvas,
           assetUrls: this.game.assets,
+          // Load every picture before the first frame. A picture first drawn
+          // with screen.blit would otherwise arrive late and land on top of
+          // whatever was drawn after it, which spoils one-frame posters.
+          preload: Object.keys(this.game.assets).filter((path) => path.startsWith("images/")),
           projectId: `jgzt-${pageKey}`,
           keyboardTarget: this.stage,
           diagnostics: (d) => this.diagnostic(d),
@@ -947,6 +951,8 @@
   };
 
   const challenges = [];
+  // scripts/check-challenges.ts reads these to find each challenge's cell.
+  JGZT.challenges = challenges;
 
   function setupChallenge(root) {
     const id = root.dataset.id;
@@ -1474,6 +1480,49 @@
   /* ------------------------------------------------------------------ *
    * Boot
    * ------------------------------------------------------------------ */
+
+  /* ------------------------------------------------------------------ *
+   * Widget helpers: sharp canvases, pointer positions and drags, in the
+   * widget's own logical units (so drawing code never thinks in pixels).
+   * ------------------------------------------------------------------ */
+
+  /** Sizes a canvas for crisp drawing at width × height units; returns its 2D context. */
+  JGZT.setupCanvas = (canvas, width, height) => {
+    const ratio = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return ctx;
+  };
+
+  /** Where a pointer event is on the canvas, in its width × height units. */
+  JGZT.pointerAt = (canvas, event, width, height) => {
+    const box = canvas.getBoundingClientRect();
+    return [((event.clientX - box.left) / box.width) * width, ((event.clientY - box.top) / box.height) * height];
+  };
+
+  /** Calls handler(point, "down" | "move" | "up") as a mouse, pen or finger drags. Return false on "down" to ignore that press. */
+  JGZT.onDrag = (canvas, width, height, handler) => {
+    let active = false;
+    canvas.addEventListener("pointerdown", (event) => {
+      active = handler(JGZT.pointerAt(canvas, event, width, height), "down") !== false;
+      if (active) canvas.setPointerCapture(event.pointerId);
+    });
+    canvas.addEventListener("pointermove", (event) => {
+      if (active) handler(JGZT.pointerAt(canvas, event, width, height), "move");
+    });
+    const end = (event) => {
+      if (!active) return;
+      active = false;
+      handler(JGZT.pointerAt(canvas, event, width, height), "up");
+    };
+    canvas.addEventListener("pointerup", end);
+    canvas.addEventListener("pointercancel", end);
+  };
+
+  /** A CSS colour from the page's theme, like JGZT.themeColor("--accent"). */
+  JGZT.themeColor = (name) => getComputedStyle(document.body).getPropertyValue(name).trim();
 
   JGZT.start = () => {
     pageKey = document.body.dataset.game;

@@ -1,0 +1,25 @@
+{
+  "title": "Penguin Slide",
+  "page": "penguin-slide.html",
+  "order": 2,
+  "after": ["firefly_flash"],
+  "theme": "theme-ice",
+  "tagline": "An icy puzzle: once you start sliding, you can't stop!",
+  "help": "Arrow keys or WASD (or swipe) to slide. The penguin keeps going until something stops it. Eat every fish! R restarts, Z undoes.",
+  "topics": [
+    "🧩 Grids",
+    "📝 Levels as text",
+    "🔄 while loops",
+    "⌨️ Keys & swipes",
+    "✨ Smooth animation",
+    "↩️ Undo & saving"
+  ],
+  "card": {
+    "background": "repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0 2px, transparent 2px 22px), linear-gradient(#bfe6ff, #e8f6ff)",
+    "sprites": [
+      ["images/igloo.svg", 200, 66, 140],
+      ["images/penguin_happy.svg", 64, 72, 100],
+      ["images/fish.svg", 168, 34, 56]
+    ]
+  }
+}
