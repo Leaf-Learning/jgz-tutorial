@@ -25,10 +25,26 @@ Each tutorial has:
 
 `tutorials/play.html?game=penguin_slide` plays any finished game full-size.
 
+## Make your own
+
+Have a game idea? Open this folder in [Claude Code](https://claude.com/claude-code) and say
+something like:
+
+> Make a tutorial for my game idea: a frog that catches bugs with its tongue before the sun sets.
+
+or run **`/new-game-tutorial`**. The skill (in `skills/new-game-tutorial/`) shapes the
+idea into a beginner-sized game with you. Then it builds the game with cute art, carves it into
+steps, writes the tutorial page with challenges, quizzes and widgets, and runs every check. The
+new tutorial shows up on the hub next to these three.
+
+Building one by hand? `bun run new frog_feast "Frog Feast"` sets up all the files, and the
+skill's guides in `skills/new-game-tutorial/references/` describe the house style.
+
 ## Layout
 
 ```
-games/<game>/            each game as a jgz project: main.js, images/, fonts/
+games/<game>/            each game as a jgz project: main.js, images/, fonts/,
+                         plus tutorial.json (its hub card and play-page details)
 tutorials/
   index.html             the hub
   <game>.html            the three tutorials
@@ -37,8 +53,10 @@ tutorials/
   lib/                   the tutorial framework (see lib/README.md),
                          the engine (jgz.js) and generated data bundles
 tests/                   play-through tests that drive each game with jgz
-scripts/                 build, checks, solvers and the Firefly tuner
-shared/fonts/            Fredoka (SIL OFL), used by all three games
+tests/challenges/        a model solution for every challenge on every page
+scripts/                 build, checks, scaffolding, solvers and the Firefly tuner
+shared/fonts/            Fredoka (SIL OFL), used by all the games
+skills/                  the new-game-tutorial skill (.claude/skills links here)
 ```
 
 The last step of each tutorial *is* `games/<game>/main.js`, so a tutorial
@@ -53,10 +71,14 @@ Needs [Bun](https://bun.sh) and a js-game-zero checkout next to this folder
 bun install                         # Playwright, for the checks
 bun run build                       # copy the engine + bundle art and steps into tutorials/lib
 bun run jgz -- test games/planet_putt   # drive a game with the jgz CLI
+bun run new <game_id> "<Title>"     # set up a new game and tutorial
 
-bun run test:games                  # play-through tests for all three games (via jgz)
+bun run check                       # everything below, in order
+bun run test:games                  # play-through tests for every game (via jgz)
 bun run check:steps                 # run every tutorial step through jgz
-bun run check:tutorials             # open every page in Chromium and run every cell
+bun run check:tutorials             # open every page in Chromium: cells, refs, phone width, TODOs
+bun run check:challenges            # solve every challenge with its model solution
+bun scripts/syntax-report.ts <game> # syntax each step uses first, and what the page never mentions
 bun scripts/solve-penguin.ts        # prove every Penguin level solvable at par
 bun scripts/tune-firefly.ts         # re-measure Firefly Flash's night goals
 ```
