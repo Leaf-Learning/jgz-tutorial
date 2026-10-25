@@ -1,0 +1,5 @@
+# `bun run format` keeps the games, steps, scripts and tests in one style.
+# Prose and the scaffold's templates stay as written: Prettier reflows
+# Markdown, and the templates hold {{placeholders}} for `bun run new`.
+*.md
+scripts/templates/
