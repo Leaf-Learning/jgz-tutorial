@@ -128,9 +128,9 @@
         help.classList.add("play-error");
       }
 
-      function start(data) {
-        // Every picture loads before the first frame, so the poster is complete.
-        const preload = Object.keys(data.assets).filter((path) => path.startsWith("images/"));
+      async function start(data) {
+        // Every picture decoded before the game's code runs.
+        const preloadedAssets = { images: await JGZ.loadImages(data.assets) };
         const canvas = document.createElement("canvas");
         stage.prepend(canvas);
         let handle;
@@ -138,7 +138,7 @@
           handle = JGZ.run(data.steps.final, {
             canvas,
             assetUrls: data.assets,
-            preload,
+            preloadedAssets,
             // The same storage scope as the tutorial, so progress is shared.
             projectId: `jgzt-${gameKey}`,
             keyboardTarget: stage,
@@ -166,7 +166,7 @@
           JGZ.run(data.steps.final, {
             canvas: live,
             assetUrls: data.assets,
-            preload,
+            preloadedAssets,
             projectId: `jgzt-${gameKey}`,
             keyboardTarget: stage,
           });

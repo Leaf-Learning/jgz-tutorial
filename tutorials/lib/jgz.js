@@ -1,3 +1,30 @@
+/*!
+ * @js-game-zero/browser-runtime 0.2.0
+ * https://github.com/Leaf-Learning/js-game-zero
+ *
+ * MIT License
+ *
+ * Copyright (c) 2026 Taha Rafiq
+ * Easing equations copyright (c) 2001 Robert Penner
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -1437,6 +1464,12 @@
       ...options,
       loadAsset: options.loadAsset ?? ((url) => loadBrowserImage(url, (image) => new ImageSurface(image)))
     });
+  }
+  async function loadImages(assetUrls) {
+    const loader = createImageLoader({ assetUrls });
+    const names = Object.keys(assetUrls).filter((path) => path.startsWith("images/")).map((path) => path.slice("images/".length));
+    const loaded = await Promise.all(names.map((name) => loader.load(name).then((surface) => [name, surface], () => null)));
+    return Object.fromEntries(loaded.filter((entry) => entry !== null));
   }
   function createSoundLoader(options = {}) {
     return createAssetLoader({
@@ -3113,23 +3146,19 @@
     }
     blit(image, pos) {
       const at = rectFromBlitTarget(pos);
+      const surface = typeof image === "string" ? this.imageLoader.get(image) : image;
+      if (!surface) {
+        return this.imageLoader.load(image).then(() => {
+          return;
+        });
+      }
       recordDrawn(this, {
         kind: "image",
         image: typeof image === "string" ? image : "",
         x: Array.isArray(at) ? at[0] : at.left,
         y: Array.isArray(at) ? at[1] : at.top
       });
-      if (typeof image === "string") {
-        const cached = this.imageLoader.get(image);
-        if (cached) {
-          this.drawSurface(cached, pos);
-          return;
-        }
-        return this.imageLoader.load(image).then((surface) => {
-          this.drawSurface(surface, pos);
-        });
-      }
-      this.drawSurface(image, pos);
+      this.drawSurface(surface, pos);
     }
     circle(x, y, radius, color = "white") {
       requireShortForm(shortForms.circle, arguments);
@@ -3280,7 +3309,10 @@
       recordDrawn(this, {
         kind: "text",
         text: String(text),
-        ...pos ? { x: pos[0], y: pos[1] } : {},
+        x: layout.topLeft[0],
+        y: layout.topLeft[1],
+        width: layout.boxWidth,
+        height: layout.boxHeight,
         ...options.color === undefined ? {} : { color: colorOf(options.color) }
       });
       renderTextLayout(this.context, layout, options);
@@ -3294,6 +3326,8 @@
         text: String(text),
         x: rect.left,
         y: rect.top,
+        width: rect.width,
+        height: rect.height,
         ...options.color === undefined ? {} : { color: colorOf(options.color) }
       });
       const fit = fitTextboxFontSize(this.context, text, rect, options);
@@ -7665,7 +7699,12 @@
     "_native",
     "sizeSource",
     "positionSource",
-    "imageLoadPromise"
+    "imageLoadPromise",
+    "_images",
+    "_fps",
+    "_loop",
+    "animationStart",
+    "clockSource"
   ]);
   function serializeActor(actor, depth, ancestors) {
     let rect = null;
@@ -7845,6 +7884,7 @@
   // packages/core/src/host.ts
   var createSeededRandom2 = createSeededRandom;
   var getGameInspector2 = getGameInspector;
+  var loadImages2 = loadImages;
   var parseStatePath2 = parseStatePath;
   var serializeGameValue2 = serializeGameValue;
 
@@ -8008,6 +8048,7 @@
   var host = {
     createSeededRandom: createSeededRandom2,
     getGameInspector: getGameInspector2,
+    loadImages: loadImages2,
     parseStatePath: parseStatePath2,
     serializeGameValue: serializeGameValue2
   };

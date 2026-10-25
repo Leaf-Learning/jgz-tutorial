@@ -33,6 +33,11 @@
 
   JGZT.register = (key, data) => {
     games[key] = data;
+    // Every picture decoded once, for every run of every cell, so a game
+    // sees each image's size from its first line.
+    data.imagesReady = JGZ.loadImages(data.assets).then((images) => {
+      data.images = images;
+    });
   };
 
   /* ------------------------------------------------------------------ *
@@ -625,10 +630,8 @@
         handle = JGZ.run(code, {
           canvas,
           assetUrls: this.game.assets,
-          // Load every picture before the first frame. A picture first drawn
-          // with screen.blit would otherwise arrive late and land on top of
-          // whatever was drawn after it, which spoils one-frame posters.
-          preload: Object.keys(this.game.assets).filter((path) => path.startsWith("images/")),
+          // A run started before they're decoded loads them itself.
+          ...(this.game.images ? { preloadedAssets: { images: this.game.images } } : {}),
           projectId: `jgzt-${pageKey}`,
           keyboardTarget: this.stage,
           diagnostics: (d) => this.diagnostic(d),
@@ -652,6 +655,7 @@
     /** Draws the code's first frame without running it, as a poster. */
     async preview() {
       this.previewed = true;
+      await this.game.imagesReady;
       if (this.handle) return;
       // A poster run never hears the keyboard: it only draws a frame.
       const handle = this.start(this.code, { autostart: false, keyboardTarget: h("div") });

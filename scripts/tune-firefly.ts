@@ -18,6 +18,9 @@ const trials = Number(process.argv[2] ?? 10);
 const results = await page.evaluate(
   async ({ source, trials }) => {
     const assets = JGZT.games.firefly_flash.assets;
+    // Decoded before each game runs, so a lit firefly's picture never holds
+    // the frames this loop steps.
+    const images = await JGZ.loadImages(assets);
     const nights = [];
     for (let n = 0; n < 8; n++) {
       const bests = [],
@@ -37,10 +40,7 @@ const results = await page.evaluate(
                 keyboardTarget: canvas,
                 mouseReleaseTarget: canvas,
                 PIXEL_DENSITY: 1,
-                preload: [
-                  "images/firefly_lit_1.svg",
-                  "images/firefly_lit_2.svg",
-                ],
+                preloadedAssets: { images },
               },
             );
             await handle.ready;

@@ -75,10 +75,12 @@ storage, runtime). Things worth knowing up front:
   `actor.opacity`, `actor.angle`, `actor.scale`. You can add your own fields (`bug.speed = 40`).
 - **`animate(obj, { x: 300, scale: 1.2, duration: 0.4, tween: "bounceEnd", onFinished })`** works on
   any numeric field. `clock.schedule(fn, seconds)` runs something later.
-- **Images load late.** Outside the tutorial pages (in `jgz`, the sandbox, or a download), an image
-  first used after startup may take a frame or two to appear. Tutorial cells and `play.html` preload
-  every image, so posters are complete. Harnesses that step the game synchronously (simulators)
-  should pass `preload` too, or step across event-loop turns.
+- **Images are ready from the first line.** `jgz`, tutorial cells and `play.html` decode every image
+  before the game's code runs, so sizes and edge positions (`midBottom`) are right at the top level.
+  A script that runs the game itself (a simulator or tuner) should do the same:
+  `JGZ.run(source, { assetUrls, preloadedAssets: { images: await JGZ.loadImages(assetUrls) } })`.
+  Without that, an image first used later holds frames until it loads, and `handle.step()` does
+  nothing meanwhile.
 - **Randomness is seeded** in `jgz test --seed` and `JGZ.run({ seed })`: `Math.random`,
   `randomInt` and `randomChoice` repeat exactly, so tests can rely on layouts.
 - **Asset names:** lowercase letters, digits and underscores, starting with a letter. `fonts/`
