@@ -5,7 +5,7 @@
  * MIT License
  *
  * Copyright (c) 2026 Taha Rafiq
- * Easing equations copyright (c) 2001 Robert Penner
+ * Copyright (c) 2001 Robert Penner (easing equations)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -120,12 +120,12 @@
     buttonsFromBrowserButtons: () => buttonsFromBrowserButtons2,
     audioUnlock: () => audioUnlock2,
     assetUrl: () => assetUrl2,
-    animate: () => animate2,
+    animate: () => animate3,
     angleTo: () => angleTo2,
     ZRect: () => ZRect2,
     ValueError: () => ValueError2,
     ToneGenerator: () => ToneGenerator2,
-    Storage: () => Storage2,
+    Storage: () => Storage3,
     Screen: () => Screen2,
     Rect: () => Rect2,
     MusicPlayer: () => MusicPlayer2,
@@ -140,7 +140,7 @@
     Clock: () => Clock3,
     BrowserSoundAsset: () => BrowserSoundAsset2,
     AudioUnlockState: () => AudioUnlockState2,
-    Animation: () => Animation2,
+    Animation: () => Animation3,
     Actor: () => Actor2
   });
 
@@ -1713,14 +1713,17 @@
     return createLazyLoadedAsset(context);
   }
   function createLazySurface(context) {
-    context.load().catch(() => {
-      return;
+    let failure;
+    context.load().catch((error) => {
+      failure = { error };
     });
     const loaded = () => {
       const asset = context.get();
-      if (!asset)
-        throw new MissingAssetError(context.kind, context.requested);
-      return asset;
+      if (asset)
+        return asset;
+      if (failure)
+        throw failure.error;
+      throw new Error(`images.${context.requested} is still loading. Name it at the top level (let picture = images.${context.requested};) and the game's first frame waits for it.`);
     };
     const surface = {
       get source() {
@@ -2299,13 +2302,23 @@
   function dispatchHook(handler, args, order = Object.keys(args)) {
     if (!handler)
       return;
-    const parameters = getParameterNames(handler);
-    if (parameters.length === 1 && parameters[0] === "event") {
+    if (takesWholeEvent(handler)) {
       handler(args);
       return;
     }
-    const names = resolveHookParameters(parameters, order);
+    const names = resolveHookParameters(getParameterNames(handler), order);
     handler(...names.map((name) => name === undefined ? undefined : args[name]));
+  }
+  var wholeEventHooks = new WeakSet;
+  function markWholeEventHook(handler) {
+    wholeEventHooks.add(handler);
+    return handler;
+  }
+  function takesWholeEvent(handler) {
+    if (wholeEventHooks.has(handler))
+      return true;
+    const parameters = getParameterNames(handler);
+    return parameters.length === 1 && parameters[0] === "event";
   }
   function resolveHookParameters(declared, known) {
     const claimed = new Set(declared.filter((name) => known.includes(name)));
@@ -2636,10 +2649,10 @@
   }
 
   // packages/core/src/clock.ts
-  function requireCallback(callback, method) {
+  function requireCallback(callback, method, rest = ", 1") {
     if (typeof callback === "function")
       return;
-    throw new TypeError(`clock.${method} needs a function to call later, but got ${describeValue(callback)}. Give the function's name without brackets: clock.${method}(spawn, 1), not clock.${method}(spawn(), 1).`);
+    throw new TypeError(`clock.${method} needs a function to call later, but got ${describeValue(callback)}. Give the function's name without brackets: clock.${method}(spawn${rest}), not clock.${method}(spawn()${rest}).`);
   }
 
   class Clock {
@@ -2699,6 +2712,7 @@
       this.tickCallbacks = this.tickCallbacks.filter((event) => !event.canceled);
     }
     eachTick(callback) {
+      requireCallback(callback, "eachTick", "");
       this.tickCallbacks.push({ callback, canceled: false });
     }
     clear() {
@@ -2727,8 +2741,9 @@
       }
       this.tickCallbacks = this.tickCallbacks.filter((event2) => !event2.canceled);
       this.time = targetTime;
+      const firstLater = this.nextOrder;
       let event = this.nextDueEvent();
-      while (event && event.due <= this.time) {
+      while (event && event.due <= this.time && event.order < firstLater) {
         this.scheduled.splice(this.scheduled.indexOf(event), 1);
         if (!event.canceled) {
           this.active.add(event);
@@ -2915,910 +2930,6 @@
     gradient.addColorStop(0, normalizeColor(color));
     gradient.addColorStop(1, normalizeColor(gcolor));
     return gradient;
-  }
-
-  // packages/core/src/rendering.ts
-  var textPositionKeys = ["pos", ...rectPositionKeys];
-  var textOptionAliases = {
-    size: "fontsize",
-    minSize: "minFontsize",
-    outline: "owidth",
-    outlineColor: "ocolor",
-    shadowColor: "scolor",
-    gradientColor: "gcolor"
-  };
-  var textboxOptionKeys = new Set([
-    ...Object.keys(textOptionAliases),
-    ...rectPositionKeys,
-    "fontname",
-    "sysfontname",
-    "fontsize",
-    "minFontsize",
-    "bold",
-    "italic",
-    "underline",
-    "color",
-    "background",
-    "lineheight",
-    "align",
-    "strip",
-    "owidth",
-    "ocolor",
-    "shadow",
-    "scolor",
-    "gcolor",
-    "alpha",
-    "anchor",
-    "angle"
-  ]);
-  var textOptionKeys = new Set([
-    ...[...textboxOptionKeys].filter((key) => key !== "minFontsize" && key !== "minSize"),
-    "pos",
-    "top",
-    "left",
-    "bottom",
-    "right",
-    "centerX",
-    "centerY",
-    "width",
-    "widthem"
-  ]);
-  var shortForms = {
-    circle: {
-      call: "screen.circle(x, y, radius, color)",
-      numbers: ["x", "y", "radius"],
-      arity: 4,
-      lists: 'screen.circle takes x, y as two numbers, like screen.circle(200, 150, 25, "gold"). For an [x, y] list, use screen.draw.filledCircle([x, y], radius, color).',
-      extra: "screen.circle always fills, so it has no outline width. For an outline, use screen.draw.circle([x, y], radius, color, width)."
-    },
-    rect: {
-      call: "screen.rect(x, y, width, height, color)",
-      numbers: ["x", "y", "width", "height"],
-      arity: 5,
-      lists: 'screen.rect takes x, y, width, height as four numbers, like screen.rect(40, 40, 120, 60, "orange"). For a list or a Rect, use screen.draw.filledRect([x, y, width, height], color).',
-      extra: "screen.rect always fills, so it has no outline width. For an outline, use screen.draw.rect([x, y, width, height], color, width)."
-    },
-    triangle: {
-      call: "screen.triangle(x1, y1, x2, y2, x3, y3, color)",
-      numbers: ["x1", "y1", "x2", "y2", "x3", "y3"],
-      arity: 7,
-      lists: 'screen.triangle takes each corner as two numbers, like screen.triangle(160, 40, 120, 120, 200, 120, "lime"). For [x, y] lists, use screen.draw.filledPolygon([[x1, y1], [x2, y2], [x3, y3]], color).',
-      extra: "screen.triangle always fills, so it has no outline width. For an outline, use screen.draw.polygon([[x1, y1], [x2, y2], [x3, y3]], color, width)."
-    },
-    line: {
-      call: "screen.line(x1, y1, x2, y2, color, width)",
-      numbers: ["x1", "y1", "x2", "y2"],
-      arity: 6,
-      lists: 'screen.line takes each end as two numbers, like screen.line(20, 20, 200, 120, "white", 3). For [x, y] lists, use screen.draw.line([x1, y1], [x2, y2], color, width).',
-      extra: "screen.line takes at most six values: screen.line(x1, y1, x2, y2, color, width)."
-    }
-  };
-  var currentScreen = null;
-  var screenSizes = new WeakMap;
-  var densityAttribute = "data-jgz-density";
-  var densityRule = `:where(canvas[${densityAttribute}]) { width: var(--jgz-width); }`;
-  function resizeScreen(screen, width, height, density = 1) {
-    const canvas = screen.canvas;
-    const previous = screenSizes.get(screen);
-    const canvasWidth = Math.max(1, Math.round(width * density));
-    const canvasHeight = Math.max(1, Math.round(height * density));
-    const kept = previous?.width === width && previous.height === height && (canvas.width !== canvasWidth || canvas.height !== canvasHeight) ? copyCanvas(canvas) : null;
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    const size = { width, height, density, canvasWidth, canvasHeight };
-    screenSizes.set(screen, size);
-    applyDensityTransform(screen.context, size);
-    applyDensityCss(canvas, size);
-    if (kept)
-      screen.context.drawImage(kept, 0, 0, width, height);
-  }
-  function syncScreen(screen) {
-    const size = screenSizes.get(screen);
-    if (!size)
-      return;
-    const { canvas, context } = screen;
-    if (canvas.width !== size.canvasWidth || canvas.height !== size.canvasHeight) {
-      resizeScreen(screen, canvas.width === size.canvasWidth ? size.width : canvas.width, canvas.height === size.canvasHeight ? size.height : canvas.height, size.density);
-      return;
-    }
-    if (!isScaled(size) || typeof context.getTransform !== "function")
-      return;
-    const matrix = context.getTransform();
-    if (matrix.isIdentity)
-      applyDensityTransform(context, size);
-  }
-  function isScaled(size) {
-    return size.canvasWidth !== size.width || size.canvasHeight !== size.height;
-  }
-  function applyDensityTransform(context, size) {
-    if (!isScaled(size) || typeof context.setTransform !== "function")
-      return;
-    context.setTransform(size.canvasWidth / size.width, 0, 0, size.canvasHeight / size.height, 0, 0);
-  }
-  function applyDensityCss(canvas, size) {
-    const { style, ownerDocument: doc } = canvas;
-    if (!style || !doc || typeof canvas.setAttribute !== "function")
-      return;
-    if (!isScaled(size)) {
-      canvas.removeAttribute?.(densityAttribute);
-      style.removeProperty("--jgz-width");
-      return;
-    }
-    const root = canvas.getRootNode?.();
-    const parent = root && root.nodeType === 11 ? root : doc.head ?? null;
-    if (parent && !parent.querySelector(`style[${densityAttribute}]`)) {
-      const rule = doc.createElement("style");
-      rule.setAttribute(densityAttribute, "");
-      rule.textContent = densityRule;
-      parent.prepend(rule);
-    }
-    canvas.setAttribute(densityAttribute, "");
-    style.setProperty("--jgz-width", `${size.width}px`);
-  }
-  function copyCanvas(canvas) {
-    if (canvas.width === 0 || canvas.height === 0)
-      return null;
-    try {
-      const copy = typeof OffscreenCanvas === "function" ? new OffscreenCanvas(canvas.width, canvas.height) : canvas.ownerDocument?.createElement("canvas");
-      if (!copy)
-        return null;
-      copy.width = canvas.width;
-      copy.height = canvas.height;
-      const context = copy.getContext("2d");
-      if (!context)
-        return null;
-      context.drawImage(canvas, 0, 0);
-      return copy;
-    } catch {
-      return null;
-    }
-  }
-  var MAX_DRAWN = 200;
-  var drawnThings = new WeakMap;
-  function beginDrawn(screen) {
-    drawnThings.set(screen, []);
-  }
-  function drawnOn(screen) {
-    return drawnThings.get(screen) ?? [];
-  }
-  function recordDrawn(screen, thing) {
-    const list = drawnThings.get(screen);
-    if (list && list.length < MAX_DRAWN)
-      list.push(thing);
-  }
-  var colorOf = (color) => typeof color === "string" ? color : [...color];
-
-  class Screen {
-    canvas;
-    context;
-    imageLoader;
-    draw = {
-      line: (start, end, color, width = 1) => this.drawLine(start, end, color, width),
-      circle: (pos, radius, color, width = 1) => this.drawCircle(pos, radius, color, width),
-      filledCircle: (pos, radius, color) => this.drawCircle(pos, radius, color, 0, true),
-      polygon: (points, color, width = 1) => this.drawPolygon(points, color, width),
-      filledPolygon: (points, color) => this.drawPolygon(points, color, 0, true),
-      rect: (rect, color, width = 1) => this.drawRect(rect, color, width),
-      filledRect: (rect, color) => this.drawRect(rect, color, 0, true),
-      text: (text, posOrOptions, options) => this.drawText(text, posOrOptions, options),
-      textbox: (text, rect, options = {}) => this.drawTextbox(text, rect, options),
-      image: (image, pos) => this.blit(image, pos)
-    };
-    constructor(canvas, context, options = {}) {
-      const resolvedContext = context ?? canvas.getContext?.("2d");
-      if (!resolvedContext) {
-        throw new TypeError("Screen requires a Canvas 2D context.");
-      }
-      this.canvas = canvas;
-      this.context = resolvedContext;
-      this.imageLoader = options.imageLoader ?? images;
-      guardSpellings(this.draw, "screen.draw");
-    }
-    get width() {
-      return screenSizes.get(this)?.width ?? this.canvas.width;
-    }
-    get height() {
-      return screenSizes.get(this)?.height ?? this.canvas.height;
-    }
-    get density() {
-      return screenSizes.get(this)?.density ?? 1;
-    }
-    bounds() {
-      return new ZRect(0, 0, this.width, this.height);
-    }
-    clear() {
-      recordDrawn(this, { kind: "clear" });
-      withSavedCanvasState(this.context, () => {
-        this.context.globalAlpha = 1;
-        this.context.fillStyle = "black";
-        this.context.fillRect(0, 0, this.width, this.height);
-      });
-    }
-    fill(color, gcolor) {
-      recordDrawn(this, {
-        kind: "fill",
-        color: colorOf(color),
-        ...gcolor === undefined ? {} : { to: colorOf(gcolor) }
-      });
-      const style = gcolor === undefined ? normalizeColor(color) : verticalGradient(this.context, 0, this.height, color, gcolor);
-      this.context.fillStyle = style;
-      this.context.fillRect(0, 0, this.width, this.height);
-    }
-    blit(image, pos) {
-      const at = rectFromBlitTarget(pos);
-      const surface = typeof image === "string" ? this.imageLoader.get(image) : image;
-      if (!surface) {
-        return this.imageLoader.load(image).then(() => {
-          return;
-        });
-      }
-      recordDrawn(this, {
-        kind: "image",
-        image: typeof image === "string" ? image : "",
-        x: Array.isArray(at) ? at[0] : at.left,
-        y: Array.isArray(at) ? at[1] : at.top
-      });
-      this.drawSurface(surface, pos);
-    }
-    circle(x, y, radius, color = "white") {
-      requireShortForm(shortForms.circle, arguments);
-      this.drawCircle([x, y], radius, color, 0, true);
-    }
-    rect(x, y, width, height, color = "white") {
-      requireShortForm(shortForms.rect, arguments);
-      this.drawRect([x, y, width, height], color, 0, true);
-    }
-    triangle(x1, y1, x2, y2, x3, y3, color = "white") {
-      requireShortForm(shortForms.triangle, arguments);
-      this.drawPolygon([
-        [x1, y1],
-        [x2, y2],
-        [x3, y3]
-      ], color, 0, true);
-    }
-    line(x1, y1, x2, y2, color = "white", width = 1) {
-      requireShortForm(shortForms.line, arguments);
-      this.drawLine([x1, y1], [x2, y2], color, width);
-    }
-    text(text, x, y, color = "white", size = 24) {
-      requireTextShortForm(arguments);
-      this.drawText(String(text), [x, y], { color, fontsize: size });
-    }
-    drawSurface(surface, pos) {
-      const target = rectFromBlitTarget(pos);
-      const source = surface.source;
-      if (Array.isArray(target)) {
-        this.context.drawImage(source, target[0], target[1]);
-        return;
-      }
-      this.context.drawImage(source, target.left, target.top);
-    }
-    drawLine(start, end, color, width) {
-      const [startX, startY] = requirePoint(start, "start");
-      const [endX, endY] = requirePoint(end, "end");
-      recordDrawn(this, {
-        kind: "line",
-        x: startX,
-        y: startY,
-        x2: endX,
-        y2: endY,
-        color: colorOf(color)
-      });
-      withSavedCanvasState(this.context, () => {
-        this.context.strokeStyle = normalizeColor(color);
-        this.context.lineWidth = requirePositiveNumber(width, "width");
-        this.context.beginPath();
-        this.context.moveTo(startX, startY);
-        this.context.lineTo(endX, endY);
-        this.context.stroke();
-      });
-    }
-    drawCircle(pos, radius, color, width, filled = false) {
-      const [x, y] = requirePoint(pos, "pos");
-      const parsedRadius = requirePositiveNumber(radius, "radius");
-      recordDrawn(this, {
-        kind: "circle",
-        x,
-        y,
-        radius: parsedRadius,
-        color: colorOf(color),
-        filled
-      });
-      withSavedCanvasState(this.context, () => {
-        this.context.beginPath();
-        this.context.arc(x, y, parsedRadius, 0, Math.PI * 2);
-        if (filled) {
-          this.context.fillStyle = normalizeColor(color);
-          this.context.fill();
-        } else {
-          this.context.strokeStyle = normalizeColor(color);
-          this.context.lineWidth = requirePositiveNumber(width, "width");
-          this.context.stroke();
-        }
-      });
-    }
-    drawPolygon(points, color, width, filled = false) {
-      if (!Array.isArray(points) || points.length < 3) {
-        throw new TypeError("polygon requires at least three points.");
-      }
-      const parsed = points.map((point, index) => requirePoint(point, `points[${index}]`));
-      const first = parsed[0];
-      if (!first)
-        throw new TypeError("polygon requires at least three points.");
-      recordDrawn(this, {
-        kind: "polygon",
-        x: first[0],
-        y: first[1],
-        points: parsed.length,
-        color: colorOf(color),
-        filled
-      });
-      withSavedCanvasState(this.context, () => {
-        this.context.beginPath();
-        this.context.moveTo(first[0], first[1]);
-        for (const [x, y] of parsed.slice(1))
-          this.context.lineTo(x, y);
-        this.context.closePath();
-        if (filled) {
-          this.context.fillStyle = normalizeColor(color);
-          this.context.fill();
-        } else {
-          this.context.strokeStyle = normalizeColor(color);
-          this.context.lineWidth = requirePositiveNumber(width, "width");
-          this.context.stroke();
-        }
-      });
-    }
-    drawRect(rectLike, color, width, filled = false) {
-      const rect = new Rect(rectLike);
-      recordDrawn(this, {
-        kind: "rect",
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height,
-        color: colorOf(color),
-        filled
-      });
-      withSavedCanvasState(this.context, () => {
-        if (filled) {
-          this.context.fillStyle = normalizeColor(color);
-          this.context.fillRect(rect.left, rect.top, rect.width, rect.height);
-        } else {
-          this.context.strokeStyle = normalizeColor(color);
-          this.context.lineWidth = requirePositiveNumber(width, "width");
-          this.context.strokeRect(rect.left, rect.top, rect.width, rect.height);
-        }
-      });
-    }
-    drawText(text, posOrOptions, maybeOptions) {
-      let pos;
-      let given;
-      if (isPlainOptions(posOrOptions)) {
-        if (maybeOptions !== undefined) {
-          throw new TypeError('screen.draw.text takes its options once: either second, as in text("Hi", { center: [x, y] }), or third, after a position.');
-        }
-        given = posOrOptions;
-      } else {
-        pos = posOrOptions;
-        given = maybeOptions ?? {};
-      }
-      rejectUnknownOptions(given, textOptionKeys, "screen.draw.text");
-      const options = canonicalTextOptions(given, "screen.draw.text");
-      const layout = layoutText(this.context, text, pos, options);
-      recordDrawn(this, {
-        kind: "text",
-        text: String(text),
-        x: layout.topLeft[0],
-        y: layout.topLeft[1],
-        width: layout.boxWidth,
-        height: layout.boxHeight,
-        ...options.color === undefined ? {} : { color: colorOf(options.color) }
-      });
-      renderTextLayout(this.context, layout, options);
-    }
-    drawTextbox(text, rectLike, givenOptions) {
-      rejectUnknownOptions(givenOptions, textboxOptionKeys, "screen.draw.textbox");
-      const options = canonicalTextOptions(givenOptions, "screen.draw.textbox");
-      const rect = new Rect(rectLike);
-      recordDrawn(this, {
-        kind: "text",
-        text: String(text),
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height,
-        ...options.color === undefined ? {} : { color: colorOf(options.color) }
-      });
-      const fit = fitTextboxFontSize(this.context, text, rect, options);
-      const anchor = options.anchor ?? "center";
-      const rectAnchorOffset = anchorOffsetFor(anchor, rect.width, rect.height);
-      const point = [
-        rect.left + rectAnchorOffset[0],
-        rect.top + rectAnchorOffset[1]
-      ];
-      const layout = layoutText(this.context, text, point, {
-        ...options,
-        fontsize: fit.fontSize,
-        width: rect.width,
-        lineheight: fit.lineHeight,
-        anchor
-      });
-      renderTextLayout(this.context, layout, options);
-    }
-  }
-  function isPlainOptions(value) {
-    if (typeof value !== "object" || value === null)
-      return false;
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
-  }
-  function canonicalTextOptions(options, label) {
-    let result = null;
-    for (const [alias, canonical] of Object.entries(textOptionAliases)) {
-      if (!(alias in options))
-        continue;
-      if (canonical in options) {
-        throw new TypeError(`${label} got both ${alias} and ${canonical}; they mean the same thing, so give just one.`);
-      }
-      result ??= { ...options };
-      result[canonical] = result[alias];
-      delete result[alias];
-    }
-    return result ?? options;
-  }
-  function setScreen(screen) {
-    const previous = currentScreen;
-    currentScreen = screen;
-    return previous;
-  }
-  function getScreen() {
-    if (!currentScreen) {
-      throw new Error("No active Screen has been configured.");
-    }
-    return currentScreen;
-  }
-  var screen = createActiveServiceProxy(getScreen);
-  function layoutText(context, text, pos, options = {}) {
-    const fontSize = requirePositiveNumber(options.fontsize ?? 24, "fontsize");
-    const lineHeight = requirePositiveNumber(options.lineheight ?? fontSize * 1.2, "lineheight");
-    const font = buildFontString(fontSize, options);
-    const widthLimit = options.width ?? (options.widthem === undefined ? undefined : options.widthem * fontSize);
-    const strip = options.strip ?? true;
-    const { lines, textWidth } = withTemporaryFont(context, font, () => {
-      const lines2 = wrapLines(context, String(text), widthLimit, strip);
-      return {
-        lines: lines2,
-        textWidth: lines2.reduce((maximum, line) => Math.max(maximum, context.measureText(line).width), 0)
-      };
-    });
-    const boxWidth = widthLimit ?? textWidth;
-    const boxHeight = Math.max(lineHeight, lines.length * lineHeight);
-    const align = options.align ?? "left";
-    if (!["left", "center", "right"].includes(align)) {
-      throw new TypeError("align must be left, center, or right.");
-    }
-    const position = resolveTextPosition(pos, options, boxWidth, boxHeight);
-    const anchorOffset = anchorOffsetFor(options.anchor ?? position.impliedAnchor ?? defaultTextAnchorFor(position.key), boxWidth, boxHeight);
-    const topLeft = position.key === "pos" ? [
-      position.point[0] - anchorOffset[0],
-      position.point[1] - anchorOffset[1]
-    ] : position.point;
-    return {
-      lines,
-      font,
-      fontSize,
-      lineHeight,
-      boxWidth,
-      boxHeight,
-      textWidth,
-      align,
-      topLeft,
-      anchorOffset,
-      alpha: clamp(options.alpha ?? 1, 0, 1)
-    };
-  }
-  function fitTextboxFontSize(context, text, rectLike, options = {}) {
-    const rect = new Rect(rectLike);
-    const maxSize = Math.floor(options.fontsize ?? Math.min(rect.height, 48));
-    const minSize = Math.floor(options.minFontsize ?? 4);
-    for (let size = maxSize;size >= minSize; size -= 1) {
-      const lineHeight = options.lineheight ?? size * 1.2;
-      const layout = layoutText(context, text, rect.topLeft, {
-        ...options,
-        fontsize: size,
-        width: rect.width,
-        lineheight: lineHeight
-      });
-      if (layout.lines.length * lineHeight <= rect.height && layout.lines.every((line) => measureWithFont(context, line, layout.font) <= rect.width)) {
-        return { fontSize: size, lineHeight, lines: layout.lines };
-      }
-    }
-    const fontSize = Math.max(1, minSize);
-    return {
-      fontSize,
-      lineHeight: options.lineheight ?? fontSize * 1.2,
-      lines: wrapLines(context, text, rect.width, options.strip ?? true)
-    };
-  }
-  function renderTextLayout(context, layout, options) {
-    const angle = options.angle ?? 0;
-    withSavedCanvasState(context, () => {
-      context.globalAlpha *= layout.alpha;
-      context.translate(layout.topLeft[0] + layout.anchorOffset[0], layout.topLeft[1] + layout.anchorOffset[1]);
-      if (angle !== 0)
-        context.rotate(-angle * Math.PI / 180);
-      context.font = layout.font;
-      context.textBaseline = "top";
-      context.textAlign = layout.align;
-      const originX = -layout.anchorOffset[0];
-      const originY = -layout.anchorOffset[1];
-      if (options.background !== undefined) {
-        context.fillStyle = normalizeColor(options.background);
-        context.fillRect(originX, originY, layout.boxWidth, layout.boxHeight);
-      }
-      const fillStyle = options.gcolor === undefined ? normalizeColor(options.color ?? "white") : verticalGradient(context, originY, layout.boxHeight, options.color ?? "white", options.gcolor);
-      const shadowOffset = shadowOffsetFor(options.shadow);
-      const lineX = lineBaseX(originX, layout.boxWidth, layout.align);
-      layout.lines.forEach((line, index) => {
-        const y = originY + index * layout.lineHeight;
-        if (shadowOffset) {
-          context.fillStyle = normalizeColor(options.scolor ?? "black");
-          context.fillText(line, lineX + shadowOffset[0], y + shadowOffset[1]);
-        }
-        if ((options.owidth ?? 0) > 0) {
-          context.strokeStyle = normalizeColor(options.ocolor ?? "black");
-          context.lineWidth = requirePositiveNumber(options.owidth, "owidth") * 2;
-          context.strokeText(line, lineX, y);
-        }
-        context.fillStyle = fillStyle;
-        context.fillText(line, lineX, y);
-        if (options.underline) {
-          const lineWidth = context.measureText(line).width;
-          const [start, end] = lineExtentX(lineX, lineWidth, layout.align);
-          const thickness = Math.max(1, layout.fontSize / 15);
-          const underlineY = y + layout.fontSize * 0.9;
-          context.fillStyle = fillStyle;
-          context.fillRect(start, underlineY - thickness / 2, end - start, thickness);
-        }
-      });
-    });
-  }
-  function wrapLines(context, text, widthLimit, strip) {
-    const normalized = String(text).replace(/\t/g, "    ").replace(/\r\n/g, `
-`);
-    const paragraphs = normalized.split(`
-`);
-    if (widthLimit === undefined) {
-      return paragraphs.map((paragraph) => strip ? rstripSpaces(paragraph) : paragraph);
-    }
-    const limit = requirePositiveNumber(widthLimit, "width");
-    const measure = (candidate) => context.measureText(candidate).width;
-    const lines = [];
-    for (const paragraph of paragraphs) {
-      lines.push(...wrapParagraph(measure, paragraph, limit, strip));
-    }
-    return lines;
-  }
-  function wrapParagraph(measure, rawText, width, strip) {
-    let text = strip ? rstripSpaces(rawText) : rawText;
-    const lines = [];
-    if (!text) {
-      lines.push("");
-      return lines;
-    }
-    const leadingSpaceCount = text.length - lstripSpaces(text).length;
-    let a = firstIndexOfSpaceOr(text, leadingSpaceCount, text.length);
-    let line = text.slice(0, a);
-    while (a + 1 < text.length) {
-      let b;
-      let bline;
-      if (text.indexOf(" ", a + 1) === -1) {
-        b = text.length;
-        bline = text;
-      } else if (strip) {
-        b = text.indexOf(" ", a + 1);
-        while (b > 0 && text[b - 1] === " ") {
-          const next = text.indexOf(" ", b + 1);
-          if (next === -1) {
-            b = text.length;
-            break;
-          }
-          b = next;
-        }
-        bline = text.slice(0, b);
-      } else {
-        b = text[a] === " " ? a + 1 : text.indexOf(" ", a + 1);
-        bline = text.slice(0, b);
-      }
-      if (measure(bline) <= width) {
-        a = b;
-        line = bline;
-      } else {
-        lines.push(line);
-        text = strip ? lstripSpaces(text.slice(a)) : text.slice(a);
-        a = firstIndexOfSpaceOr(text, 1, text.length);
-        line = text.slice(0, a);
-      }
-    }
-    if (text)
-      lines.push(line);
-    return lines;
-  }
-  function firstIndexOfSpaceOr(text, from, fallback) {
-    const index = text.indexOf(" ", from);
-    return index === -1 ? fallback : index;
-  }
-  function lstripSpaces(text) {
-    let index = 0;
-    while (index < text.length && text[index] === " ")
-      index += 1;
-    return text.slice(index);
-  }
-  function rstripSpaces(text) {
-    let end = text.length;
-    while (end > 0 && text[end - 1] === " ")
-      end -= 1;
-    return text.slice(0, end);
-  }
-  var horizontalScalarKeys = ["left", "centerX", "right"];
-  var verticalScalarKeys = ["top", "centerY", "bottom"];
-  var horizontalScalarAnchor = {
-    left: "left",
-    centerX: "center",
-    right: "right"
-  };
-  var verticalScalarAnchor = {
-    top: "top",
-    centerY: "center",
-    bottom: "bottom"
-  };
-  function resolveTextPosition(pos, options, width, height) {
-    if (pos !== undefined && options.pos !== undefined) {
-      throw new TypeError("draw.text accepts exactly one position source.");
-    }
-    const compoundEntries = textPositionKeys.filter((key2) => {
-      if (key2 === "pos")
-        return options.pos !== undefined || pos !== undefined;
-      return options[key2] !== undefined;
-    });
-    const namedCompoundEntries = compoundEntries.filter((key2) => key2 !== "pos");
-    const horizontalScalars = horizontalScalarKeys.filter((key2) => options[key2] !== undefined);
-    const verticalScalars = verticalScalarKeys.filter((key2) => options[key2] !== undefined);
-    if (horizontalScalars.length > 0 || verticalScalars.length > 0) {
-      if (namedCompoundEntries.length > 0) {
-        throw new TypeError("draw.text accepts exactly one position source.");
-      }
-      if (horizontalScalars.length > 1) {
-        throw new TypeError("draw.text accepts only one of left, centerX, or right.");
-      }
-      if (verticalScalars.length > 1) {
-        throw new TypeError("draw.text accepts only one of top, centerY, or bottom.");
-      }
-      const fallback = pos ?? options.pos;
-      const horizontalKey = horizontalScalars[0];
-      const verticalKey = verticalScalars[0];
-      const x = horizontalKey === undefined ? fallback?.[0] : requireFiniteNumber(options[horizontalKey], horizontalKey);
-      const y = verticalKey === undefined ? fallback?.[1] : requireFiniteNumber(options[verticalKey], verticalKey);
-      if (x === undefined) {
-        throw new TypeError("Unable to determine horizontal position.");
-      }
-      if (y === undefined) {
-        throw new TypeError("Unable to determine vertical position.");
-      }
-      const hanchor = horizontalKey === undefined ? "left" : horizontalScalarAnchor[horizontalKey];
-      const vanchor = verticalKey === undefined ? "top" : verticalScalarAnchor[verticalKey];
-      return { key: "pos", point: [x, y], impliedAnchor: [hanchor, vanchor] };
-    }
-    if (compoundEntries.length > 1) {
-      throw new TypeError("draw.text accepts exactly one position source.");
-    }
-    const key = compoundEntries[0] ?? "pos";
-    const value = key === "pos" ? options.pos ?? pos ?? [0, 0] : options[key];
-    const point = requirePoint(value, key);
-    switch (key) {
-      case "topRight":
-        return { key, point: [point[0] - width, point[1]] };
-      case "bottomLeft":
-        return { key, point: [point[0], point[1] - height] };
-      case "bottomRight":
-        return { key, point: [point[0] - width, point[1] - height] };
-      case "midTop":
-        return { key, point: [point[0] - width / 2, point[1]] };
-      case "midLeft":
-        return { key, point: [point[0], point[1] - height / 2] };
-      case "midRight":
-        return { key, point: [point[0] - width, point[1] - height / 2] };
-      case "midBottom":
-        return { key, point: [point[0] - width / 2, point[1] - height] };
-      case "center":
-        return { key, point: [point[0] - width / 2, point[1] - height / 2] };
-      default:
-        return { key, point };
-    }
-  }
-  function defaultTextAnchorFor(positionKey) {
-    return positionKey === "pos" ? "topLeft" : positionKey;
-  }
-  function anchorOffsetFor(anchor, width, height) {
-    if (typeof anchor === "string") {
-      switch (anchor) {
-        case "topLeft":
-          return [0, 0];
-        case "topRight":
-          return [width, 0];
-        case "bottomLeft":
-          return [0, height];
-        case "bottomRight":
-          return [width, height];
-        case "midTop":
-          return [width / 2, 0];
-        case "midLeft":
-          return [0, height / 2];
-        case "midRight":
-          return [width, height / 2];
-        case "midBottom":
-          return [width / 2, height];
-        case "center":
-          return [width / 2, height / 2];
-        default:
-          throw new TypeError(`Unknown text anchor: ${anchor}.${didYouMean(anchor, rectPositionKeys)}`);
-      }
-    }
-    if (Array.isArray(anchor) && anchor.length === 2) {
-      return [
-        horizontalAnchorOffset(anchor[0], width),
-        verticalAnchorOffset(anchor[1], height)
-      ];
-    }
-    throw new TypeError("anchor must be a known string or two-item tuple.");
-  }
-  function lineBaseX(originX, width, align) {
-    if (align === "center")
-      return originX + width / 2;
-    if (align === "right")
-      return originX + width;
-    return originX;
-  }
-  function lineExtentX(lineX, lineWidth, align) {
-    if (align === "center")
-      return [lineX - lineWidth / 2, lineX + lineWidth / 2];
-    if (align === "right")
-      return [lineX - lineWidth, lineX];
-    return [lineX, lineX + lineWidth];
-  }
-  var GENERIC_FONT_FAMILIES = new Set([
-    "serif",
-    "sans-serif",
-    "monospace",
-    "cursive",
-    "fantasy",
-    "system-ui"
-  ]);
-  function cssFontFamily(name) {
-    if (GENERIC_FONT_FAMILIES.has(name))
-      return name;
-    return `"${name.replace(/"/g, "\\\"")}"`;
-  }
-  function resolveFontFamily(options) {
-    if (options.fontname !== undefined && options.sysfontname !== undefined) {
-      throw new TypeError("draw.text accepts only one of fontname or sysfontname.");
-    }
-    if (options.sysfontname !== undefined) {
-      return cssFontFamily(options.sysfontname);
-    }
-    if (options.fontname !== undefined) {
-      const loaded = tryGetLoadedFont(options.fontname);
-      if (loaded)
-        return cssFontFamily(loaded.family);
-      tryStartLoadingFont(options.fontname);
-      return cssFontFamily(options.fontname);
-    }
-    return "sans-serif";
-  }
-  function tryGetLoadedFont(name) {
-    try {
-      return fonts.get(name);
-    } catch {
-      return;
-    }
-  }
-  function tryStartLoadingFont(name) {
-    try {
-      fonts.load(name).catch(() => {
-        return;
-      });
-    } catch {}
-  }
-  function buildFontString(fontSize, options) {
-    const fontFamily = resolveFontFamily(options);
-    const styleParts = [];
-    if (options.italic)
-      styleParts.push("italic");
-    if (options.bold)
-      styleParts.push("bold");
-    const stylePrefix = styleParts.length > 0 ? `${styleParts.join(" ")} ` : "";
-    return `${stylePrefix}${fontSize}px ${fontFamily}`;
-  }
-  function shadowOffsetFor(shadow) {
-    if (shadow === undefined)
-      return null;
-    if (typeof shadow === "number" && Number.isFinite(shadow))
-      return [shadow, shadow];
-    return requirePoint(shadow, "shadow");
-  }
-  function measureWithFont(context, text, font) {
-    return withTemporaryFont(context, font, () => context.measureText(text).width);
-  }
-  function withTemporaryFont(context, font, callback) {
-    const previousFont = context.font;
-    try {
-      context.font = font;
-      return callback();
-    } finally {
-      context.font = previousFont;
-    }
-  }
-  function withSavedCanvasState(context, callback) {
-    context.save();
-    try {
-      return callback();
-    } finally {
-      context.restore();
-    }
-  }
-  function requireShortForm(form, args) {
-    const values = Array.from(args);
-    const name = form.call.slice(0, form.call.indexOf("("));
-    const numbers = values.slice(0, form.numbers.length);
-    if (numbers.some((value) => typeof value === "object" && value !== null)) {
-      throw new TypeError(form.lists);
-    }
-    form.numbers.forEach((label, index) => {
-      const value = values[index];
-      if (value === undefined) {
-        throw new TypeError(`${name} is missing ${label}: ${form.call}.`);
-      }
-      if (typeof value !== "number" || !Number.isFinite(value)) {
-        throw new TypeError(`${name}'s ${label} must be a number, but got ${describeValue(value)}.`);
-      }
-    });
-    if (values.length > form.arity)
-      throw new TypeError(form.extra);
-  }
-  var textCall = "screen.text(text, x, y, color, size)";
-  function requireTextShortForm(args) {
-    const values = Array.from(args);
-    const [text, x, y] = values;
-    if (text === undefined) {
-      throw new TypeError(`screen.text is missing text: ${textCall}.`);
-    }
-    if (typeof text !== "string" && !(typeof text === "number" && Number.isFinite(text))) {
-      throw new TypeError(`screen.text's text must be words in quotes or a number, but got ${describeValue(text)}.`);
-    }
-    if (typeof x === "object" && x !== null || typeof y === "object" && y !== null) {
-      throw new TypeError('screen.text takes x, y as two numbers, like screen.text("Score: 3", 20, 30). For an [x, y] list or options such as center, use screen.draw.text(text, [x, y], options).');
-    }
-    for (const [label, value] of [
-      ["x", x],
-      ["y", y]
-    ]) {
-      if (value === undefined) {
-        throw new TypeError(`screen.text is missing ${label}: ${textCall}.`);
-      }
-      if (typeof value !== "number" || !Number.isFinite(value)) {
-        throw new TypeError(`screen.text's ${label} must be a number, but got ${describeValue(value)}.`);
-      }
-    }
-    if (values.length > 5) {
-      throw new TypeError(`screen.text takes at most five values: ${textCall}. For more options, use screen.draw.text.`);
-    }
-  }
-  function requirePositiveNumber(value, label) {
-    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-      return value;
-    }
-    throw new TypeError(`${label} must be a positive finite number.`);
   }
 
   // packages/core/src/source-scan.ts
@@ -4394,9 +3505,9 @@
       const hook = module[name];
       if (typeof hook !== "function")
         continue;
-      const declared = getParameterNames(hook);
-      if (declared.length === 1 && declared[0] === "event")
+      if (takesWholeEvent(hook))
         continue;
+      const declared = getParameterNames(hook);
       const known = HOOK_PARAMETERS[name];
       const resolved = resolveHookParameters(declared, known);
       declared.forEach((parameter, index) => {
@@ -4426,6 +3537,941 @@
         message: name === "draw" ? "draw should not declare parameters." : "update should accept either no parameters or one dt parameter."
       });
     }
+  }
+
+  // packages/core/src/rendering.ts
+  var textPositionKeys = ["pos", ...rectPositionKeys];
+  var textOptionAliases = {
+    size: "fontsize",
+    minSize: "minFontsize",
+    outline: "owidth",
+    outlineColor: "ocolor",
+    shadowColor: "scolor",
+    gradientColor: "gcolor"
+  };
+  var textboxOptionKeys = new Set([
+    ...Object.keys(textOptionAliases),
+    "fontname",
+    "sysfontname",
+    "fontsize",
+    "minFontsize",
+    "bold",
+    "italic",
+    "underline",
+    "color",
+    "background",
+    "lineheight",
+    "align",
+    "strip",
+    "owidth",
+    "ocolor",
+    "shadow",
+    "scolor",
+    "gcolor",
+    "alpha",
+    "anchor",
+    "angle"
+  ]);
+  var textPlacingOptionKeys = new Set([
+    ...textPositionKeys,
+    "top",
+    "left",
+    "bottom",
+    "right",
+    "centerX",
+    "centerY"
+  ]);
+  var textOptionKeys = new Set([
+    ...[...textboxOptionKeys].filter((key) => key !== "minFontsize" && key !== "minSize"),
+    ...textPlacingOptionKeys,
+    "width",
+    "widthem"
+  ]);
+  var shortForms = {
+    circle: {
+      call: "screen.circle(x, y, radius, color)",
+      numbers: ["x", "y", "radius"],
+      arity: 4,
+      lists: 'screen.circle takes x, y as two numbers, like screen.circle(200, 150, 25, "gold"). For an [x, y] list, use screen.draw.filledCircle([x, y], radius, color).',
+      extra: "screen.circle always fills, so it has no outline width. For an outline, use screen.draw.circle([x, y], radius, color, width)."
+    },
+    rect: {
+      call: "screen.rect(x, y, width, height, color)",
+      numbers: ["x", "y", "width", "height"],
+      arity: 5,
+      lists: 'screen.rect takes x, y, width, height as four numbers, like screen.rect(40, 40, 120, 60, "orange"). For a list or a Rect, use screen.draw.filledRect([x, y, width, height], color).',
+      extra: "screen.rect always fills, so it has no outline width. For an outline, use screen.draw.rect([x, y, width, height], color, width)."
+    },
+    triangle: {
+      call: "screen.triangle(x1, y1, x2, y2, x3, y3, color)",
+      numbers: ["x1", "y1", "x2", "y2", "x3", "y3"],
+      arity: 7,
+      lists: 'screen.triangle takes each corner as two numbers, like screen.triangle(160, 40, 120, 120, 200, 120, "lime"). For [x, y] lists, use screen.draw.filledPolygon([[x1, y1], [x2, y2], [x3, y3]], color).',
+      extra: "screen.triangle always fills, so it has no outline width. For an outline, use screen.draw.polygon([[x1, y1], [x2, y2], [x3, y3]], color, width)."
+    },
+    line: {
+      call: "screen.line(x1, y1, x2, y2, color, width)",
+      numbers: ["x1", "y1", "x2", "y2"],
+      arity: 6,
+      lists: 'screen.line takes each end as two numbers, like screen.line(20, 20, 200, 120, "white", 3). For [x, y] lists, use screen.draw.line([x1, y1], [x2, y2], color, width).',
+      extra: "screen.line takes at most six values: screen.line(x1, y1, x2, y2, color, width)."
+    }
+  };
+  var currentScreen = null;
+  var screenSizes = new WeakMap;
+  var densityAttribute = "data-jgz-density";
+  var densityRule = `:where(canvas[${densityAttribute}]) { width: var(--jgz-width); }`;
+  function resizeScreen(screen, width, height, density = 1) {
+    const canvas = screen.canvas;
+    const previous = screenSizes.get(screen);
+    const canvasWidth = Math.max(1, Math.round(width * density));
+    const canvasHeight = Math.max(1, Math.round(height * density));
+    const kept = previous?.width === width && previous.height === height && (canvas.width !== canvasWidth || canvas.height !== canvasHeight) ? copyCanvas(canvas) : null;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const size = { width, height, density, canvasWidth, canvasHeight };
+    screenSizes.set(screen, size);
+    applyDensityTransform(screen.context, size);
+    applyDensityCss(canvas, size);
+    if (kept)
+      screen.context.drawImage(kept, 0, 0, width, height);
+  }
+  function syncScreen(screen) {
+    const size = screenSizes.get(screen);
+    if (!size)
+      return;
+    const { canvas, context } = screen;
+    if (canvas.width !== size.canvasWidth || canvas.height !== size.canvasHeight) {
+      resizeScreen(screen, canvas.width === size.canvasWidth ? size.width : canvas.width, canvas.height === size.canvasHeight ? size.height : canvas.height, size.density);
+      return;
+    }
+    if (!isScaled(size) || typeof context.getTransform !== "function")
+      return;
+    const matrix = context.getTransform();
+    if (matrix.isIdentity)
+      applyDensityTransform(context, size);
+  }
+  function isScaled(size) {
+    return size.canvasWidth !== size.width || size.canvasHeight !== size.height;
+  }
+  function applyDensityTransform(context, size) {
+    if (!isScaled(size) || typeof context.setTransform !== "function")
+      return;
+    context.setTransform(size.canvasWidth / size.width, 0, 0, size.canvasHeight / size.height, 0, 0);
+  }
+  function applyDensityCss(canvas, size) {
+    const { style, ownerDocument: doc } = canvas;
+    if (!style || !doc || typeof canvas.setAttribute !== "function")
+      return;
+    if (!isScaled(size)) {
+      canvas.removeAttribute?.(densityAttribute);
+      style.removeProperty("--jgz-width");
+      return;
+    }
+    const root = canvas.getRootNode?.();
+    const parent = root && root.nodeType === 11 ? root : doc.head ?? null;
+    if (parent && !parent.querySelector(`style[${densityAttribute}]`)) {
+      const rule = doc.createElement("style");
+      rule.setAttribute(densityAttribute, "");
+      rule.textContent = densityRule;
+      parent.prepend(rule);
+    }
+    canvas.setAttribute(densityAttribute, "");
+    style.setProperty("--jgz-width", `${size.width}px`);
+  }
+  function copyCanvas(canvas) {
+    if (canvas.width === 0 || canvas.height === 0)
+      return null;
+    try {
+      const copy = typeof OffscreenCanvas === "function" ? new OffscreenCanvas(canvas.width, canvas.height) : canvas.ownerDocument?.createElement("canvas");
+      if (!copy)
+        return null;
+      copy.width = canvas.width;
+      copy.height = canvas.height;
+      const context = copy.getContext("2d");
+      if (!context)
+        return null;
+      context.drawImage(canvas, 0, 0);
+      return copy;
+    } catch {
+      return null;
+    }
+  }
+  var MAX_DRAWN = 200;
+  var drawnThings = new WeakMap;
+  function beginDrawn(screen) {
+    drawnThings.set(screen, []);
+  }
+  function drawnOn(screen) {
+    return drawnThings.get(screen) ?? [];
+  }
+  function recordDrawn(screen, thing) {
+    const list = drawnThings.get(screen);
+    if (list && list.length < MAX_DRAWN)
+      list.push(thing);
+  }
+  var reportedImages = new WeakMap;
+  var colorOf = (color) => typeof color === "string" ? color : [...color];
+
+  class Screen {
+    canvas;
+    context;
+    imageLoader;
+    draw = {
+      line: (start, end, color, width = 1) => this.drawLine(start, end, color, width),
+      circle: (pos, radius, color, width = 1) => this.drawCircle(pos, radius, color, width),
+      filledCircle: (pos, radius, color) => this.drawCircle(pos, radius, color, 0, true),
+      polygon: (points, color, width = 1) => this.drawPolygon(points, color, width),
+      filledPolygon: (points, color) => this.drawPolygon(points, color, 0, true),
+      rect: (rect, color, width = 1) => this.drawRect(rect, color, width),
+      filledRect: (rect, color) => this.drawRect(rect, color, 0, true),
+      text: (text, posOrOptions, options) => this.drawText(text, posOrOptions, options),
+      textbox: (text, rect, options = {}) => this.drawTextbox(text, rect, options),
+      image: (image, pos) => this.blit(image, pos)
+    };
+    constructor(canvas, context, options = {}) {
+      const resolvedContext = context ?? canvas.getContext?.("2d");
+      if (!resolvedContext) {
+        throw new TypeError("Screen requires a Canvas 2D context.");
+      }
+      this.canvas = canvas;
+      this.context = resolvedContext;
+      this.imageLoader = options.imageLoader ?? images;
+      guardSpellings(this.draw, "screen.draw");
+    }
+    get width() {
+      return screenSizes.get(this)?.width ?? this.canvas.width;
+    }
+    get height() {
+      return screenSizes.get(this)?.height ?? this.canvas.height;
+    }
+    get density() {
+      return screenSizes.get(this)?.density ?? 1;
+    }
+    bounds() {
+      return new ZRect(0, 0, this.width, this.height);
+    }
+    clear() {
+      recordDrawn(this, { kind: "clear" });
+      withSavedCanvasState(this.context, () => {
+        this.context.globalAlpha = 1;
+        this.context.fillStyle = "black";
+        this.context.fillRect(0, 0, this.width, this.height);
+      });
+    }
+    fill(color, gcolor) {
+      recordDrawn(this, {
+        kind: "fill",
+        color: colorOf(color),
+        ...gcolor === undefined ? {} : { to: colorOf(gcolor) }
+      });
+      const style = gcolor === undefined ? normalizeColor(color) : verticalGradient(this.context, 0, this.height, color, gcolor);
+      this.context.fillStyle = style;
+      this.context.fillRect(0, 0, this.width, this.height);
+    }
+    blit(image, pos) {
+      const at = rectFromBlitTarget(pos);
+      const surface = typeof image === "string" ? this.imageLoader.get(image) : image;
+      if (!surface) {
+        const name = image;
+        const loaded = this.imageLoader.load(name).then(() => {
+          return;
+        });
+        const reportDiagnostic = getActiveDiagnosticEmit();
+        loaded.catch((error) => {
+          const reported = reportedImages.get(this) ?? new Set;
+          if (!reportDiagnostic || reported.has(name))
+            return;
+          reportedImages.set(this, reported.add(name));
+          reportDiagnostic({
+            code: "runtime-error",
+            severity: "warning",
+            phase: "asset",
+            recoverable: true,
+            message: `Failed to load image "${name}": ${describeRuntimeError(error)}`
+          });
+        });
+        return loaded;
+      }
+      recordDrawn(this, {
+        kind: "image",
+        image: typeof image === "string" ? image : "",
+        x: Array.isArray(at) ? at[0] : at.left,
+        y: Array.isArray(at) ? at[1] : at.top
+      });
+      this.drawSurface(surface, pos);
+    }
+    circle(x, y, radius, color = "white") {
+      requireShortForm(shortForms.circle, arguments);
+      this.drawCircle([x, y], radius, color, 0, true);
+    }
+    rect(x, y, width, height, color = "white") {
+      requireShortForm(shortForms.rect, arguments);
+      this.drawRect([x, y, width, height], color, 0, true);
+    }
+    triangle(x1, y1, x2, y2, x3, y3, color = "white") {
+      requireShortForm(shortForms.triangle, arguments);
+      this.drawPolygon([
+        [x1, y1],
+        [x2, y2],
+        [x3, y3]
+      ], color, 0, true);
+    }
+    line(x1, y1, x2, y2, color = "white", width = 1) {
+      requireShortForm(shortForms.line, arguments);
+      this.drawLine([x1, y1], [x2, y2], color, width);
+    }
+    text(text, x, y, color = "white", size = 24) {
+      requireTextShortForm(arguments);
+      this.drawText(String(text), [x, y], { color, fontsize: size });
+    }
+    drawSurface(surface, pos) {
+      const target = rectFromBlitTarget(pos);
+      const source = surface.source;
+      if (Array.isArray(target)) {
+        this.context.drawImage(source, target[0], target[1]);
+        return;
+      }
+      this.context.drawImage(source, target.left, target.top);
+    }
+    drawLine(start, end, color, width) {
+      const [startX, startY] = requirePoint(start, "start");
+      const [endX, endY] = requirePoint(end, "end");
+      recordDrawn(this, {
+        kind: "line",
+        x: startX,
+        y: startY,
+        x2: endX,
+        y2: endY,
+        color: colorOf(color)
+      });
+      withSavedCanvasState(this.context, () => {
+        this.context.strokeStyle = normalizeColor(color);
+        this.context.lineWidth = requirePositiveNumber(width, "width");
+        this.context.beginPath();
+        this.context.moveTo(startX, startY);
+        this.context.lineTo(endX, endY);
+        this.context.stroke();
+      });
+    }
+    drawCircle(pos, radius, color, width, filled = false) {
+      const [x, y] = requirePoint(pos, "pos");
+      const parsedRadius = requirePositiveNumber(radius, "radius");
+      recordDrawn(this, {
+        kind: "circle",
+        x,
+        y,
+        radius: parsedRadius,
+        color: colorOf(color),
+        filled
+      });
+      withSavedCanvasState(this.context, () => {
+        this.context.beginPath();
+        this.context.arc(x, y, parsedRadius, 0, Math.PI * 2);
+        if (filled) {
+          this.context.fillStyle = normalizeColor(color);
+          this.context.fill();
+        } else {
+          this.context.strokeStyle = normalizeColor(color);
+          this.context.lineWidth = requirePositiveNumber(width, "width");
+          this.context.stroke();
+        }
+      });
+    }
+    drawPolygon(points, color, width, filled = false) {
+      if (!Array.isArray(points) || points.length < 3) {
+        throw new TypeError("polygon requires at least three points.");
+      }
+      const parsed = points.map((point, index) => requirePoint(point, `points[${index}]`));
+      const first = parsed[0];
+      if (!first)
+        throw new TypeError("polygon requires at least three points.");
+      recordDrawn(this, {
+        kind: "polygon",
+        x: first[0],
+        y: first[1],
+        points: parsed.length,
+        color: colorOf(color),
+        filled
+      });
+      withSavedCanvasState(this.context, () => {
+        this.context.beginPath();
+        this.context.moveTo(first[0], first[1]);
+        for (const [x, y] of parsed.slice(1))
+          this.context.lineTo(x, y);
+        this.context.closePath();
+        if (filled) {
+          this.context.fillStyle = normalizeColor(color);
+          this.context.fill();
+        } else {
+          this.context.strokeStyle = normalizeColor(color);
+          this.context.lineWidth = requirePositiveNumber(width, "width");
+          this.context.stroke();
+        }
+      });
+    }
+    drawRect(rectLike, color, width, filled = false) {
+      const rect = new Rect(rectLike);
+      recordDrawn(this, {
+        kind: "rect",
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+        color: colorOf(color),
+        filled
+      });
+      withSavedCanvasState(this.context, () => {
+        if (filled) {
+          this.context.fillStyle = normalizeColor(color);
+          this.context.fillRect(rect.left, rect.top, rect.width, rect.height);
+        } else {
+          this.context.strokeStyle = normalizeColor(color);
+          this.context.lineWidth = requirePositiveNumber(width, "width");
+          this.context.strokeRect(rect.left, rect.top, rect.width, rect.height);
+        }
+      });
+    }
+    drawText(text, posOrOptions, maybeOptions) {
+      let pos;
+      let given;
+      if (isPlainOptions(posOrOptions)) {
+        if (maybeOptions !== undefined) {
+          throw new TypeError('screen.draw.text takes its options once: either second, as in text("Hi", { center: [x, y] }), or third, after a position.');
+        }
+        given = posOrOptions;
+      } else {
+        pos = posOrOptions;
+        given = maybeOptions ?? {};
+      }
+      rejectUnknownOptions(given, textOptionKeys, "screen.draw.text");
+      const options = canonicalTextOptions(given, "screen.draw.text");
+      const layout = layoutText(this.context, text, pos, options);
+      recordDrawn(this, {
+        kind: "text",
+        text: String(text),
+        x: layout.topLeft[0],
+        y: layout.topLeft[1],
+        width: layout.boxWidth,
+        height: layout.boxHeight,
+        ...options.color === undefined ? {} : { color: colorOf(options.color) }
+      });
+      renderTextLayout(this.context, layout, options);
+    }
+    drawTextbox(text, rectLike, givenOptions) {
+      const placing = Object.keys(givenOptions).find((key) => textPlacingOptionKeys.has(key));
+      if (placing !== undefined) {
+        throw new TypeError(`screen.draw.textbox places its text with its rect, so it has no option called ${placing}. Move the rect to move the text, and use anchor (like anchor: "topLeft") and align to place the text inside it.`);
+      }
+      rejectUnknownOptions(givenOptions, textboxOptionKeys, "screen.draw.textbox");
+      const options = canonicalTextOptions(givenOptions, "screen.draw.textbox");
+      const rect = new Rect(rectLike);
+      recordDrawn(this, {
+        kind: "text",
+        text: String(text),
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+        ...options.color === undefined ? {} : { color: colorOf(options.color) }
+      });
+      const fit = fitTextboxFontSize(this.context, text, rect, options);
+      const anchor = options.anchor ?? "center";
+      const rectAnchorOffset = anchorOffsetFor(anchor, rect.width, rect.height);
+      const point = [
+        rect.left + rectAnchorOffset[0],
+        rect.top + rectAnchorOffset[1]
+      ];
+      const layout = layoutText(this.context, text, point, {
+        ...options,
+        fontsize: fit.fontSize,
+        width: rect.width,
+        lineheight: fit.lineHeight,
+        anchor,
+        align: options.align ?? alignForAnchor(anchor)
+      });
+      renderTextLayout(this.context, layout, options);
+    }
+  }
+  function isPlainOptions(value) {
+    if (typeof value !== "object" || value === null)
+      return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  }
+  function canonicalTextOptions(options, label) {
+    let result = null;
+    for (const [alias, canonical] of Object.entries(textOptionAliases)) {
+      if (!(alias in options))
+        continue;
+      if (canonical in options) {
+        throw new TypeError(`${label} got both ${alias} and ${canonical}; they mean the same thing, so give just one.`);
+      }
+      result ??= { ...options };
+      result[canonical] = result[alias];
+      delete result[alias];
+    }
+    return result ?? options;
+  }
+  function setScreen(screen) {
+    const previous = currentScreen;
+    currentScreen = screen;
+    return previous;
+  }
+  function getScreen() {
+    if (!currentScreen) {
+      throw new Error("No active Screen has been configured.");
+    }
+    return currentScreen;
+  }
+  var screen = createActiveServiceProxy(getScreen);
+  function layoutText(context, text, pos, options = {}) {
+    const fontSize = requirePositiveNumber(options.fontsize ?? 24, "fontsize");
+    const lineHeight = requirePositiveNumber(options.lineheight ?? fontSize * 1.2, "lineheight");
+    const font = buildFontString(fontSize, options);
+    const widthLimit = options.width ?? (options.widthem === undefined ? undefined : options.widthem * fontSize);
+    const strip = options.strip ?? true;
+    const { lines, textWidth } = withTemporaryFont(context, font, () => {
+      const lines2 = wrapLines(context, String(text), widthLimit, strip);
+      return {
+        lines: lines2,
+        textWidth: lines2.reduce((maximum, line) => Math.max(maximum, context.measureText(line).width), 0)
+      };
+    });
+    const boxWidth = widthLimit ?? textWidth;
+    const boxHeight = Math.max(lineHeight, lines.length * lineHeight);
+    const align = options.align ?? "left";
+    if (!["left", "center", "right"].includes(align)) {
+      throw new TypeError("align must be left, center, or right.");
+    }
+    const position = resolveTextPosition(pos, options, boxWidth, boxHeight);
+    const anchorOffset = anchorOffsetFor(options.anchor ?? position.impliedAnchor ?? defaultTextAnchorFor(position.key), boxWidth, boxHeight);
+    const topLeft = position.key === "pos" ? [
+      position.point[0] - anchorOffset[0],
+      position.point[1] - anchorOffset[1]
+    ] : position.point;
+    return {
+      lines,
+      font,
+      fontSize,
+      lineHeight,
+      boxWidth,
+      boxHeight,
+      textWidth,
+      align,
+      topLeft,
+      anchorOffset,
+      alpha: clamp(options.alpha ?? 1, 0, 1)
+    };
+  }
+  function fitTextboxFontSize(context, text, rectLike, options = {}) {
+    const rect = new Rect(rectLike);
+    const maxSize = Math.floor(options.fontsize ?? Math.min(rect.height, 48));
+    const minSize = Math.floor(options.minFontsize ?? 4);
+    for (let size = maxSize;size >= minSize; size -= 1) {
+      const lineHeight = options.lineheight ?? size * 1.2;
+      const layout = layoutText(context, text, rect.topLeft, {
+        ...options,
+        fontsize: size,
+        width: rect.width,
+        lineheight: lineHeight
+      });
+      if (layout.lines.length * lineHeight <= rect.height && layout.lines.every((line) => measureWithFont(context, line, layout.font) <= rect.width)) {
+        return { fontSize: size, lineHeight, lines: layout.lines };
+      }
+    }
+    const fontSize = Math.max(1, minSize);
+    return {
+      fontSize,
+      lineHeight: options.lineheight ?? fontSize * 1.2,
+      lines: wrapLines(context, text, rect.width, options.strip ?? true)
+    };
+  }
+  function renderTextLayout(context, layout, options) {
+    const angle = options.angle ?? 0;
+    withSavedCanvasState(context, () => {
+      context.globalAlpha *= layout.alpha;
+      context.translate(layout.topLeft[0] + layout.anchorOffset[0], layout.topLeft[1] + layout.anchorOffset[1]);
+      if (angle !== 0)
+        context.rotate(-angle * Math.PI / 180);
+      context.font = layout.font;
+      context.textBaseline = "top";
+      context.textAlign = layout.align;
+      const originX = -layout.anchorOffset[0];
+      const originY = -layout.anchorOffset[1];
+      if (options.background !== undefined) {
+        context.fillStyle = normalizeColor(options.background);
+        context.fillRect(originX, originY, layout.boxWidth, layout.boxHeight);
+      }
+      const fillStyle = options.gcolor === undefined ? normalizeColor(options.color ?? "white") : verticalGradient(context, originY, layout.boxHeight, options.color ?? "white", options.gcolor);
+      const shadowOffset = shadowOffsetFor(options.shadow);
+      const lineX = lineBaseX(originX, layout.boxWidth, layout.align);
+      layout.lines.forEach((line, index) => {
+        const y = originY + index * layout.lineHeight;
+        if (shadowOffset) {
+          context.fillStyle = normalizeColor(options.scolor ?? "black");
+          context.fillText(line, lineX + shadowOffset[0], y + shadowOffset[1]);
+        }
+        if ((options.owidth ?? 0) > 0) {
+          context.strokeStyle = normalizeColor(options.ocolor ?? "black");
+          context.lineWidth = requirePositiveNumber(options.owidth, "owidth") * 2;
+          context.strokeText(line, lineX, y);
+        }
+        context.fillStyle = fillStyle;
+        context.fillText(line, lineX, y);
+        if (options.underline) {
+          const lineWidth = context.measureText(line).width;
+          const [start, end] = lineExtentX(lineX, lineWidth, layout.align);
+          const thickness = Math.max(1, layout.fontSize / 15);
+          const underlineY = y + layout.fontSize * 0.9;
+          context.fillStyle = fillStyle;
+          context.fillRect(start, underlineY - thickness / 2, end - start, thickness);
+        }
+      });
+    });
+  }
+  function wrapLines(context, text, widthLimit, strip) {
+    const normalized = String(text).replace(/\t/g, "    ").replace(/\r\n/g, `
+`);
+    const paragraphs = normalized.split(`
+`);
+    if (widthLimit === undefined) {
+      return paragraphs.map((paragraph) => strip ? rstripSpaces(paragraph) : paragraph);
+    }
+    const limit = requirePositiveNumber(widthLimit, "width");
+    const measure = (candidate) => context.measureText(candidate).width;
+    const lines = [];
+    for (const paragraph of paragraphs) {
+      lines.push(...wrapParagraph(measure, paragraph, limit, strip));
+    }
+    return lines;
+  }
+  function wrapParagraph(measure, rawText, width, strip) {
+    let text = strip ? rstripSpaces(rawText) : rawText;
+    const lines = [];
+    if (!text) {
+      lines.push("");
+      return lines;
+    }
+    const leadingSpaceCount = text.length - lstripSpaces(text).length;
+    let a = firstIndexOfSpaceOr(text, leadingSpaceCount, text.length);
+    let line = text.slice(0, a);
+    while (a + 1 < text.length) {
+      let b;
+      let bline;
+      if (text.indexOf(" ", a + 1) === -1) {
+        b = text.length;
+        bline = text;
+      } else if (strip) {
+        b = text.indexOf(" ", a + 1);
+        while (b > 0 && text[b - 1] === " ") {
+          const next = text.indexOf(" ", b + 1);
+          if (next === -1) {
+            b = text.length;
+            break;
+          }
+          b = next;
+        }
+        bline = text.slice(0, b);
+      } else {
+        b = text[a] === " " ? a + 1 : text.indexOf(" ", a + 1);
+        bline = text.slice(0, b);
+      }
+      if (measure(bline) <= width) {
+        a = b;
+        line = bline;
+      } else {
+        lines.push(line);
+        text = strip ? lstripSpaces(text.slice(a)) : text.slice(a);
+        a = firstIndexOfSpaceOr(text, 1, text.length);
+        line = text.slice(0, a);
+      }
+    }
+    if (text)
+      lines.push(line);
+    return lines;
+  }
+  function firstIndexOfSpaceOr(text, from, fallback) {
+    const index = text.indexOf(" ", from);
+    return index === -1 ? fallback : index;
+  }
+  function lstripSpaces(text) {
+    let index = 0;
+    while (index < text.length && text[index] === " ")
+      index += 1;
+    return text.slice(index);
+  }
+  function rstripSpaces(text) {
+    let end = text.length;
+    while (end > 0 && text[end - 1] === " ")
+      end -= 1;
+    return text.slice(0, end);
+  }
+  var horizontalScalarKeys = ["left", "centerX", "right"];
+  var verticalScalarKeys = ["top", "centerY", "bottom"];
+  var horizontalScalarAnchor = {
+    left: "left",
+    centerX: "center",
+    right: "right"
+  };
+  var verticalScalarAnchor = {
+    top: "top",
+    centerY: "center",
+    bottom: "bottom"
+  };
+  function resolveTextPosition(pos, options, width, height) {
+    if (pos !== undefined && options.pos !== undefined) {
+      throw new TypeError("draw.text accepts exactly one position source.");
+    }
+    const compoundEntries = textPositionKeys.filter((key2) => {
+      if (key2 === "pos")
+        return options.pos !== undefined || pos !== undefined;
+      return options[key2] !== undefined;
+    });
+    const namedCompoundEntries = compoundEntries.filter((key2) => key2 !== "pos");
+    const horizontalScalars = horizontalScalarKeys.filter((key2) => options[key2] !== undefined);
+    const verticalScalars = verticalScalarKeys.filter((key2) => options[key2] !== undefined);
+    if (horizontalScalars.length > 0 || verticalScalars.length > 0) {
+      if (namedCompoundEntries.length > 0) {
+        throw new TypeError("draw.text accepts exactly one position source.");
+      }
+      if (horizontalScalars.length > 1) {
+        throw new TypeError("draw.text accepts only one of left, centerX, or right.");
+      }
+      if (verticalScalars.length > 1) {
+        throw new TypeError("draw.text accepts only one of top, centerY, or bottom.");
+      }
+      const fallback = pos ?? options.pos;
+      const horizontalKey = horizontalScalars[0];
+      const verticalKey = verticalScalars[0];
+      const x = horizontalKey === undefined ? fallback?.[0] : requireFiniteNumber(options[horizontalKey], horizontalKey);
+      const y = verticalKey === undefined ? fallback?.[1] : requireFiniteNumber(options[verticalKey], verticalKey);
+      if (x === undefined) {
+        throw new TypeError("Unable to determine horizontal position.");
+      }
+      if (y === undefined) {
+        throw new TypeError("Unable to determine vertical position.");
+      }
+      const hanchor = horizontalKey === undefined ? "left" : horizontalScalarAnchor[horizontalKey];
+      const vanchor = verticalKey === undefined ? "top" : verticalScalarAnchor[verticalKey];
+      return { key: "pos", point: [x, y], impliedAnchor: [hanchor, vanchor] };
+    }
+    if (compoundEntries.length > 1) {
+      throw new TypeError("draw.text accepts exactly one position source.");
+    }
+    const key = compoundEntries[0] ?? "pos";
+    const value = key === "pos" ? options.pos ?? pos ?? [0, 0] : options[key];
+    const point = requirePoint(value, key);
+    switch (key) {
+      case "topRight":
+        return { key, point: [point[0] - width, point[1]] };
+      case "bottomLeft":
+        return { key, point: [point[0], point[1] - height] };
+      case "bottomRight":
+        return { key, point: [point[0] - width, point[1] - height] };
+      case "midTop":
+        return { key, point: [point[0] - width / 2, point[1]] };
+      case "midLeft":
+        return { key, point: [point[0], point[1] - height / 2] };
+      case "midRight":
+        return { key, point: [point[0] - width, point[1] - height / 2] };
+      case "midBottom":
+        return { key, point: [point[0] - width / 2, point[1] - height] };
+      case "center":
+        return { key, point: [point[0] - width / 2, point[1] - height / 2] };
+      default:
+        return { key, point };
+    }
+  }
+  function defaultTextAnchorFor(positionKey) {
+    return positionKey === "pos" ? "topLeft" : positionKey;
+  }
+  function anchorOffsetFor(anchor, width, height) {
+    if (typeof anchor === "string") {
+      switch (anchor) {
+        case "topLeft":
+          return [0, 0];
+        case "topRight":
+          return [width, 0];
+        case "bottomLeft":
+          return [0, height];
+        case "bottomRight":
+          return [width, height];
+        case "midTop":
+          return [width / 2, 0];
+        case "midLeft":
+          return [0, height / 2];
+        case "midRight":
+          return [width, height / 2];
+        case "midBottom":
+          return [width / 2, height];
+        case "center":
+          return [width / 2, height / 2];
+        default:
+          throw new TypeError(`Unknown text anchor: ${anchor}.${didYouMean(anchor, rectPositionKeys)}`);
+      }
+    }
+    if (Array.isArray(anchor) && anchor.length === 2) {
+      return [
+        horizontalAnchorOffset(anchor[0], width),
+        verticalAnchorOffset(anchor[1], height)
+      ];
+    }
+    throw new TypeError("anchor must be a known string or two-item tuple.");
+  }
+  function alignForAnchor(anchor) {
+    if (typeof anchor !== "string" && typeof anchor[0] === "number") {
+      return "left";
+    }
+    const [x] = anchorOffsetFor(anchor, 2, 0);
+    return x === 0 ? "left" : x === 1 ? "center" : "right";
+  }
+  function lineBaseX(originX, width, align) {
+    if (align === "center")
+      return originX + width / 2;
+    if (align === "right")
+      return originX + width;
+    return originX;
+  }
+  function lineExtentX(lineX, lineWidth, align) {
+    if (align === "center")
+      return [lineX - lineWidth / 2, lineX + lineWidth / 2];
+    if (align === "right")
+      return [lineX - lineWidth, lineX];
+    return [lineX, lineX + lineWidth];
+  }
+  var GENERIC_FONT_FAMILIES = new Set([
+    "serif",
+    "sans-serif",
+    "monospace",
+    "cursive",
+    "fantasy",
+    "system-ui"
+  ]);
+  function cssFontFamily(name) {
+    if (GENERIC_FONT_FAMILIES.has(name))
+      return name;
+    return `"${name.replace(/"/g, "\\\"")}"`;
+  }
+  function resolveFontFamily(options) {
+    if (options.fontname !== undefined && options.sysfontname !== undefined) {
+      throw new TypeError("draw.text accepts only one of fontname or sysfontname.");
+    }
+    if (options.sysfontname !== undefined) {
+      return cssFontFamily(options.sysfontname);
+    }
+    if (options.fontname !== undefined) {
+      const loaded = tryGetLoadedFont(options.fontname);
+      if (loaded)
+        return cssFontFamily(loaded.family);
+      tryStartLoadingFont(options.fontname);
+      return cssFontFamily(options.fontname);
+    }
+    return "sans-serif";
+  }
+  function tryGetLoadedFont(name) {
+    try {
+      return fonts.get(name);
+    } catch {
+      return;
+    }
+  }
+  function tryStartLoadingFont(name) {
+    try {
+      fonts.load(name).catch(() => {
+        return;
+      });
+    } catch {}
+  }
+  function buildFontString(fontSize, options) {
+    const fontFamily = resolveFontFamily(options);
+    const styleParts = [];
+    if (options.italic)
+      styleParts.push("italic");
+    if (options.bold)
+      styleParts.push("bold");
+    const stylePrefix = styleParts.length > 0 ? `${styleParts.join(" ")} ` : "";
+    return `${stylePrefix}${fontSize}px ${fontFamily}`;
+  }
+  function shadowOffsetFor(shadow) {
+    if (shadow === undefined)
+      return null;
+    if (typeof shadow === "number" && Number.isFinite(shadow))
+      return [shadow, shadow];
+    return requirePoint(shadow, "shadow");
+  }
+  function measureWithFont(context, text, font) {
+    return withTemporaryFont(context, font, () => context.measureText(text).width);
+  }
+  function withTemporaryFont(context, font, callback) {
+    const previousFont = context.font;
+    try {
+      context.font = font;
+      return callback();
+    } finally {
+      context.font = previousFont;
+    }
+  }
+  function withSavedCanvasState(context, callback) {
+    context.save();
+    try {
+      return callback();
+    } finally {
+      context.restore();
+    }
+  }
+  function requireShortForm(form, args) {
+    const values = Array.from(args);
+    const name = form.call.slice(0, form.call.indexOf("("));
+    const numbers = values.slice(0, form.numbers.length);
+    if (numbers.some((value) => typeof value === "object" && value !== null)) {
+      throw new TypeError(form.lists);
+    }
+    form.numbers.forEach((label, index) => {
+      const value = values[index];
+      if (value === undefined) {
+        throw new TypeError(`${name} is missing ${label}: ${form.call}.`);
+      }
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        throw new TypeError(`${name}'s ${label} must be a number, but got ${describeValue(value)}.`);
+      }
+    });
+    if (values.length > form.arity)
+      throw new TypeError(form.extra);
+  }
+  var textCall = "screen.text(text, x, y, color, size)";
+  function requireTextShortForm(args) {
+    const values = Array.from(args);
+    const [text, x, y] = values;
+    if (text === undefined) {
+      throw new TypeError(`screen.text is missing text: ${textCall}.`);
+    }
+    if (typeof text !== "string" && !(typeof text === "number" && Number.isFinite(text))) {
+      throw new TypeError(`screen.text's text must be words in quotes or a number, but got ${describeValue(text)}.`);
+    }
+    if (typeof x === "object" && x !== null || typeof y === "object" && y !== null) {
+      throw new TypeError('screen.text takes x, y as two numbers, like screen.text("Score: 3", 20, 30). For an [x, y] list or options such as center, use screen.draw.text(text, [x, y], options).');
+    }
+    for (const [label, value] of [
+      ["x", x],
+      ["y", y]
+    ]) {
+      if (value === undefined) {
+        throw new TypeError(`screen.text is missing ${label}: ${textCall}.`);
+      }
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        throw new TypeError(`screen.text's ${label} must be a number, but got ${describeValue(value)}.`);
+      }
+    }
+    if (values.length > 5) {
+      throw new TypeError(`screen.text takes at most five values: ${textCall}. For more options, use screen.draw.text.`);
+    }
+  }
+  function requirePositiveNumber(value, label) {
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+      return value;
+    }
+    throw new TypeError(`${label} must be a positive finite number.`);
   }
 
   // packages/core/src/actor.ts
@@ -4718,33 +4764,33 @@
       return this.rect().left;
     }
     set left(value) {
-      const rect = this.baseRect();
+      const rect = this.rect();
       rect.left = requireFiniteNumber(value, "left");
-      this.setPosFromBaseRect(rect);
+      this.setPosFromRect(rect);
     }
     get top() {
       return this.rect().top;
     }
     set top(value) {
-      const rect = this.baseRect();
+      const rect = this.rect();
       rect.top = requireFiniteNumber(value, "top");
-      this.setPosFromBaseRect(rect);
+      this.setPosFromRect(rect);
     }
     get right() {
       return this.rect().right;
     }
     set right(value) {
-      const rect = this.baseRect();
+      const rect = this.rect();
       rect.right = requireFiniteNumber(value, "right");
-      this.setPosFromBaseRect(rect);
+      this.setPosFromRect(rect);
     }
     get bottom() {
       return this.rect().bottom;
     }
     set bottom(value) {
-      const rect = this.baseRect();
+      const rect = this.rect();
       rect.bottom = requireFiniteNumber(value, "bottom");
-      this.setPosFromBaseRect(rect);
+      this.setPosFromRect(rect);
     }
     async ready() {
       if (this._surface)
@@ -4803,7 +4849,9 @@
           target.context.rotate(-this.angle * Math.PI / 180);
         }
         const native = this._native ?? this._surface;
-        target.context.drawImage(this._surface.source, -anchorX, -anchorY, native.getWidth() * this._scale, native.getHeight() * this._scale);
+        const width = native.getWidth() * this._scale;
+        const height = native.getHeight() * this._scale;
+        target.context.drawImage(this._surface.source, -anchorX - (width - this.surfaceWidth()) / 2, -anchorY - (height - this.surfaceHeight()) / 2, width, height);
       } finally {
         target.context.restore();
       }
@@ -4829,12 +4877,12 @@
       return this.rect().move(xOrOffset, y);
     }
     moveIp(xOrOffset, y) {
-      const rect = this.baseRect();
+      const rect = this.rect();
       if (Array.isArray(xOrOffset))
         rect.moveIp(xOrOffset);
       else
         rect.moveIp(xOrOffset, y);
-      this.setPosFromBaseRect(rect);
+      this.setPosFromRect(rect);
     }
     inflate(xOrSize, y) {
       if (Array.isArray(xOrSize))
@@ -4923,14 +4971,14 @@
     }
     setRectPosition(key, value) {
       const point = requirePoint(value, key);
-      const rect = this.baseRect();
+      const rect = this.rect();
       rect[key] = point;
-      this.setPosFromBaseRect(rect);
+      this.setPosFromRect(rect);
       this.positionSource = { key, value: point };
     }
-    setPosFromBaseRect(rect) {
-      const [anchorX, anchorY] = this.anchorOffset();
-      this._pos = [rect.left + anchorX, rect.top + anchorY];
+    setPosFromRect(rect) {
+      const [offsetX, offsetY] = this.rectOffset();
+      this._pos = [rect.left + offsetX, rect.top + offsetY];
       this.positionSource = { key: "pos", value: this.pos };
     }
     applyBaseRectGeometry(rect) {
@@ -4950,8 +4998,14 @@
       }
       const rect = new Rect(0, 0, this.width, this.height);
       rect[this.positionSource.key] = this.positionSource.value;
-      const [anchorX, anchorY] = this.anchorOffset();
-      this._pos = [rect.left + anchorX, rect.top + anchorY];
+      const [offsetX, offsetY] = this.rectOffset();
+      this._pos = [rect.left + offsetX, rect.top + offsetY];
+    }
+    rectOffset() {
+      if (this.angle === 0)
+        return this.anchorOffset();
+      const rect = this.rect();
+      return [this.x - rect.left, this.y - rect.top];
     }
     anchorOffset() {
       return [
@@ -5184,6 +5238,18 @@
   function animate(object, options) {
     return new Animation(object, options);
   }
+  function animationsOn(scheduler) {
+
+    class GameAnimation extends Animation {
+      constructor(object, options, clock2 = scheduler) {
+        super(object, options, clock2);
+      }
+    }
+    return {
+      Animation: GameAnimation,
+      animate: (object, options) => new GameAnimation(object, options)
+    };
+  }
   function withAnimationClock(scheduler, callback) {
     const previous = activeAnimationClock;
     activeAnimationClock = scheduler;
@@ -5406,108 +5472,6 @@
     return activeRandom ? activeRandom() : Math.random();
   }
 
-  // packages/core/src/runtime-persistence.ts
-  var AUTOSAVE_DEBOUNCE_MS = 250;
-  function attachAutosave(storage, emit) {
-    let timer = null;
-    let dirty = false;
-    let writing = null;
-    const reportSaveFailure = (error) => {
-      emit(storageWarning(`Failed to auto-save storage: ${errorMessage2(error)}`));
-    };
-    const flush = () => {
-      if (timer !== null) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      if (writing)
-        return writing;
-      writing = (async () => {
-        while (dirty) {
-          dirty = false;
-          try {
-            await storage.save();
-          } catch (error) {
-            dirty = true;
-            throw error;
-          }
-        }
-      })().finally(() => {
-        writing = null;
-      });
-      return writing;
-    };
-    const unsubscribe = storage.onChange(() => {
-      dirty = true;
-      if (timer !== null)
-        clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        flush().catch(reportSaveFailure);
-      }, AUTOSAVE_DEBOUNCE_MS);
-    });
-    const hasWindow = typeof window !== "undefined" && typeof window.addEventListener === "function";
-    const pagehideHandler = hasWindow ? () => void flush().catch(reportSaveFailure) : undefined;
-    const visibilityHandler = hasWindow && typeof document !== "undefined" ? () => {
-      if (document.visibilityState === "hidden") {
-        flush().catch(reportSaveFailure);
-      }
-    } : undefined;
-    if (hasWindow && pagehideHandler) {
-      window.addEventListener("pagehide", pagehideHandler);
-    }
-    if (hasWindow && visibilityHandler && typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", visibilityHandler);
-    }
-    return {
-      flush,
-      detach() {
-        unsubscribe();
-        if (timer !== null) {
-          clearTimeout(timer);
-          timer = null;
-        }
-        if (hasWindow && pagehideHandler) {
-          window.removeEventListener("pagehide", pagehideHandler);
-        }
-        if (hasWindow && visibilityHandler && typeof document !== "undefined") {
-          document.removeEventListener("visibilitychange", visibilityHandler);
-        }
-      }
-    };
-  }
-  function primeStorage(storage, emit) {
-    const state = { current: false };
-    try {
-      if (storage.loadSync()) {
-        state.current = true;
-        return { state, promise: Promise.resolve() };
-      }
-    } catch (error) {
-      emit(storageWarning(`Failed to load storage: ${errorMessage2(error)}`));
-      state.current = true;
-      return { state, promise: Promise.resolve() };
-    }
-    const promise = storage.load().catch((error) => {
-      emit(storageWarning(`Failed to load storage: ${errorMessage2(error)}`));
-    }).then(() => {
-      state.current = true;
-    });
-    return { state, promise };
-  }
-  function storageWarning(message) {
-    return {
-      code: "runtime-error",
-      severity: "warning",
-      phase: "storage",
-      recoverable: true,
-      message
-    };
-  }
-  function errorMessage2(error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-
   // packages/core/src/storage-path.ts
   function normalizeStoragePath(path) {
     if (path.length === 0 || path.includes("\\") || path.startsWith("/")) {
@@ -5529,11 +5493,13 @@
       this.path = path;
     }
   }
+  var savedText = Symbol("savedText");
 
   class Storage {
     adapter;
     values = new Map;
     listeners = new Set;
+    [savedText] = "{}";
     constructor(options = {}) {
       this.adapter = options.adapter ?? createLocalStorageAdapter({
         ...options.projectId !== undefined ? { projectId: options.projectId } : {},
@@ -5550,11 +5516,13 @@
     }
     set(key, value) {
       requireStorageKey(key);
+      validateJsonValue(value, `storage.${key}`);
       this.values.set(key, value);
       this.notify();
     }
     setDefault(key, defaultValue) {
       requireStorageKey(key);
+      validateJsonValue(defaultValue, `storage.${key}`);
       if (!this.values.has(key)) {
         this.values.set(key, defaultValue);
         this.notify();
@@ -5591,7 +5559,9 @@
       };
     }
     async save() {
-      await this.adapter.save(JSON.stringify(this.jsonObject()));
+      const text = JSON.stringify(this.jsonObject());
+      await this.adapter.save(text);
+      this[savedText] = text;
     }
     async load() {
       const text = await this.adapter.load();
@@ -5605,6 +5575,7 @@
     }
     applyLoadedText(text) {
       this.values.clear();
+      this[savedText] = "{}";
       if (text === null || text === "")
         return;
       let parsed;
@@ -5620,6 +5591,7 @@
       for (const [key, value] of Object.entries(parsed)) {
         this.values.set(key, value);
       }
+      this[savedText] = JSON.stringify(this.jsonObject());
     }
     notify() {
       for (const listener of this.listeners)
@@ -5634,6 +5606,9 @@
     }
   }
   guardSpellings(Storage.prototype, "storage");
+  function hasUnsavedChanges(storage) {
+    return JSON.stringify(storage.toJSON()) !== storage[savedText];
+  }
   function createStorage(options = {}) {
     return new Storage(options);
   }
@@ -5667,7 +5642,7 @@
     if (typeof value === "number") {
       if (Number.isFinite(value))
         return;
-      throw new JsonStorageError(path, "Non-finite numbers are not JSON values");
+      throw new JsonStorageError(path, `${value} is not a JSON value`);
     }
     if (typeof value !== "object") {
       throw new JsonStorageError(path, `${typeof value} is not a JSON value`);
@@ -5770,8 +5745,107 @@
   }
   var storage = createActiveServiceProxy(getActiveStorage);
 
+  // packages/core/src/runtime-persistence.ts
+  var AUTOSAVE_DEBOUNCE_MS = 250;
+  function attachAutosave(storage2, emit) {
+    let timer = null;
+    let dirty = false;
+    let writing = null;
+    const reportSaveFailure = (error) => {
+      emit(storageWarning(`Failed to auto-save storage: ${errorMessage2(error)}`));
+    };
+    const flush = () => {
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      if (writing)
+        return writing;
+      writing = (async () => {
+        do {
+          dirty = false;
+          if (hasUnsavedChanges(storage2))
+            await storage2.save();
+        } while (dirty);
+      })().finally(() => {
+        writing = null;
+      });
+      return writing;
+    };
+    const unsubscribe = storage2.onChange(() => {
+      dirty = true;
+      if (timer !== null)
+        clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        flush().catch(reportSaveFailure);
+      }, AUTOSAVE_DEBOUNCE_MS);
+    });
+    const hasWindow = typeof window !== "undefined" && typeof window.addEventListener === "function";
+    const pagehideHandler = hasWindow ? () => void flush().catch(reportSaveFailure) : undefined;
+    const visibilityHandler = hasWindow && typeof document !== "undefined" ? () => {
+      if (document.visibilityState === "hidden") {
+        flush().catch(reportSaveFailure);
+      }
+    } : undefined;
+    if (hasWindow && pagehideHandler) {
+      window.addEventListener("pagehide", pagehideHandler);
+    }
+    if (hasWindow && visibilityHandler && typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", visibilityHandler);
+    }
+    return {
+      flush,
+      detach() {
+        unsubscribe();
+        if (timer !== null) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        if (hasWindow && pagehideHandler) {
+          window.removeEventListener("pagehide", pagehideHandler);
+        }
+        if (hasWindow && visibilityHandler && typeof document !== "undefined") {
+          document.removeEventListener("visibilitychange", visibilityHandler);
+        }
+      }
+    };
+  }
+  function primeStorage(storage2, emit) {
+    const state = { current: false };
+    try {
+      if (storage2.loadSync()) {
+        state.current = true;
+        return { state, promise: Promise.resolve() };
+      }
+    } catch (error) {
+      emit(storageWarning(`Failed to load storage: ${errorMessage2(error)}`));
+      state.current = true;
+      return { state, promise: Promise.resolve() };
+    }
+    const promise = storage2.load().catch((error) => {
+      emit(storageWarning(`Failed to load storage: ${errorMessage2(error)}`));
+    }).then(() => {
+      state.current = true;
+    });
+    return { state, promise };
+  }
+  function storageWarning(message) {
+    return {
+      code: "runtime-error",
+      severity: "warning",
+      phase: "storage",
+      recoverable: true,
+      message
+    };
+  }
+  function errorMessage2(error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
   // packages/core/src/tone.ts
   var tonePlayOptionKeys = new Set(["waveform", "volume"]);
+  var waveforms = ["sine", "square", "sawtooth", "triangle"];
   var DEFAULT_TONE_VOLUME = 0.8;
 
   class CreatedTone {
@@ -5910,7 +5984,10 @@
       return "sine";
     if (waveform === "saw")
       return "sawtooth";
-    return waveform;
+    if (waveforms.includes(waveform))
+      return waveform;
+    const suggestion = typeof waveform === "string" ? closestName(waveform, [...waveforms, "sin", "saw"]) : undefined;
+    throw new TypeError(`tone waveform must be "sine", "square", "sawtooth" or "triangle", not ${describeValue(waveform)}.${suggestion === undefined ? "" : ` Did you mean "${suggestion}"?`}`);
   }
   function setAudioParam(param, value, time) {
     if (param.setValueAtTime) {
@@ -6446,40 +6523,74 @@
   }
 
   // packages/core/src/runtime-source.ts
-  var builtinGlobals = {
-    Array,
-    BigInt,
-    Boolean,
-    Date,
-    Error,
-    Infinity: Infinity,
-    Intl,
-    JSON,
-    Map,
-    Math,
-    NaN: NaN,
-    Number,
-    Object,
-    Promise,
-    RangeError,
-    ReferenceError,
-    RegExp,
-    Set,
-    String,
-    Symbol,
-    SyntaxError,
-    TypeError,
-    WeakMap,
-    WeakSet,
-    console,
-    decodeURIComponent,
-    encodeURIComponent,
-    isFinite,
-    isNaN,
-    parseFloat,
-    parseInt,
-    undefined: undefined
-  };
+  var builtinGlobals = Object.fromEntries([
+    "Infinity",
+    "NaN",
+    "undefined",
+    "eval",
+    "isFinite",
+    "isNaN",
+    "parseFloat",
+    "parseInt",
+    "decodeURI",
+    "decodeURIComponent",
+    "encodeURI",
+    "encodeURIComponent",
+    "AggregateError",
+    "Array",
+    "ArrayBuffer",
+    "BigInt",
+    "BigInt64Array",
+    "BigUint64Array",
+    "Boolean",
+    "DataView",
+    "Date",
+    "Error",
+    "EvalError",
+    "FinalizationRegistry",
+    "Float16Array",
+    "Float32Array",
+    "Float64Array",
+    "Function",
+    "Int8Array",
+    "Int16Array",
+    "Int32Array",
+    "Iterator",
+    "Map",
+    "Number",
+    "Object",
+    "Promise",
+    "Proxy",
+    "RangeError",
+    "ReferenceError",
+    "RegExp",
+    "Set",
+    "SharedArrayBuffer",
+    "String",
+    "Symbol",
+    "SyntaxError",
+    "TypeError",
+    "Uint8Array",
+    "Uint8ClampedArray",
+    "Uint16Array",
+    "Uint32Array",
+    "URIError",
+    "WeakMap",
+    "WeakRef",
+    "WeakSet",
+    "Atomics",
+    "Intl",
+    "JSON",
+    "Math",
+    "Reflect",
+    "console",
+    "structuredClone",
+    "queueMicrotask",
+    "atob",
+    "btoa",
+    "TextDecoder",
+    "TextEncoder"
+  ].filter((name) => (name in globalThis)).map((name) => [name, globalThis[name]]));
   var drawMethods = [
     "line",
     "circle",
@@ -6544,14 +6655,15 @@
     localStorage: 'Use storage instead, for example storage.set("score", 10).',
     sessionStorage: 'Use storage instead, for example storage.set("score", 10).',
     Image: 'Use new Actor("name") or screen.blit("name", [x, y]) to show a picture from images/.',
-    Audio: 'Use sounds.name.play() for a sound in sounds/, or music.play("name") for music.'
+    Audio: 'Use sounds.name.play() for a sound in sounds/, or music.play("name") for music.',
+    run: "A game file runs by itself: put WIDTH, HEIGHT and hooks like function draw() {} at its top level."
   };
   var sourceResultFields = [
     ...RUNTIME_CONFIGURATION_NAMES.map((name) => `${name}: ${name}`),
     ...RUNTIME_SOURCE_HOOK_NAMES.map((name) => `${name}: typeof ${name} === "function" ? ${name} : undefined`)
   ].join(`,
 `);
-  function executeZeroBoilerplateSource(source, context, runFunction, emit) {
+  function executeZeroBoilerplateSource(source, context, emit) {
     diagnoseSource(source, emit);
     const scan = scanSource(source);
     const functionNames = new Set(scan.topLevelFunctions);
@@ -6569,10 +6681,8 @@
       }
     }
     const globals = {
-      Animation,
-      animate,
+      ...animationsOn(context.clock),
       Clock: pointToService(Clock, "Clock", "clock", context.clock),
-      KeyboardState,
       Rect,
       ZRect,
       Screen: pointToService(Screen, "Screen", "screen", context.screen),
@@ -6588,27 +6698,38 @@
       keymods: friendlyService(keymods, "keymods"),
       keys: friendlyService(keys, "keys"),
       mouse: friendlyService(createLiveMouse(context.mouseState, () => [
-        configuredSize("WIDTH", context.screen.width) / 2,
-        configuredSize("HEIGHT", context.screen.height) / 2
+        context.screen.width / 2,
+        context.screen.height / 2
       ]), "mouse"),
       images: context.loaders.images,
       sounds: context.loaders.sounds,
       music: friendlyService(context.music, "music"),
-      createBrowserSoundAsset,
       storage: context.storage,
       tone: friendlyService(context.tone, "tone"),
       randomInt,
       randomChoice,
       clamp: clamp2,
       rgb,
-      run: runFunction,
       exit: () => context.stop?.(),
       ...context.random ? { Math: mathWithRandom(context.random) } : {}
     };
     const scopeTarget = { ...globals };
+    scopeTarget.globalThis = new Proxy(scopeTarget, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && !(property in target)) {
+          return builtinGlobals[property];
+        }
+        return Reflect.get(target, property, receiver);
+      },
+      has: (target, property) => (property in target) || (property in builtinGlobals)
+    });
+    let topLevel = false;
+    function sizeScreen() {
+      resizeScreen(context.screen, configuredSize("WIDTH", 800), configuredSize("HEIGHT", 600), context.screen.density);
+    }
     function configuredSize(name, fallback) {
       const value = scopeTarget[name];
-      return typeof value === "number" && value > 0 ? value : fallback;
+      return isValidRuntimeDimension(value) ? Math.floor(value) : fallback;
     }
     const optionalNames = new Set([
       ...RUNTIME_CONFIGURATION_NAMES,
@@ -6637,6 +6758,9 @@
       set(target, property, value) {
         if (typeof property === "string")
           target[property] = value;
+        if (topLevel && (property === "WIDTH" || property === "HEIGHT")) {
+          sizeScreen();
+        }
         return true;
       }
     });
@@ -6654,7 +6778,14 @@
       }
       throw error;
     }
-    const evaluated = factory(scope);
+    topLevel = true;
+    sizeScreen();
+    let evaluated;
+    try {
+      evaluated = factory(scope);
+    } finally {
+      topLevel = false;
+    }
     const bindings = Object.freeze([...bindingNames]);
     const callables = Object.freeze(callableNames);
     return {
@@ -6821,6 +6952,7 @@
     return { [definedGameBrand]: true, create: factory };
   }
   var activeHandles = [];
+  var soundLoaderRuns = new Map;
   var gameInspectors = new WeakMap;
   function getSourceInspector(handle) {
     return gameInspectors.get(handle) ?? null;
@@ -6837,7 +6969,7 @@
     try {
       if (mode === "global") {
         context = createRuntimeContext(options, diagnostics, emit, undefined);
-        const evaluated = withRuntimeContext(context, () => executeZeroBoilerplateSource(String(moduleOrSource), context, run, emit));
+        const evaluated = withRuntimeContext(context, () => executeZeroBoilerplateSource(String(moduleOrSource), context, emit));
         module = evaluated.module;
         inspector = evaluated.inspector;
       } else if (isDefinedGame(moduleOrSource)) {
@@ -6898,6 +7030,7 @@
       context.keyboard.clear();
       context.clock.clear();
       context.music.stop();
+      releaseSoundLoader(context.loaders.sounds);
       context.stop = null;
       context.autosave.detach();
       if (state !== "failed")
@@ -6943,13 +7076,15 @@
     const dispatcher = createInputDispatcher(hooks, context.keyboard, context.mouseState);
     detachInput = attachDispatcher(dispatcher, context, context.canvas, options, (error) => failRuntime("input", error), touchControls);
     const musicEndHook = hooks.onMusicEnd;
-    context.music.setOnMusicEnd(musicEndHook ? () => {
-      try {
-        withRuntimeContext(context, () => musicEndHook());
-      } catch (error) {
-        failRuntime("audio", error);
-      }
-    } : undefined);
+    if (musicEndHook) {
+      context.music.setOnMusicEnd(() => {
+        try {
+          withRuntimeContext(context, () => musicEndHook());
+        } catch (error) {
+          failRuntime("audio", error);
+        }
+      });
+    }
     const ready = waitForPreloadGate(context).then(() => {
       if (state === "starting")
         state = "running";
@@ -7015,6 +7150,7 @@
     if (inspector)
       gameInspectors.set(handle, inspector);
     activeHandles.push(handle);
+    soundLoaderRuns.set(context.loaders.sounds, (soundLoaderRuns.get(context.loaders.sounds) ?? 0) + 1);
     setScreen(context.screen);
     if (options.autostart !== false) {
       const frame = (timestamp) => {
@@ -7094,9 +7230,7 @@
           });
         }
       });
-      const scopedTone = createToneGenerator({
-        unlockState: new AudioUnlockState
-      });
+      const scopedTone = createToneGenerator();
       return {
         canvas,
         ownsCanvas,
@@ -7127,6 +7261,20 @@
       throw error;
     }
   }
+  function releaseSoundLoader(loader) {
+    const runs = (soundLoaderRuns.get(loader) ?? 1) - 1;
+    if (runs > 0)
+      soundLoaderRuns.set(loader, runs);
+    else
+      soundLoaderRuns.delete(loader);
+    stopSoundsIfUnused(loader);
+  }
+  function stopSoundsIfUnused(loader) {
+    if (soundLoaderRuns.has(loader))
+      return;
+    for (const name of loader.cacheKeys())
+      loader.get(name)?.stop();
+  }
   function cleanupFailedStartup(context, emit) {
     if (!context)
       return;
@@ -7134,6 +7282,7 @@
     context.keyboard.clear();
     context.clock.clear();
     context.music.stop();
+    stopSoundsIfUnused(context.loaders.sounds);
     if (context.ownsCanvas)
       context.canvas.remove?.();
     setScreen(activeHandles.at(-1)?.screen ?? null);
@@ -7162,10 +7311,10 @@
         });
       }
     }
-    const scopedAnimate = (object, options) => withAnimationClock(context.clock, () => animate(object, options));
+    const animations = animationsOn(context.clock);
     return {
       Actor: ScopedActor,
-      Animation,
+      Animation: animations.Animation,
       Rect,
       ZRect,
       Screen,
@@ -7182,7 +7331,7 @@
       fonts: context.loaders.fonts,
       storage: context.storage,
       tone: context.tone,
-      animate: scopedAnimate,
+      animate: animations.animate,
       exit: () => context.stop?.()
     };
   }
@@ -7207,9 +7356,9 @@
         continue;
       }
       const eventCallback = callback;
-      writable[name] = (event) => {
+      writable[name] = markWholeEventHook((event) => {
         eventCallback(event);
-      };
+      });
     }
     return adapted;
   }
@@ -7251,10 +7400,9 @@
           }
         }
         monitorAudioAssetGate(context);
-        if (isRuntimeGated(context)) {
-          monitorLateAssetGate(context, onFailure);
+        monitorLateAssetGate(context, onFailure);
+        if (isRuntimeGated(context))
           return;
-        }
         try {
           beginDrawn(context.screen);
           module.draw?.();
@@ -7944,12 +8092,12 @@
     buttonsFromBrowserButtons: () => buttonsFromBrowserButtons2,
     audioUnlock: () => audioUnlock2,
     assetUrl: () => assetUrl2,
-    animate: () => animate2,
+    animate: () => animate3,
     angleTo: () => angleTo2,
     ZRect: () => ZRect2,
     ValueError: () => ValueError2,
     ToneGenerator: () => ToneGenerator2,
-    Storage: () => Storage2,
+    Storage: () => Storage3,
     Screen: () => Screen2,
     Rect: () => Rect2,
     MusicPlayer: () => MusicPlayer2,
@@ -7964,15 +8112,15 @@
     Clock: () => Clock3,
     BrowserSoundAsset: () => BrowserSoundAsset2,
     AudioUnlockState: () => AudioUnlockState2,
-    Animation: () => Animation2,
+    Animation: () => Animation3,
     Actor: () => Actor2
   });
 
   // packages/core/src/index.ts
   var Actor2 = Actor;
-  var Animation2 = Animation;
+  var Animation3 = Animation;
   var ValueError2 = ValueError;
-  var animate2 = animate;
+  var animate3 = animate;
   var tweenNames2 = tweenNames;
   var tweens2 = tweens;
   var ImageSurface2 = ImageSurface;
@@ -8003,7 +8151,7 @@
   var exit2 = exit;
   var run2 = run;
   var JsonStorageError2 = JsonStorageError;
-  var Storage2 = Storage;
+  var Storage3 = Storage;
   var storage2 = storage;
   var CreatedTone2 = CreatedTone;
   var DEFAULT_TONE_VOLUME2 = DEFAULT_TONE_VOLUME;
