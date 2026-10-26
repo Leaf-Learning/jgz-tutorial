@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="90" viewBox="0 0 64 72">
+<ellipse cx="32" cy="70" rx="15" ry="2.6" fill="#2a2140" opacity="0.15"/><path d="M32 70 Q31 62 32 54" fill="none" stroke="#2a2140" stroke-width="6" stroke-linecap="round"/><path d="M32 70 Q31 62 32 54" fill="none" stroke="#78ad42" stroke-width="2.6" stroke-linecap="round"/><g transform="rotate(-32 20 62)"><ellipse cx="20" cy="62" rx="9.5" ry="4.6" fill="#9bd160" stroke="#2a2140" stroke-width="1.8"/><path d="M14.3 62 L25.7 62" stroke="#78ad42" stroke-width="1.2" stroke-linecap="round"/></g><g transform="rotate(32 44 60)"><ellipse cx="44" cy="60" rx="9.5" ry="4.6" fill="#9bd160" stroke="#2a2140" stroke-width="1.8"/><path d="M38.3 60 L49.7 60" stroke="#78ad42" stroke-width="1.2" stroke-linecap="round"/></g>
+<defs><clipPath id="t"><path d="M15 22 C13 44 21 57 32 57 C43 57 51 44 49 22 L40.5 31 L32 12 L23.5 31 Z"/></clipPath></defs>
+<path d="M15 22 C13 44 21 57 32 57 C43 57 51 44 49 22 L40.5 31 L32 12 L23.5 31 Z" fill="#ff7f9f"/>
+<g clip-path="url(#t)"><ellipse cx="47" cy="48" rx="15" ry="20" fill="#e45f84" opacity="0.6"/>
+<path d="M32 12 L40.5 31 L32 40 L23.5 31 Z" fill="#ff9db8"/>
+<ellipse cx="22" cy="36" rx="3.2" ry="7" fill="#fff" opacity="0.4" transform="rotate(8 22 36)"/></g>
+<path d="M23.5 31 Q32 38 40.5 31" fill="none" stroke="#2a2140" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M15 22 C13 44 21 57 32 57 C43 57 51 44 49 22 L40.5 31 L32 12 L23.5 31 Z" fill="none" stroke="#2a2140" stroke-width="2.2" stroke-linejoin="round"/>
+<ellipse cx="27.8" cy="43" rx="1.9" ry="2.4" fill="#2a2140"/><ellipse cx="36.2" cy="43" rx="1.9" ry="2.4" fill="#2a2140"/><circle cx="28.5" cy="42.1" r="0.85" fill="#fff"/><circle cx="27.3" cy="44.1" r="0.4" fill="#fff"/><circle cx="36.9" cy="42.1" r="0.85" fill="#fff"/><circle cx="35.7" cy="44.1" r="0.4" fill="#fff"/><ellipse cx="24.3" cy="47" rx="2.3" ry="1.4" fill="#ff8fab" opacity="0.65"/><ellipse cx="39.7" cy="47" rx="2.3" ry="1.4" fill="#ff8fab" opacity="0.65"/><path d="M29.8 46.5 Q32 49 34.2 46.5" fill="none" stroke="#2a2140" stroke-width="1.3" stroke-linecap="round"/>
+</svg>

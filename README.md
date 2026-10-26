@@ -1,6 +1,6 @@
 # jgz tutorials
 
-Three cute browser games built with [js-game-zero](../js-game-zero), and three
+Six cute browser games built with [js-game-zero](../js-game-zero), and six
 interactive, playful tutorials that teach a complete beginner to build each
 one from an empty screen.
 
@@ -9,6 +9,9 @@ one from an empty screen.
 | 1 | **Firefly Flash**: one click sets off a chain reaction of fireflies | drawing, the game loop, variables, lists & loops, `if`, clicks, sound, game states, saving |
 | 2 | **Penguin Slide**: an ice puzzle where you slide until something stops you | grids, levels as text, `while` loops, keys & swipes, tweens, undo, progress |
 | 3 | **Planet Putt**: mini-golf in space, where planets bend every shot | velocity, acceleration, gravity, drag-to-aim, bouncing, predicting paths, levels as data |
+| 4 | **Pancake Stack**: a bear catches falling pancakes on a tower that wobbles more with every catch | keys & pointer, falling with speed × time, timers, lists & loops, indexes, `Math.sin` wobbles, game states, levels as data |
+| 5 | **Octo Pop**: an octopus pops word bubbles as you type them | strings (length, letters, `slice`, `startsWith`, `split`), keys & typing, `if` / `else if` chains, lives & game states, levels as data |
+| 6 | **Tiny Garden**: plant, water, pick and sell flowers to buy rarer seeds | timers, growth stages, states, data tables, loops that add up, buying rules, saving a whole garden |
 
 ## Open the tutorials
 
@@ -35,7 +38,7 @@ something like:
 or run **`/new-game-tutorial`**. The skill (in `skills/new-game-tutorial/`) shapes the
 idea into a beginner-sized game with you. Then it builds the game with cute art, carves it into
 steps, writes the tutorial page with challenges, quizzes and widgets, and runs every check. The
-new tutorial shows up on the hub next to these three.
+new tutorial shows up on the hub next to the others.
 
 Building one by hand? `bun run new frog_feast "Frog Feast"` sets up all the files, and the
 skill's guides in `skills/new-game-tutorial/references/` describe the house style.
@@ -47,7 +50,7 @@ games/<game>/            each game as a jgz project: main.js, images/, fonts/,
                          plus tutorial.json (its hub card and play-page details)
 tutorials/
   index.html             the hub
-  <game>.html            the three tutorials
+  <game>.html            one page per tutorial
   play.html              full-size player
   steps/<game>/NN-*.js   every tutorial step, each a complete runnable game
   lib/                   the tutorial framework (see lib/README.md),

@@ -114,6 +114,70 @@
     radial-gradient(900px 600px at -10% 30%, rgba(78, 205, 196, 0.18), transparent 60%);
 }
 
+/* Pancake Stack: started from theme-hub, retuned to the art: butter-cream
+   paper, cocoa ink, maple-syrup accents and a blueberry second colour. */
+.theme-pancake-stack {
+  --bg: #fff6e3;
+  --bg-2: #ffe9c4;
+  --ink: #3a2433;
+  --muted: #7b6270;
+  --card: #fffdf8;
+  --card-2: #fff4de;
+  --line: rgba(58, 36, 51, 0.11);
+  --accent: #d2680a;
+  --accent-ink: #ffffff;
+  --accent-2: #6f7cf0;
+  --accent-3: #ff8fab;
+  --inline-code: rgba(210, 104, 10, 0.11);
+  --bar: rgba(255, 246, 227, 0.86);
+  --shadow: 0 18px 44px rgba(120, 66, 20, 0.16);
+  --confetti: #d2680a, #ffd34d, #6f7cf0, #ff8fab, #ffffff;
+  --page-glow: radial-gradient(1000px 600px at 88% -18%, rgba(255, 211, 77, 0.42), transparent 60%),
+    radial-gradient(900px 600px at -10% 30%, rgba(111, 124, 240, 0.14), transparent 60%);
+}
+
+/* Octo Pop: a deep sea, with coral pink for the octopus's blush and aqua for bubbles. */
+.theme-octo-pop {
+  --bg: #0a2742;
+  --bg-2: #0f3a5f;
+  --ink: #eaf7ff;
+  --muted: #a3c7df;
+  --card: #123f66;
+  --card-2: #18507d;
+  --line: rgba(255, 255, 255, 0.12);
+  --accent: #ff9fbd;
+  --accent-ink: #3a0a22;
+  --accent-2: #7cf0e1;
+  --accent-3: #ffd34d;
+  --inline-code: rgba(255, 159, 189, 0.14);
+  --bar: rgba(10, 39, 66, 0.84);
+  --shadow: 0 18px 50px rgba(0, 12, 30, 0.45);
+  --confetti: #ff9fbd, #7cf0e1, #ffd34d, #c9b8ff, #ffffff;
+  --page-glow: radial-gradient(1200px 600px at 85% -10%, rgba(124, 240, 225, 0.16), transparent 60%),
+    radial-gradient(900px 600px at -10% 25%, rgba(201, 184, 255, 0.12), transparent 60%);
+}
+
+/* Tiny Garden: started from theme-hub, retuned to the game's leafy greens, blossom pink and sunshine. */
+.theme-tiny-garden {
+  --bg: #f4fbe9;
+  --bg-2: #e5f5d0;
+  --ink: #27352b;
+  --muted: #5d7660;
+  --card: #ffffff;
+  --card-2: #f7fcef;
+  --line: rgba(39, 53, 43, 0.12);
+  --accent: #2f8f46;
+  --accent-ink: #ffffff;
+  --accent-2: #ff7aa8;
+  --accent-3: #ffd34d;
+  --inline-code: rgba(47, 143, 70, 0.11);
+  --bar: rgba(244, 251, 233, 0.86);
+  --shadow: 0 18px 44px rgba(52, 96, 52, 0.15);
+  --confetti: #ff7aa8, #ffd34d, #7fd1ff, #c9b8ff, #9bd160;
+  --page-glow: radial-gradient(1000px 600px at 90% -20%, rgba(255, 211, 77, 0.35), transparent 60%),
+    radial-gradient(900px 600px at -10% 30%, rgba(127, 209, 255, 0.28), transparent 60%);
+}
+
 /* ---------- Base ---------- */
 
 *,

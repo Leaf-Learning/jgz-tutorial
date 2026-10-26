@@ -1,0 +1,2082 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Octo Pop</title>
+    <meta name="description" content="Build a typing game in JavaScript with js-game-zero: pop word bubbles before they float away, and learn how programs work with words (strings). A hands-on tutorial for total beginners." />
+    <link rel="stylesheet" href="lib/tutorial.css" />
+    <style>
+      /* ---- Page-only styles for Octo Pop's widgets ---- */
+      .word-input {
+        font: 700 1.1rem/1 var(--font-code);
+        padding: 9px 12px;
+        width: 15ch;
+        border-radius: 12px;
+        border: 2px solid var(--line);
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .word-input:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .word-input.wide {
+        width: min(100%, 34ch);
+      }
+      .letters {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        margin: 14px 0 6px;
+        min-height: 92px;
+      }
+      .letter {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .letter b {
+        display: grid;
+        place-items: center;
+        width: 46px;
+        height: 54px;
+        border-radius: 14px;
+        border: 2.5px solid #2a2140;
+        background: #f6fdff;
+        color: #2a2140;
+        font: 700 1.6rem/1 var(--font-display);
+        box-shadow: 0 4px 0 rgba(0, 12, 30, 0.35);
+        transition:
+          transform 0.12s,
+          background 0.15s,
+          opacity 0.15s;
+      }
+      .letter i {
+        font: 700 0.95rem/1 var(--font-code);
+        font-style: normal;
+        color: var(--muted);
+      }
+      .letter.is-picked b {
+        background: var(--accent);
+        transform: translateY(-5px);
+      }
+      .letter.is-picked i {
+        color: var(--accent);
+      }
+      .letter.is-cut b {
+        background: #ffc4d9;
+        transform: translateY(-3px);
+      }
+      .letter.is-dim b {
+        opacity: 0.35;
+      }
+      .letter.is-lit b {
+        background: #ffe9a8;
+      }
+      .letter.is-typed b {
+        color: #e8286b;
+        background: #fff2f7;
+      }
+      .letter.is-gap b {
+        background: transparent;
+        border-style: dashed;
+        color: var(--muted);
+        box-shadow: none;
+      }
+      .code-line {
+        margin: 12px 0 0;
+        padding: 10px 14px;
+        border-radius: 12px;
+        background: var(--ed-bg);
+        color: var(--ed-ink);
+        font: 600 0.95rem/1.5 var(--font-code);
+        overflow-x: auto;
+        white-space: pre;
+      }
+      .code-line .str {
+        color: var(--t-str);
+      }
+      .code-line .num {
+        color: var(--t-num);
+      }
+      .code-line .res {
+        color: var(--accent-3);
+      }
+
+      .bubble-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        margin: 14px 0 8px;
+      }
+      .word-bubble {
+        position: relative;
+        min-width: 104px;
+        padding: 18px 16px;
+        border-radius: 999px;
+        border: 3px solid #2a2140;
+        background: #f6fdff;
+        color: #2a2140;
+        font: 700 1.5rem/1 var(--font-display);
+        letter-spacing: 0.06em;
+        text-align: center;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s,
+          opacity 0.3s;
+      }
+      .word-bubble .typed {
+        color: #e8286b;
+      }
+      .word-bubble.is-lit {
+        box-shadow: 0 0 0 5px #ffd34d;
+        transform: translateY(-4px);
+      }
+      .word-bubble.is-popped {
+        opacity: 0;
+        transform: scale(1.4);
+      }
+      .judge-tray {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin: 4px auto 12px;
+        min-width: 190px;
+        width: fit-content;
+        padding: 8px 24px;
+        border-radius: 999px;
+        border: 3px solid #2a2140;
+        background: #fdfbff;
+        color: #2a2140;
+        font: 700 1.6rem/1 var(--font-display);
+        letter-spacing: 0.08em;
+        min-height: 52px;
+      }
+      .judge-tray.is-ouch {
+        background: #ffd9d9;
+        animation: shake 0.3s;
+      }
+      .judge-tray .hint {
+        font: 600 0.95rem/1 var(--font-body);
+        letter-spacing: 0;
+        color: #8a7fb0;
+      }
+      @keyframes shake {
+        25% {
+          transform: translateX(-6px);
+        }
+        75% {
+          transform: translateX(6px);
+        }
+      }
+      .keys-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+        margin: 8px 0;
+      }
+      .keys-row button {
+        width: 36px;
+        height: 38px;
+        border-radius: 10px;
+        border: 2px solid var(--line);
+        background: var(--card-2);
+        color: var(--ink);
+        font: 700 1rem/1 var(--font-code);
+        cursor: pointer;
+        box-shadow: 0 3px 0 rgba(0, 12, 30, 0.35);
+      }
+      .keys-row button:hover {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .keys-row button:active {
+        transform: translateY(2px);
+        box-shadow: 0 1px 0 rgba(0, 12, 30, 0.35);
+      }
+      .keys-row button.wide {
+        width: auto;
+        padding: 0 14px;
+        font-family: var(--font-body);
+      }
+      .judge-steps {
+        display: grid;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .judge-step {
+        padding: 10px 14px;
+        border-radius: 12px;
+        background: var(--card-2);
+        border: 2px solid transparent;
+        font-size: 0.93rem;
+        line-height: 1.45;
+        opacity: 0.55;
+        transition:
+          opacity 0.2s,
+          border-color 0.2s;
+      }
+      .judge-step.is-asked {
+        opacity: 1;
+      }
+      .judge-step.is-yes {
+        border-color: #7cf0c5;
+      }
+      .judge-step.is-no {
+        border-color: #ff9ecf;
+      }
+      .judge-step code {
+        font-size: 0.88rem;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: flex-start;
+        margin-top: 14px;
+      }
+      .chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+      }
+      .chip b {
+        padding: 9px 14px;
+        min-width: 44px;
+        text-align: center;
+        border-radius: 12px;
+        background: var(--accent-3);
+        color: #2a2140;
+        font: 700 1.05rem/1 var(--font-code);
+        box-shadow: 0 3px 0 rgba(0, 12, 30, 0.35);
+      }
+      .chip b.is-empty {
+        background: transparent;
+        border: 2px dashed var(--accent);
+        color: var(--accent);
+      }
+      .chip i {
+        font: 700 0.85rem/1 var(--font-code);
+        font-style: normal;
+        color: var(--muted);
+      }
+      .split-picks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .split-picks .btn[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .coord-label {
+        position: absolute;
+        z-index: 3;
+        padding: 4px 9px;
+        border-radius: 99px;
+        background: rgba(10, 39, 66, 0.88);
+        color: #fff;
+        font: 600 12px/1 var(--font-code);
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(12px, 12px);
+        white-space: nowrap;
+      }
+      .coord-line {
+        position: absolute;
+        z-index: 2;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(124, 240, 225, 0.6);
+      }
+      .coord-line.v {
+        top: 0;
+        bottom: 0;
+        width: 1px;
+      }
+      .coord-line.h {
+        left: 0;
+        right: 0;
+        height: 1px;
+      }
+      .stage.show-coords .coord-label,
+      .stage.show-coords .coord-line {
+        opacity: 1;
+      }
+      .widget-svg .node rect {
+        fill: var(--card-2);
+        stroke: var(--line);
+        stroke-width: 2;
+        transition:
+          fill 0.25s,
+          stroke 0.25s;
+      }
+      .widget-svg .node text {
+        fill: var(--ink);
+        font: 600 16px var(--font-code);
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .widget-svg .node.is-on rect {
+        fill: var(--accent);
+        stroke: #fff;
+      }
+      .widget-svg .node.is-on text {
+        fill: var(--accent-ink);
+      }
+      .widget-svg .edge {
+        fill: none;
+        stroke: var(--muted);
+        stroke-width: 2;
+        opacity: 0.6;
+      }
+      .widget-svg .edge-label {
+        fill: var(--muted);
+        font: 600 12.5px var(--font-body);
+        text-anchor: middle;
+      }
+      .widget-svg marker path {
+        fill: var(--muted);
+      }
+      .state-now {
+        font-weight: 800;
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body class="theme-octo-pop" data-game="octo_pop" data-tutorial="Octo Pop">
+    <main class="page">
+      <!-- ============================================================ -->
+      <section class="hero">
+        <div class="hero-kicker">🐙 Tutorial 5 · Typing and strings</div>
+        <h1>Octo <span class="pop">Pop</span></h1>
+        <p class="hero-lede">
+          Build a typing game from a completely empty screen, one small step at a time. Bubbles full of words float up from the
+          sea floor, and Octo the octopus pops each one when you type its word. Along the way you'll learn what programmers call
+          <strong>strings</strong>: the way every program works with words. The code you'll write is real JavaScript, one of the
+          most popular programming languages in the world.
+        </p>
+        <ul class="hero-meta">
+          <li>⏱ About 100 minutes</li>
+          <li>🌱 Total beginners welcome (Firefly Flash first makes the early steps feel familiar)</li>
+          <li>⌨️ You'll need a keyboard. Nothing to install: the code runs right on this page</li>
+        </ul>
+
+        <h3>Play it first</h3>
+        <p class="prose">
+          Press <strong>Play</strong>, then click the game once so it can hear your keyboard. Press <kbd>Enter</kbd> to dive in.
+          Bubbles with words float up from the sand: <strong>type a word to pop its bubble</strong> before it reaches the surface.
+          Letters you've typed turn pink, a wrong letter makes Octo wince, and <kbd>Backspace</kbd> takes a letter back. Lose all
+          three hearts and the level is lost. Pop enough bubbles to clear it!
+        </p>
+        <div class="cell" id="hero-game" data-step="final" data-play-only></div>
+
+        <div class="learn-grid">
+          <div class="learn-card"><span class="emoji">🔤</span><b>Strings</b>Words as data: quote marks, length, and joining pieces together.</div>
+          <div class="learn-card"><span class="emoji">🔢</span><b>Letter by letter</b>Every letter has a number, and loops can visit them all.</div>
+          <div class="learn-card"><span class="emoji">⌨️</span><b>Typing &amp; keys</b>Reacting to the keyboard and building a word one letter at a time.</div>
+          <div class="learn-card"><span class="emoji">🔎</span><b>Matching &amp; cutting</b><code>startsWith</code>, <code>===</code>, <code>slice</code> and <code>split</code>.</div>
+          <div class="learn-card"><span class="emoji">🫧</span><b>Lists, loops &amp; the game loop</b>One bubble, then a whole school of them.</div>
+          <div class="learn-card"><span class="emoji">❤️</span><b>States &amp; levels</b>Lives, winning, losing, levels as data, and saving your best score.</div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🧭</span>
+          <div>
+            <span class="callout-title">How this page works</span>
+            <p>
+              Each step has <strong>code on the left</strong> and <strong>the game on the right</strong>. Change anything you
+              like, then press <strong>▶ Run</strong> (or <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>). Lines that are
+              new in a step glow green, and hovering a dotted code word in the text lights up the matching lines.
+              <strong>🎯 Challenges check themselves</strong> while your game runs. You can't break anything:
+              <strong>↺ Reset</strong> always brings the step back. Some steps have a <strong>Live values</strong> box underneath that shows
+              numbers changing as the game runs. Every step starts from its own code, so changes you make in one step don't carry into the next.
+            </p>
+            <p>
+              This is a typing game, so <strong>click the game once</strong> before you type, or the keys will go to the code
+              editor instead.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="The sea and a word">
+        <span class="step-kicker"></span>
+        <h2>The sea and a word</h2>
+        <p>
+          Every game starts with a picture, so let's paint one: a sea, some sand, and a bubble with a word in it. The whole
+          program is a few lines long. Press <strong>Run</strong>:
+        </p>
+        <div class="cell" data-step="01-sea"></div>
+        <p>A bubble with a word in it, floating in the sea. Let's read the code line by line.</p>
+        <ul>
+          <li>
+            <code class="ref" data-match="WIDTH = 720;">WIDTH = 720;</code> and <code class="ref" data-match="HEIGHT = 480;">HEIGHT = 480;</code> set the size of the game window
+            in <span class="term" tabindex="0" data-tip="The tiny dots a screen is made of. This game is 720 dots wide and 480 tall.">pixels</span>.
+            They must be written in capitals, exactly like that, because the game looks for those names.
+          </li>
+          <li>
+            <code class="ref" data-match="TITLE">TITLE = "Octo Pop";</code> is the game's name. Words and sentences inside quote marks are called
+            <span class="term" tabindex="0" data-tip="A piece of text. Strings always go inside quote marks: &quot;like this&quot;.">strings</span>.
+            This game is all about them, so you'll be seeing plenty.
+          </li>
+          <li>
+            <code class="ref" data-match="function draw">function draw() { … }</code> is a
+            <span class="term" tabindex="0" data-tip="A named set of instructions. Everything between its { curly brackets } runs when the function is called.">function</span>:
+            a named recipe. The game runs <code>draw</code> about <strong>60 times every second</strong> to paint the picture,
+            like the pages of a flip book.
+          </li>
+          <li>Lines starting with <code class="ref" data-match="// The sea">//</code> are <span class="term" tabindex="0" data-tip="Notes for humans. The computer skips everything after // on a line.">comments</span>: notes for people. The computer ignores them.</li>
+          <li><code class="ref" data-match="screen.fill">screen.fill</code> paints the whole window. With two colours it fades from the first (top) to the second (bottom).</li>
+          <li>
+            <code class="ref" data-match="screen.rect">screen.rect(0, HEIGHT - 70, WIDTH, 70, "#f6dfa8")</code> draws a filled rectangle: its left edge's
+            <strong>x</strong>, its top edge's <strong>y</strong>, its <strong>width</strong>, its <strong>height</strong>, and its colour. Colours can be names like <code>"white"</code>, or codes that start with <code>#</code>, like the one here: the same
+            codes paint programs use. The sand starts 70 pixels above the bottom (<code>HEIGHT - 70</code>) and stretches the full <code>WIDTH</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="screen.circle(360">screen.circle(360, 230, 56, "#f6fdff")</code> draws a filled circle: <strong>x</strong>, <strong>y</strong>, <strong>radius</strong> (how far
+            it reaches from its middle) and colour. <code class="ref" data-match="screen.draw.circle">screen.draw.circle</code> draws only the <em>outline</em>: it takes its middle as a
+            list in square brackets <code>[360, 230]</code>, then the radius, the colour and how thick the line is.
+          </li>
+          <li>
+            <code class="ref" data-match="screen.text">screen.text("octopus", 322, 218, "#2a2140", 24)</code> writes the word. It takes the text, then the x and y of the text's
+            <em>top-left corner</em>, then a colour and a size.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🧠</span>
+          <div>
+            <span class="callout-title">Big idea: x and y, and painting order</span>
+            <p>
+              Every spot in the window has two numbers. <strong>x</strong> says how far across from the left edge.
+              <strong>y</strong> says how far <em>down</em> from the top. So <code>(0, 0)</code> is the top-left corner, and y gets
+              <em>bigger</em> as you go <em>down</em>.
+            </p>
+            <p>
+              The computer paints in the order you write the lines, like painting on a canvas. Things painted <strong>later</strong>
+              cover things painted <strong>earlier</strong>. That's why the sea comes first and the word comes last.
+            </p>
+            <p>👉 <strong>Hover over the game above</strong> to see the x and y of any spot.</p>
+          </div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🧪</span>
+          <div>
+            <span class="callout-title">Break it on purpose</span>
+            <p>
+              Errors are normal, and the friendly messages tell you what to fix. Delete the closing quote mark after
+              <code>octopus</code> and press <strong>Run</strong>. Read the message, put the quote back, and run again. Strings need
+              their quote marks at <em>both</em> ends!
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-quotes" data-answer="a">
+          <p>What do the quote marks around <code>"octopus"</code> tell the computer?</p>
+          <button data-choice="a">That this is text to use as it is, not the name of something</button>
+          <button data-choice="b">To show the word in bold</button>
+          <button data-choice="c">To tell the computer the word is a number</button>
+          <div class="explain" data-for="a">Without quotes, <code>octopus</code> would be a <em>name</em> the computer should know about, and it would complain it has never heard of it. Inside quotes, it is plain letters.</div>
+          <div class="explain" data-for="wrong">Try deleting the quote marks in the code and running it: what does the error say?</div>
+        </div>
+
+        <div class="challenge" data-id="new-word" data-success="A brand-new word. You edited a string!">
+          <p><strong>Change the word in the bubble</strong> to any other word you like.</p>
+          <p class="hint">Find <code>"octopus"</code> in the <code>screen.text</code> line. Keep the quote marks, and change what's between them.</p>
+          <pre class="answer">  screen.text("kraken", 322, 218, "#2a2140", 24);</pre>
+        </div>
+        <div class="challenge" data-id="big-bubble" data-success="A bubble the size of a beach ball.">
+          <p><strong>Make the bubble bigger</strong>: give it a radius of at least 80, in both the filled circle and its outline.</p>
+          <p class="hint">The third number in <code>screen.circle</code> is the radius. The outline has its own radius, after the <code>[360, 230]</code>.</p>
+          <pre class="answer">  screen.circle(360, 230, 80, "#f6fdff");
+  screen.draw.circle([360, 230], 80, "#2a2140", 3);</pre>
+        </div>
+        <p class="muted">Next: a real octopus joins in.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Meet Octo">
+        <span class="step-kicker"></span>
+        <h2>Meet Octo</h2>
+        <p>
+          Circles are fine, but this game has <em>art</em>! Games keep their pictures in an <code>images</code> folder. Here's
+          what comes with Octo Pop:
+        </p>
+        <div class="art-tray"></div>
+        <div class="cell" data-step="02-octopus"></div>
+        <p>The sandy sea floor, a bright sky at the top, a smiling octopus, and a proper bubble. Here's what changed:</p>
+        <ul>
+          <li>
+            <code class="ref" data-match='const INK'>const INK = "#2a2140";</code> gives a colour a name. <code>const</code> makes a
+            <span class="term" tabindex="0" data-tip="A name for a value that stays the same. Made with const.">constant</span>: a name for a value that you can't swap for
+            a different one later. Now every dark-plum word can say <code>INK</code> instead of repeating the code, and changing
+            that one line changes them all. (<code>const octopus = new Actor(…)</code> is fine too: the name always means that same Actor, even
+            while the Actor itself moves around.)
+          </li>
+          <li>
+            An <code class="ref" data-match="new Actor">Actor</code> is a picture you can move around.
+            <code class="ref" data-match='new Actor("octopus_idle"'>new Actor("octopus_idle", { center: [WIDTH / 2, OCTOPUS_Y] })</code> loads
+            <code>images/octopus_idle.svg</code> and puts its middle at that spot. <code>WIDTH / 2</code> is halfway across.
+            Then <code class="ref" data-match="octopus.draw()">octopus.draw()</code> paints it.
+          </li>
+          <li><code class="ref" data-match='const bubble = new Actor'>bubble</code> is an Actor too, so the bubble is now a picture instead of two circles.</li>
+          <li>
+            <code class="ref" data-match="screen.blit">screen.blit("seabed", [0, HEIGHT - 130])</code> draws a picture with its top-left corner at that spot. It's great for
+            scenery that doesn't move: the sky strip and the sea floor.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawSea">drawSea()</code> is a new function holding all the scenery.
+            <code class="ref" data-match="drawSea();">draw()</code> only <em>calls</em> it by writing its name with brackets. Giving a chunk of work a name keeps
+            <code>draw</code> short and tidy.
+          </li>
+        </ul>
+        <div class="callout big-idea">
+          <span class="callout-icon">🏷️</span>
+          <div>
+            <span class="callout-title">Big idea: giving things names</span>
+            <p>
+              Programmers name things so they don't have to remember them. A <strong>constant</strong> names a value
+              (<code>INK</code>), a <strong>function</strong> names a chunk of work (<code>drawSea</code>), and an
+              <strong>Actor</strong> names a picture that can move (<code>octopus</code>). Good names make code read like a story.
+            </p>
+          </div>
+        </div>
+        <div class="tweak" data-name="OCTOPUS_Y" data-min="60" data-max="400" data-label="Octo's y (bigger = lower)" data-icon="🐙"></div>
+        <div class="quiz" data-id="q-asset" data-answer="b">
+          <p>Which name loads the picture <code>images/octopus_happy.svg</code>?</p>
+          <button data-choice="a"><code>new Actor("Octopus_Happy")</code></button>
+          <button data-choice="b"><code>new Actor("octopus_happy")</code></button>
+          <button data-choice="c"><code>new Actor("images/octopus_happy.svg")</code></button>
+          <div class="explain" data-for="b">Only the file's name, in lowercase. The <code>images/</code> folder and the <code>.svg</code> are found automatically.</div>
+          <div class="explain" data-for="a">So close! Picture names are written exactly like the file name, in lowercase.</div>
+          <div class="explain" data-for="c">Actors already look in the <code>images</code> folder, so you only need the file's own name.</div>
+        </div>
+        <div class="challenge" data-id="octo-happy" data-success="Octo is delighted to meet you.">
+          <p><strong>Make Octo happy</strong>: use the <code>"octopus_happy"</code> picture instead of the idle one.</p>
+          <p class="hint">The picture's name is the first thing inside <code>new Actor(…)</code>.</p>
+          <pre class="answer">const octopus = new Actor("octopus_happy", { center: [WIDTH / 2, OCTOPUS_Y] });</pre>
+        </div>
+        <p class="muted">Next: it's time to find out what a string really is.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Words are strings">
+        <span class="step-kicker"></span>
+        <h2>Words are strings</h2>
+        <p>
+          The bubble needs a word, and every letter of that word should sit neatly inside it. To do that, the program has to
+          know things about the word: how long it is, and what its letters are. That's what
+          <strong>strings</strong> are for. Run this step, then try the letter boxes underneath:
+        </p>
+        <div class="cell" data-step="03-words" data-watch="bubble.word, bubble.word.length"></div>
+        <p>The bubble grows to fit its word, and each letter is placed by the program, one at a time.</p>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🔤</span>
+          <div>
+            <span class="callout-title">Big idea: strings</span>
+            <p>
+              A <span class="term" tabindex="0" data-tip="A piece of text, written inside quote marks.">string</span> is a row of letters (programmers say
+              <em>characters</em>) threaded together, like beads on a string. Write one with quote marks:
+              <code class="ref" data-match='bubble.word = "octopus"'>"octopus"</code>.
+            </p>
+            <p>
+              A string knows how long it is: <code class="ref" data-match="bubble.word.length">bubble.word.length</code> is 7. And every letter has a
+              <strong>position number</strong> (an <span class="term" tabindex="0" data-tip="A letter's or an item's position number. Counting starts at 0, not 1.">index</span>), starting from
+              <strong>0</strong>, not 1: <code>bubble.word[0]</code> is <code>"o"</code>, <code>bubble.word[1]</code> is <code>"c"</code>.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🔘</span>
+          <div>
+            <span class="callout-title">What's that dot?</span>
+            <p>
+              A dot reaches <em>inside</em> something. <code>bubble.word</code> is the <code>word</code> that belongs to the <code>bubble</code>, and
+              <code>"octopus".length</code> is a fact the string knows about itself. Strings can also <em>do</em> things, and those
+              abilities are called <span class="term" tabindex="0" data-tip="An action that belongs to a value, written after a dot with brackets, like word.toUpperCase().">methods</span>.
+              You write the brackets to make them happen: <code>"octopus".toUpperCase()</code> gives you <code>"OCTOPUS"</code>. You'll meet more methods in the steps ahead.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="letter-boxes">
+          <div class="widget-title">🔢 Letter boxes</div>
+          <div class="widget-sub">Type any word. Every letter gets a number underneath. Slide the position to see what <code>word[i]</code> gives you.</div>
+          <label>Your word <input class="word-input" type="text" value="octopus" maxlength="12" spellcheck="false" autocomplete="off" aria-label="Your word" /></label>
+          <div class="letters" aria-live="polite"></div>
+          <div class="widget-controls">
+            <label>Position <code>i</code> <input type="range" min="0" max="12" value="3" data-pos /> <output data-pos-out>3</output></label>
+          </div>
+          <div class="readout" data-readout></div>
+        </div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match="const LETTER_WIDTH">LETTER_WIDTH</code> and <code class="ref" data-match="const BUBBLE_PADDING">BUBBLE_PADDING</code> are
+            constants: how many pixels each letter gets, and some spare room around the word.
+          </li>
+          <li>
+            <code class="ref" data-match="bubble.width =">bubble.width = bubble.word.length * LETTER_WIDTH + BUBBLE_PADDING</code> sizes the bubble:
+            7 letters × 17 pixels + 44 = 163 pixels wide. Longer word, bigger bubble. (<code>*</code> means "times".)
+          </li>
+          <li>
+            The text in the bubble is written by <code class="ref" data-match="function write">write(text, x, y, size, color)</code>, a function of our own. When we call it, we hand it some values called
+            <span class="term" tabindex="0" data-tip="A value you hand to a function when you call it. Inside the function it has a name, like text or x.">arguments</span>: what to write, where, how big, and what colour.
+            The brackets after <code>function write</code> give each one a name to use inside. Because every piece of text in the game goes
+            through <code>write</code>, changing the font here changes <em>all</em> the text.
+          </li>
+          <li>
+            Inside, <code class="ref" data-match="screen.draw.text">screen.draw.text</code> takes the text and then an
+            <span class="term" tabindex="0" data-tip="A bundle of named values in { curly brackets }, like { x: 10, y: 20 }.">object</span> of settings in curly brackets.
+            <code>center: [x, y]</code> puts the middle of the text at that spot, <code>fontname: "fredoka"</code> picks the rounded font, and
+            <code class="ref" data-match="shadow:">shadow: [0, 2]</code> adds a soft shadow 0 pixels across and 2 pixels down. The shadow's colour,
+            <code class="ref" data-match="rgb(42">rgb(42, 33, 64, 70)</code>, is mixed from red, green and blue light (each from 0 to 255), and the fourth number makes it mostly see-through.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawWord">drawWord(bubble)</code> draws the word <em>one letter at a time</em>.
+            <code class="ref" data-match="for (let i = 0">for (let i = 0; i &lt; bubble.word.length; i++)</code> is a <span class="term" tabindex="0" data-tip="Code that repeats. This one counts: i starts at 0, and goes up by 1 each time round, while i is less than the word's length.">counting loop</span>:
+            <code>i</code> starts at 0 and goes up by 1 (<code>i++</code>) for as long as <code>i &lt; bubble.word.length</code>. So for
+            "octopus" it runs 7 times, with <code>i</code> = 0, 1, 2, … 6.
+          </li>
+          <li>
+            Inside the loop, <code class="ref" data-match="bubble.word[i]">bubble.word[i]</code> is the letter at position <code>i</code>, and
+            <code class="ref" data-match="left + i * LETTER_WIDTH">left + i * LETTER_WIDTH</code> is where to draw it: each letter sits one
+            <code>LETTER_WIDTH</code> further right than the one before. <code class="ref" data-match="const left">left</code> works out where the very first letter goes, so
+            the whole word is centred.
+          </li>
+        </ul>
+
+        <div class="tweak-row">
+          <div class="tweak" data-name="LETTER_WIDTH" data-min="8" data-max="30" data-label="Space per letter" data-icon="↔️" data-unit=" px"></div>
+          <div class="tweak" data-name="BUBBLE_PADDING" data-min="0" data-max="120" data-label="Spare room" data-icon="🫧" data-unit=" px"></div>
+        </div>
+
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <div>
+            <span class="callout-title">Counting starts at 0</span>
+            <p>
+              The <em>first</em> letter is number 0, so a word with 7 letters has letters 0 to 6, and <code>word[7]</code> is
+              <code>undefined</code>: there's nothing there. The last letter is always at <code>word.length - 1</code>. Slide the
+              position past the end in the widget to see it.
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-index" data-answer="c">
+          <p>What is <code>"seahorse"[1]</code>?</p>
+          <button data-choice="a"><code>"s"</code></button>
+          <button data-choice="b"><code>"seahorse"</code></button>
+          <button data-choice="c"><code>"e"</code></button>
+          <div class="explain" data-for="c">Position 0 is <code>"s"</code>, so position 1 is the second letter: <code>"e"</code>.</div>
+          <div class="explain" data-for="a"><code>"s"</code> is at position <em>0</em>. Positions start at 0, not 1!</div>
+          <div class="explain" data-for="b">The square brackets pick out <em>one letter</em>, not the whole word.</div>
+        </div>
+
+        <div class="challenge" data-id="long-word" data-success="What a long word! Look how the bubble grew to fit it.">
+          <p><strong>Give the bubble a longer word</strong>: at least 9 letters. Try <code>"jellyfish"</code>.</p>
+          <p class="hint">Change the string in <code>bubble.word = "octopus";</code>.</p>
+          <pre class="answer">bubble.word = "jellyfish";</pre>
+        </div>
+        <div class="challenge" data-id="shout" data-success="SHOUTING IN BUBBLES! You used a string method.">
+          <p><strong>Show the letters in CAPITALS</strong>. Strings have a built-in trick for that: <code>.toUpperCase()</code>.</p>
+          <p class="hint">In <code>drawWord</code>, the letter being drawn is <code>bubble.word[i]</code>. Add <code>.toUpperCase()</code> straight after it.</p>
+          <p class="hint">You can add it right after the closing square bracket: <code>bubble.word[i].toUpperCase()</code>.</p>
+          <pre class="answer">    write(bubble.word[i].toUpperCase(), left + i * LETTER_WIDTH, bubble.y, 26, INK);</pre>
+        </div>
+        <p class="muted">Next: the bubble floats! Time to meet the game loop.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="The game loop: float up">
+        <span class="step-kicker"></span>
+        <h2>The game loop: float up</h2>
+        <p>
+          A bubble that stays still isn't much of a bubble. Here's the secret behind every video game: the computer draws a
+          picture, changes things a tiny bit, draws again, changes a tiny bit, draws again… about 60 times a second. Your eyes
+          blend those pictures into motion. That's the <strong>game loop</strong>. Watch the bubble float:
+        </p>
+        <div class="cell" data-step="04-rise" data-watch="bubble.y, time"></div>
+        <p>
+          The bubble rises, sways from side to side, reaches the surface, and starts again from the sand. Keep an eye on
+          <code>bubble.y</code> in the live values box: it counts <em>down</em>, because up is the smaller y.
+        </p>
+        <ul>
+          <li>
+            <code class="ref" data-match="function update">update(dt)</code> is a second special function. The game calls it every frame, right
+            <em>before</em> <code>draw()</code>. <strong>update changes things, draw shows them.</strong>
+          </li>
+          <li>
+            <code class="ref" data-match="(dt)">dt</code> is the time since the last frame, in seconds. It's usually about 0.017 (one sixtieth of a second).
+          </li>
+          <li>
+            <code class="ref" data-match="bubble.y -= BUBBLE_SPEED * dt">bubble.y -= BUBBLE_SPEED * dt;</code> means "take <code>BUBBLE_SPEED × dt</code> away from y". Speed ×
+            time = distance, so each frame the bubble moves exactly as far as it should in that sliver of time. (<code>-=</code> is short for
+            <code>bubble.y = bubble.y - …</code>.)
+          </li>
+          <li>
+            <code class="ref" data-match="if (bubble.y < SURFACE_Y)">if (bubble.y &lt; SURFACE_Y)</code> asks a yes-or-no question: "is the bubble's y <em>less than</em> the surface line's y?". Less y means higher up. If the answer is
+            yes, the part after it runs and puts the bubble back at <code class="ref" data-match="SPAWN_Y">SPAWN_Y</code>, right above the sand.
+          </li>
+          <li>
+            <code class="ref" data-match="let time">let time = 0;</code> makes a <span class="term" tabindex="0" data-tip="A named box that holds a value. You can read what's inside, or put something new in.">variable</span>:
+            a labelled box whose contents <em>can</em> change later, unlike a <code>const</code>. <code class="ref" data-match="time += dt">time += dt;</code> adds each frame's <code>dt</code> to it, so
+            <code>time</code> is a stopwatch of the seconds since the game began.
+          </li>
+          <li>
+            <code class="ref" data-match="const WOBBLE">WOBBLE</code> is a constant for how far the bubble sways, and <code class="ref" data-match="bubble.startX">bubble.startX</code> remembers where the bubble began.
+            <code class="ref" data-match="Math.sin">Math.sin(time * 2)</code> gives a number that swings smoothly between −1 and 1
+            as time goes on, like a wave, so <code class="ref" data-match="WOBBLE * Math.sin">WOBBLE * Math.sin(…)</code> moves the bubble between <code>WOBBLE</code> pixels left and <code>WOBBLE</code> pixels right of its starting spot
+            (10 to begin with). The <code>* 2</code> makes the sway quicker.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🔁</span>
+          <div>
+            <span class="callout-title">Big idea: the game loop</span>
+            <p>
+              Every frame, the game calls <code>update(dt)</code> to <em>change</em> things, then <code>draw()</code> to <em>show</em>
+              them. Multiplying a speed by <code>dt</code> means the bubble covers the same distance every second, whether your computer
+              draws 30 frames a second or 144.
+            </p>
+          </div>
+        </div>
+
+        <div class="tweak-row">
+          <div class="tweak" data-name="BUBBLE_SPEED" data-min="5" data-max="200" data-label="Float speed" data-icon="🫧" data-unit=" px/s"></div>
+          <div class="tweak" data-name="SURFACE_Y" data-min="60" data-max="360" data-label="Where's the surface?" data-icon="🌊"></div>
+          <div class="tweak" data-name="WOBBLE" data-min="0" data-max="40" data-label="How much it sways" data-icon="〰️" data-unit=" px"></div>
+        </div>
+
+        <div class="quiz" data-id="q-dt" data-answer="c">
+          <p>A slow computer draws a frame every half second, so <code>dt</code> is 0.5. The bubble is at y = 300 and <code>BUBBLE_SPEED</code> is 30. Where is it after one frame?</p>
+          <button data-choice="a">y = 270</button>
+          <button data-choice="b">y = 299.5</button>
+          <button data-choice="c">y = 285</button>
+          <div class="explain" data-for="c">30 pixels a second for half a second is 15 pixels, so 300 − 15 = 285. That's the beauty of <code>dt</code>: slow frames take bigger steps.</div>
+          <div class="explain" data-for="wrong">Multiply the speed by <code>dt</code> first: 30 × 0.5. Then take that away from 300.</div>
+        </div>
+
+        <div class="challenge" data-id="fast-bubble" data-success="Whoosh! A speedy bubble.">
+          <p><strong>Make the bubble float twice as fast</strong>: at least 56 pixels a second.</p>
+          <p class="hint">Look at the constants at the top: one of them is the bubble's speed.</p>
+          <pre class="answer">const BUBBLE_SPEED = 60; // pixels per second</pre>
+        </div>
+        <p class="muted">Next: one bubble is lonely. Let's fill the sea with them.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="A school of bubbles">
+        <span class="step-kicker"></span>
+        <h2>A school of bubbles</h2>
+        <p>
+          One bubble is lonely. We want lots, each with its own word, but writing <code>bubble1</code>, <code>bubble2</code>… for each would get tiring
+          very fast. Instead we'll keep a <strong>list</strong> of bubbles, and let <strong>loops</strong> do the repetitive work. A new bubble
+          appears every few seconds, with a random word from a list of words.
+        </p>
+        <div class="cell" data-step="05-shoal" data-watch="bubbles.length, spawnTimer"></div>
+        <div class="callout big-idea">
+          <span class="callout-icon">🧺</span>
+          <div>
+            <span class="callout-title">Big idea: lists and objects</span>
+            <p>
+              A <span class="term" tabindex="0" data-tip="Also called an array. An ordered list of values in [square brackets].">list</span>
+              (programmers say <em>array</em>) holds many values in order. This list holds <strong>strings</strong>:
+              <code class="ref" data-match="const WORDS">WORDS</code> is <code>["cat", "sun", "fish", …]</code>. <code>WORDS[0]</code> is
+              <code>"cat"</code>, <code>WORDS[1]</code> is <code>"sun"</code>: lists count from 0 too. An empty list is <code>[]</code>, and
+              <code class="ref" data-match="bubbles.push">.push(…)</code> adds something to the end.
+            </p>
+            <p>
+              An <span class="term" tabindex="0" data-tip="A bundle of named values in { curly brackets }, like { x: 10, y: 20 }.">object</span> bundles named values together, like
+              <code>{ x: 80, y: 60 }</code>. Every Actor is an object, and we can stick our own extras onto it, like <code>bubble.word</code>. That's how each
+              bubble in the list carries its own word.
+            </p>
+          </div>
+        </div>
+        <ul>
+          <li>
+            <code class="ref" data-match="let bubbles">let bubbles = [];</code> is a variable holding an empty list, and <code class="ref" data-match="let spawnTimer">spawnTimer</code> is a countdown timer: it
+            counts down to the next bubble.
+          </li>
+          <li>
+            <code class="ref" data-match="function makeBubble">makeBubble(word)</code> builds one bubble, like the one from the last step but for any word we give it, and
+            <code>return</code>s it: it hands the new bubble back to whoever asked for it.
+          </li>
+          <li>
+            Inside it, <code class="ref" data-match="const diameter">diameter</code> is how wide this word's bubble needs to be, and <code class="ref" data-match="const margin">margin</code> is half of that plus the
+            sway: how far from the walls the middle of the bubble must stay, so the bubble never pokes out of the window.
+            <code class="ref" data-match="randomInt(margin">randomInt(margin, WIDTH - margin)</code> picks a random whole number between the two, so bubbles appear in different places.
+          </li>
+          <li>
+            Each bubble gets a random <code class="ref" data-match="bubble.phase = ">phase</code>, a starting point in the sway wave, so they don't all sway in step.
+            <code class="ref" data-match="Math.random">Math.random()</code> gives a random fraction between 0 and 1, so times 6 it's anywhere from 0 to 6.
+          </li>
+          <li>
+            <code class="ref" data-match="function moveBubble">moveBubble(bubble, dt)</code> is the movement code from last step, but it works on whichever bubble we hand it.
+          </li>
+          <li>
+            In <code>update</code>, <code class="ref" data-match="for (const bubble of bubbles)">for (const bubble of bubbles)</code> visits <strong>each item</strong> of a list in turn, calling it
+            <code>bubble</code> while it's there. That's how every bubble gets moved, and (in <code class="ref" data-match="function drawBubbles">drawBubbles</code>) drawn.
+          </li>
+          <li>
+            <code class="ref" data-match="spawnTimer -= dt">spawnTimer</code> counts down. When it reaches 0 or less, <code class="ref" data-match="bubbles.push(makeBubble">a new bubble is pushed onto the list</code>
+            with <code class="ref" data-match="randomChoice(WORDS)">randomChoice(WORDS)</code> (a random item from a list) as its word, and the timer starts again.
+          </li>
+          <li>
+            <code class="ref" data-match="bubbles.filter">bubbles.filter((bubble) =&gt; bubble.y &gt; SURFACE_Y)</code> builds a new list that keeps only the bubbles for which the test is true: the ones still below the surface.
+            The <code>(bubble) =&gt; …</code> is an <span class="term" tabindex="0" data-tip="A short way to write a small function right where you need it: (x) => doSomething(x).">arrow function</span>:
+            a tiny function without a name. Bubbles that float away are left out, so the list never gets too long.
+          </li>
+        </ul>
+        <div class="tweak" data-name="SPAWN_EVERY" data-min="0.3" data-max="6" data-step="0.1" data-label="Seconds between bubbles" data-icon="⏳" data-unit=" s"></div>
+        <div class="quiz" data-id="q-filter" data-answer="b">
+          <p>What does <code>bubbles.filter((bubble) =&gt; bubble.y &gt; SURFACE_Y)</code> do with a bubble at y = 50, if <code>SURFACE_Y</code> is 74?</p>
+          <button data-choice="a">Keeps it: it's close to the top</button>
+          <button data-choice="b">Leaves it out of the new list: it has floated above the surface</button>
+          <button data-choice="c">Moves it back down to the sand</button>
+          <div class="explain" data-for="b">50 is not greater than 74, so the test is false and the bubble isn't kept.</div>
+          <div class="explain" data-for="wrong">The test is <code>bubble.y &gt; SURFACE_Y</code>. Is 50 greater than 74? Only bubbles that pass the test are kept.</div>
+        </div>
+        <div class="challenge" data-id="my-word" data-success="Your word is in the sea now!">
+          <p><strong>Add a word of your own</strong> to <code>WORDS</code>. Remember the quote marks, and a comma after the one before it.</p>
+          <p class="hint">Add it inside the square brackets: <code>"jelly"</code> goes between commas, like the others.</p>
+          <pre class="answer">const WORDS = ["cat", "sun", "fish", "crab", "wave", "pearl", "moon", "bell", "kraken"];</pre>
+        </div>
+        <div class="challenge" data-id="busy-sea" data-success="A busy sea! Plenty to type.">
+          <p><strong>Make the sea busy</strong>: a bubble every 1.5 seconds or faster, until at least 4 are floating at once.</p>
+          <p class="hint">How often a new bubble appears is one of the constants at the top.</p>
+          <pre class="answer">const SPAWN_EVERY = 1; // seconds between new bubbles</pre>
+        </div>
+        <p class="muted">Next: a keyboard, and the heart of the game.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Typing makes a string">
+        <span class="step-kicker"></span>
+        <h2>Typing makes a string</h2>
+        <p>
+          Now the player joins in. Every key you press will add a letter to a string called <code>typed</code>, and a tray under Octo
+          will show it. <strong>Click the game first</strong> so it can hear your keyboard, then start typing:
+        </p>
+        <div class="cell" data-step="06-typing" data-watch="typed, typed.length"></div>
+        <p>
+          Type some letters and watch the tray, and the live values, fill up. Press <kbd>Backspace</kbd> to take one away. Capitals
+          and Caps Lock don't matter, and keys like <kbd>Shift</kbd> or the arrows are ignored.
+        </p>
+        <ul>
+          <li>
+            <code class="ref" data-match="const ALPHABET">ALPHABET</code> is one string holding all 26 letters. The game will use it to check that a key really is a letter.
+          </li>
+          <li>
+            <code class="ref" data-match='let typed = ""'>let typed = "";</code> makes another <span class="term" tabindex="0" data-tip="A named box that holds a value. You can read what's inside, or put something new in.">variable</span> and puts
+            the <strong>empty string</strong> in it: two quote marks with nothing between them. It's a string with 0 letters, which is exactly how much you've typed so far.
+          </li>
+          <li>
+            <code class="ref" data-match="function onKeyDown">onKeyDown(key, unicode, repeat)</code> is another special name: the game calls it whenever a key goes down.
+            <code>key</code> says <em>which</em> key it was, as a number you compare with names like <code class="ref" data-match="keys.BACKSPACE">keys.BACKSPACE</code>.
+            <code>unicode</code> is the <em>character</em> the key typed, as a string: <code>"a"</code>, or <code>"A"</code> with Shift held. For keys that don't type a character
+            (Shift, the arrows, Enter) it's the empty string.
+          </li>
+          <li>
+            <code class="ref" data-match="unicode.length === 1">unicode.length === 1</code> keeps only keys that typed exactly one character. <code>===</code> asks "is this <em>exactly</em> equal to that?".
+            (A single <code>=</code> is different: it <em>puts</em> a value in a box.) The <code>else if</code> means "otherwise, if…".
+          </li>
+          <li>
+            <code class="ref" data-match="&& !repeat">&amp;&amp; !repeat</code> adds a second condition. <code>&amp;&amp;</code> means <strong>and</strong>: both sides must be true, so the key has to type one character
+            <em>and</em> not be a repeat. When you hold a key down the keyboard starts repeating it, and the game tells <code>onKeyDown</code> with <code>repeat</code>. <code>!repeat</code> means "not a repeat",
+            so holding a letter key types one letter, not twenty. (Holding <kbd>Backspace</kbd> keeps erasing, which is what you'd expect.)
+          </li>
+          <li>
+            <code class="ref" data-match="toLowerCase">unicode.toLowerCase()</code> turns capitals into small letters, so Shift and Caps Lock make no difference. Words in the game are always lowercase.
+          </li>
+          <li>
+            <code class="ref" data-match="ALPHABET.includes(letter)">ALPHABET.includes(letter)</code> is true when the letter is somewhere inside the alphabet string. The <code class="ref" data-match="!ALPHABET">!</code> in front means
+            "not", and <code>return</code> leaves the function straight away. So anything that isn't a letter stops here.
+          </li>
+          <li>
+            <code class="ref" data-match="typed += letter">typed += letter;</code> adds the letter onto the end of <code>typed</code>. <code>+=</code> is short for <code>typed = typed + letter</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="typed.slice(0, -1)">typed.slice(0, -1)</code> is what <kbd>Backspace</kbd> does: it cuts a piece out of the string. More on that in a moment.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawTray">drawTray()</code> draws the tray picture, then writes <code>typed</code> on it. If <code class="ref" data-match='typed === ""'>typed === ""</code>, there's nothing
+            to show yet, so it writes a little hint instead.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🧵</span>
+          <div>
+            <span class="callout-title">Big idea: joining and cutting strings</span>
+            <p>
+              Strings can be <strong>joined</strong> with <code>+</code>: <code>"cat" + "fish"</code> is <code>"catfish"</code>. And they can be <strong>cut</strong>:
+              <code>word.slice(start, end)</code> gives you the piece from position <code>start</code> up to, but <em>not including</em>, position <code>end</code>.
+              A negative number counts back from the end, so <code>-1</code> means "stop one letter before the end". Slicing never changes the original string. It hands you a new one.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="slice-scissors">
+          <div class="widget-title">✂️ Slice scissors</div>
+          <div class="widget-sub">Pick the start and the end of the cut. The pink letters are the piece you get back.</div>
+          <label>Your word <input class="word-input" type="text" value="octopus" maxlength="12" spellcheck="false" autocomplete="off" aria-label="Your word" /></label>
+          <div class="letters" aria-live="polite"></div>
+          <div class="widget-controls">
+            <label>start <input type="range" min="0" max="12" value="0" data-start /> <output data-start-out>0</output></label>
+            <label>end <input type="range" min="-12" max="12" value="12" data-end /> <output data-end-out>12</output></label>
+            <button class="btn btn-small btn-soft" type="button" data-backspace>⌫ Show what Backspace does</button>
+          </div>
+          <div class="code-line" data-code></div>
+          <div class="readout" data-readout></div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">⌨️</span>
+          <div>
+            <span class="callout-title">Why lowercase everything?</span>
+            <p>
+              To a computer, <code>"A"</code> and <code>"a"</code> are <em>different</em> letters. By turning every typed letter into lowercase as it arrives,
+              the game never has to worry about it. It's a good habit: tidy up what players give you before using it.
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-plus" data-answer="a">
+          <p>If <code>typed</code> is <code>"ca"</code>, what is <code>typed</code> after <code>typed += "t"</code> runs?</p>
+          <button data-choice="a"><code>"cat"</code></button>
+          <button data-choice="b"><code>"ca"</code>, because <code>+=</code> only works on numbers</button>
+          <button data-choice="c"><code>"cat"</code>, but only if the word exists</button>
+          <div class="explain" data-for="a"><code>+=</code> joins the new letter onto the end. The computer doesn't check if it's a real word. It only glues the strings together.</div>
+          <div class="explain" data-for="wrong"><code>typed += "t"</code> means <code>typed = typed + "t"</code>: join the two strings, then put the new, longer string back in the <code>typed</code> box.</div>
+        </div>
+        <div class="quiz" data-id="q-slice" data-answer="b">
+          <p>What is <code>"octopus".slice(0, -1)</code>?</p>
+          <button data-choice="a"><code>"o"</code></button>
+          <button data-choice="b"><code>"octopu"</code></button>
+          <button data-choice="c"><code>"ctopus"</code></button>
+          <div class="explain" data-for="b">It starts at position 0 and stops one letter before the end, so only the final <code>s</code> is cut off. That's exactly what Backspace needs.</div>
+          <div class="explain" data-for="wrong">Try it in the scissors above: start 0, end −1.</div>
+        </div>
+
+        <div class="challenge" data-id="digits" data-success="Numbers are welcome too!">
+          <p><strong>Let players type digits as well</strong>: add <code>0123456789</code> to the end of the <code>ALPHABET</code> string, then type a number.</p>
+          <p class="hint">Keep it all inside the same pair of quote marks.</p>
+          <pre class="answer">const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"; // the keys that count as typing</pre>
+        </div>
+        <div class="challenge" data-id="caps-tray" data-success="LOUD TYPING! A string method in action.">
+          <p><strong>Show the tray in CAPITAL letters</strong> with <code>.toUpperCase()</code>, then type something to see it.</p>
+          <p class="hint">In <code>drawTray</code>, the line that writes the typed letters uses <code>typed</code>. What could you add after it?</p>
+          <pre class="answer">    write(typed.toUpperCase(), WIDTH / 2, middle, 30, INK);</pre>
+        </div>
+        <p class="muted">Next: bubbles light up when your letters match their words.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Which bubbles match?">
+        <span class="step-kicker"></span>
+        <h2>Which bubbles match?</h2>
+        <p>
+          Right now typing does nothing to the bubbles. Let's make them <em>react</em>: every bubble whose word <strong>starts with</strong> the
+          letters you've typed gets a golden ring, and the letters you've already typed turn pink inside it. Type the first letter of a word
+          you can see:
+        </p>
+        <div class="cell" data-step="07-match" data-watch="typed"></div>
+        <p>
+          Type <code>c</code> and every bubble starting with "c" lights up. Type a second letter and only the words that still match stay lit.
+          Typed a letter that matches nothing? Nothing lights up. Press <kbd>Backspace</kbd> and try again.
+        </p>
+        <ul>
+          <li>
+            <code class="ref" data-match="const PINK">PINK</code> and <code class="ref" data-match="const GOLD">GOLD</code> are two new colour constants: pink for typed letters, gold for the ring.
+          </li>
+          <li>
+            <code class="ref" data-match="function isLit">isLit(bubble)</code> answers a yes-or-no question about one bubble. A function that <code>return</code>s <code>true</code> or <code>false</code> is
+            perfect for an <code>if</code> to ask.
+          </li>
+          <li>
+            <code class="ref" data-match="startsWith">bubble.word.startsWith(typed)</code> is true when the word begins with exactly those letters. <code>"crab".startsWith("cr")</code> is
+            <code>true</code>, but <code>"crab".startsWith("ra")</code> is <code>false</code>. Words that start the same way are said to share a
+            <span class="term" tabindex="0" data-tip="The start of a string. &quot;ca&quot; is a prefix of &quot;cat&quot; and &quot;car&quot;.">prefix</span>.
+          </li>
+          <li>
+            <code class="ref" data-match="typed.length > 0 &&">typed.length &gt; 0 &amp;&amp; …</code>: <code>&amp;&amp;</code> means <strong>and</strong>. Both sides must be true. We need the first part because
+            <em>every</em> word starts with the empty string, so with nothing typed, every bubble would light up!
+          </li>
+          <li>
+            In <code>drawWord</code>, <code class="ref" data-match="const done">done</code> is true for a letter that's inside a lit bubble and whose position is less than <code>typed.length</code>: if you've typed 2 letters,
+            letters 0 and 1 are done. Then <code class="ref" data-match="const color">done ? PINK : INK</code> is a quick two-way choice: <strong>if</strong> <code>done</code> is true,
+            use <code>PINK</code>, <strong>otherwise</strong> use <code>INK</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="const ring">ring</code> is a little bigger than the bubble (<code>bubble.width / 2</code> is its radius), and
+            <code class="ref" data-match="screen.draw.circle([bubble.x">screen.draw.circle(…)</code> draws it as an outline, 4 pixels thick, only when <code class="ref" data-match="if (isLit(bubble))">isLit(bubble)</code> says so.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🔎</span>
+          <div>
+            <span class="callout-title">Big idea: does it start with…?</span>
+            <p>
+              <code>word.startsWith(letters)</code> asks whether one string begins with another, and answers <code>true</code> or <code>false</code>. Typing a word
+              letter by letter keeps asking that question: after <code>"c"</code>, <code>"ca"</code>, <code>"cat"</code>, which words still start with what I've typed?
+            </p>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <span class="callout-icon">🕳️</span>
+          <div>
+            <span class="callout-title">The empty string starts every word</span>
+            <p>
+              <code>"anything".startsWith("")</code> is <code>true</code>. It's technically right (every string begins with nothing), but it often surprises people the
+              first time. That's why <code>isLit</code> checks <code>typed.length &gt; 0</code> first.
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-prefix" data-answer="b">
+          <p>You've typed <code>"ca"</code>. Which of these words light up: <code>"cat"</code>, <code>"car"</code>, <code>"crab"</code>, <code>"scan"</code>?</p>
+          <button data-choice="a">Only <code>"cat"</code></button>
+          <button data-choice="b"><code>"cat"</code> and <code>"car"</code></button>
+          <button data-choice="c"><code>"cat"</code>, <code>"car"</code> and <code>"scan"</code>, because they all contain "ca"</button>
+          <div class="explain" data-for="b">Both start with "ca". "crab" starts with "cr", and "scan" starts with "sc". It <em>contains</em> "ca", but that's not the same as <em>starting</em> with it.</div>
+          <div class="explain" data-for="c">"scan" has "ca" inside it, but it doesn't <em>start</em> with it. <code>startsWith</code> only looks at the beginning.</div>
+          <div class="explain" data-for="a">"car" starts with "ca" too, so both light up.</div>
+        </div>
+
+        <div class="challenge" data-id="ends-with" data-kicker="Bonus challenge" data-success="Words that END with your letter light up! Same idea, other end.">
+          <p><strong>Light up bubbles whose word <em>ends</em> with what you typed</strong>, instead of starting with it. Then type the last letter of a word to see it work. (The pink letters will look odd, because the code that colours them hasn't changed.)</p>
+          <p class="hint">Strings have a cousin of <code>startsWith</code>. What would it be called?</p>
+          <p class="hint">Change <code>startsWith</code> to <code>endsWith</code> inside <code>isLit</code>.</p>
+          <pre class="answer">  return typed.length &gt; 0 &amp;&amp; bubble.word.endsWith(typed);</pre>
+        </div>
+        <p class="muted">Next: the payoff, popping a bubble.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Pop!">
+        <span class="step-kicker"></span>
+        <h2>Pop!</h2>
+        <p>
+          Time for the main event. When what you've typed matches a whole word, the bubble should <strong>pop</strong>: it swells, fades
+          away, Octo cheers, and you score points. Type a whole word, letter by letter. (If you slip, the wrong letter stays in the tray until you press <kbd>Backspace</kbd>. We'll fix that in the next step.)
+        </p>
+        <div class="cell" data-step="08-pop" data-watch="typed, score, bubbles.length"></div>
+        <p>
+          Pop! The bubble puffs up and vanishes, Octo's face changes, and the score goes up. Let's see how the code knows a word is finished.
+        </p>
+        <ul>
+          <li>
+            <code class="ref" data-match="function findBubble">findBubble(letters)</code> looks through the list for the first bubble that isn't already popping and whose word starts with
+            those letters. As soon as it finds one it <code class="ref" data-match="return bubble;">return</code>s it, and the function stops. If the loop ends with no match, it
+            returns <code class="ref" data-match="return null;">null</code>, which means "nothing".
+          </li>
+          <li>
+            At the end of <code>typeLetter</code>, <code class="ref" data-match="const bubble = findBubble(typed)">findBubble(typed)</code> finds the bubble you're typing. Then
+            <code class="ref" data-match="bubble.word === typed">bubble.word === typed</code> asks: <strong>is the whole word exactly what's typed?</strong> If so, the word is complete,
+            and <code class="ref" data-match="popBubble(bubble)">popBubble(bubble)</code> does the popping.
+          </li>
+          <li>
+            <code class="ref" data-match="bubble && bubble.word">bubble &amp;&amp; …</code> guards against <code>null</code>. If nothing matched, <code>bubble</code> is <code>null</code>, and asking <code>null</code> for its
+            <code>word</code> would crash. <code>&amp;&amp;</code> means <strong>and</strong>: both sides have to be true. In an <code>if</code>, <code>null</code> counts as "no" and a real bubble counts as "yes", so when the left side is
+            "no", the right side is never even looked at.
+          </li>
+          <li>
+            <code class="ref" data-match="function popBubble">popBubble</code> bursts the bubble, empties the tray (<code class="ref" data-match='typed = "";'>typed = ""</code>), adds the word's length to the
+            <code class="ref" data-match="score += bubble.word.length">score</code> (longer words are worth more), and gives Octo a happy face.
+          </li>
+          <li>
+            <code class="ref" data-match="function burst">burst(bubble)</code> uses <code class="ref" data-match="animate(bubble">animate</code>: you name an object and some numbers to head towards, and it changes them
+            smoothly over time. Here <code>scale</code> grows by 40% and <code>opacity</code> fades to 0 (invisible), taking <code class="ref" data-match="POP_TIME">POP_TIME</code> seconds.
+          </li>
+          <li>
+            Once a bubble is invisible, <code class="ref" data-match="bubble.opacity > 0">bubbles.filter((bubble) =&gt; bubble.opacity &gt; 0)</code> drops it from the list. Bubbles that float up past the surface
+            now burst too, instead of vanishing.
+          </li>
+          <li>
+            <code class="ref" data-match="function setMood">setMood(image)</code> swaps Octo's picture and starts <code class="ref" data-match="moodTimer = 0.6">moodTimer</code> counting down from 0.6 seconds. In <code>update</code>, when
+            the timer reaches 0, Octo goes back to the idle face.
+          </li>
+          <li>
+            <code class="ref" data-match="Score ${score}">`Score ${score}`</code> uses backticks. Inside a backtick string, <code>${…}</code> drops the value of a variable straight into the text: a
+            <span class="term" tabindex="0" data-tip="A string in `backticks` where ${…} is replaced by a value. Great for mixing words and numbers.">template string</span>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">⚖️</span>
+          <div>
+            <span class="callout-title">Big idea: comparing strings</span>
+            <p>
+              <code>===</code> asks whether two strings are <em>exactly</em> the same, letter for letter, and capitals count: <code>"cat" === "cat"</code> is true, but
+              <code>"cat" === "Cat"</code> is false, and so is <code>"cat" === "cats"</code>. That's why we lowercased every typed letter in step 6. <code>startsWith</code> asks "does it begin
+              this way?", and <code>===</code> asks "is it <em>all</em> this?" Together they run the whole game.
+            </p>
+          </div>
+        </div>
+
+        <div class="tweak" data-name="POP_TIME" data-min="0.05" data-max="1.5" data-step="0.05" data-label="How long a pop takes" data-icon="💥" data-unit=" s"></div>
+
+        <div class="quiz" data-id="q-equal" data-answer="a">
+          <p>Which of these is <code>true</code>?</p>
+          <button data-choice="a"><code>"crab".startsWith("cr")</code></button>
+          <button data-choice="b"><code>"crab" === "Crab"</code></button>
+          <button data-choice="c"><code>"crab" === "cra"</code></button>
+          <div class="explain" data-for="a">"crab" begins with "cr", so it's true. The other two compare the <em>whole</em> strings, and neither pair is exactly the same: one has a capital C, the other is a letter short.</div>
+          <div class="explain" data-for="wrong"><code>===</code> needs <em>every</em> letter to match, including capitals, and the same number of letters.</div>
+        </div>
+        <div class="quiz" data-id="q-null" data-answer="c">
+          <p>Why does the code say <code>bubble &amp;&amp; bubble.word === typed</code> instead of only <code>bubble.word === typed</code>?</p>
+          <button data-choice="a">Because <code>===</code> only works on words with more than one letter</button>
+          <button data-choice="b">Because two checks are always better than one</button>
+          <button data-choice="c">Because <code>bubble</code> can be <code>null</code> (no bubble matches), and <code>null</code> has no word to look at</button>
+          <div class="explain" data-for="c">If you've typed letters that match nothing, <code>findBubble</code> returns <code>null</code>. Without the guard, <code>null.word</code> would crash the game.</div>
+          <div class="explain" data-for="wrong">Try removing <code>bubble &amp;&amp;</code>, run the game, then type a letter no bubble starts with. What happens?</div>
+        </div>
+
+        <div class="challenge" data-id="double-points" data-success="Double the points, double the fun!">
+          <p><strong>Make every pop worth double</strong>: twice the word's length. Then pop a bubble to score.</p>
+          <p class="hint">Look at the line in <code>popBubble</code> that changes <code>score</code>.</p>
+          <pre class="answer">  score += bubble.word.length * 2; // longer words score more</pre>
+        </div>
+        <div class="challenge" data-id="twelve-points" data-kicker="Play time" data-success="Twelve points! Octo is thrilled.">
+          <p><strong>Score 12 points</strong> by popping bubbles. Click the game, then type the words you see.</p>
+          <p class="hint">Every word scores at least its length in points, so a few words will do it.</p>
+        </div>
+        <p class="muted">Next: what happens when you slip up?</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Oops! Typos and switching">
+        <span class="step-kicker"></span>
+        <h2>Oops! Typos and switching</h2>
+        <p>
+          There's a problem. Type a wrong letter and it stays in the tray until you press Backspace. Real typists make mistakes all the
+          time, and sometimes they change their mind and head for a different bubble. Let's make the game handle both: the tray should
+          <strong>clear itself</strong> when you slip, and a letter that starts <em>another</em> word should <strong>switch</strong> to it.
+          Try typing half a word, then the first letter of a different one:
+        </p>
+        <div class="cell" data-step="09-oops" data-watch="typed, streak, score"></div>
+        <ul>
+          <li>
+            <code>typeLetter</code> now asks questions <strong>in order</strong>, as a chain: <code class="ref" data-match="if (findBubble(typed + letter))">if</code> …
+            <code class="ref" data-match="else if (findBubble(letter))">else if</code> … <code class="ref" data-match="mistake(); // no bubble starts with that">else</code>. The first question that's true wins, and the rest are skipped.
+          </li>
+          <li>
+            <strong>Question 1:</strong> <code class="ref" data-match="findBubble(typed + letter)">findBubble(typed + letter)</code> joins the new letter on, with <code>+</code>, and asks "would some bubble still match?".
+            If yes, <code class="ref" data-match="typed += letter; //">typed += letter</code>: carry on with this word.
+          </li>
+          <li>
+            <strong>Question 2:</strong> no? Then does the letter on its own start a different word? <code class="ref" data-match="typed = letter">typed = letter</code> throws away the old letters and starts again with this one: you've
+            <em>switched</em> bubbles. (One <code>=</code> puts a value in a box. Three, <code>===</code>, ask a question.)
+          </li>
+          <li>
+            <strong>Otherwise:</strong> it's a typo. <code class="ref" data-match="function mistake">mistake()</code> empties the tray, resets the streak, and gives Octo the ouch face.
+          </li>
+          <li>
+            <code class="ref" data-match="streak">streak</code> counts words popped in a row without a typo, and it adds a bonus to the score: <code class="ref" data-match="bubble.word.length + streak">bubble.word.length + streak</code>.
+            Three clean pops in a row, then a fourth with a streak of 4, will earn 4 bonus points.
+          </li>
+          <li>
+            <code>if (bubble.word === typed)</code> doesn't need <code>bubble &amp;&amp;</code> any more: we only get that far when question 1 or 2 said some bubble matches.
+          </li>
+          <li>
+            In <code>update</code>, <code class="ref" data-match="typed.length > 0 && !findBubble(typed)">if (typed.length &gt; 0 &amp;&amp; !findBubble(typed))</code> clears the tray if the bubble you were typing has floated away. The <code>!</code> means "not".
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🌳</span>
+          <div>
+            <span class="callout-title">Big idea: ask in order, first yes wins</span>
+            <p>
+              An <code>if … else if … else</code> chain is a list of questions. The computer asks them top to bottom and does the first one that's true, then skips the rest.
+              <code>else</code> at the end catches everything that's left. Put the most specific question first.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="letter-judge">
+          <div class="widget-title">⚖️ The letter judge</div>
+          <div class="widget-sub">Four bubbles are floating. Click the letter buttons, or click the widget once and type on your keyboard, and watch the judge ask its questions in order.</div>
+          <div class="bubble-row" data-bubbles></div>
+          <div class="judge-tray" data-tray></div>
+          <div class="keys-row" data-keys></div>
+          <div class="judge-steps">
+            <div class="judge-step" data-q="1">1. Does some bubble start with <code data-expr1>typed + letter</code>?</div>
+            <div class="judge-step" data-q="2">2. If not, does some bubble start with only <code data-expr2>letter</code>?</div>
+            <div class="judge-step" data-q="3">3. Otherwise…</div>
+          </div>
+          <div class="widget-controls">
+            <button class="btn btn-small btn-soft" type="button" data-clear>⌫ Backspace</button>
+            <button class="btn btn-small btn-soft" type="button" data-reset>↺ Refill the bubbles</button>
+          </div>
+          <div class="readout" data-readout aria-live="polite">Press a letter to begin.</div>
+        </div>
+
+        <div class="quiz" data-id="q-switch" data-answer="a">
+          <p>Floating: <code>"cat"</code>, <code>"sun"</code>, <code>"fish"</code>. You've typed <code>"ca"</code>, and now you press <kbd>s</kbd>. What does the tray show?</p>
+          <button data-choice="a"><code>"s"</code></button>
+          <button data-choice="b"><code>"cas"</code></button>
+          <button data-choice="c">Nothing, because it was a typo</button>
+          <div class="explain" data-for="a">Question 1: does any word start with "cas"? No. Question 2: does any word start with "s"? Yes, "sun". So the tray switches to <code>"s"</code>.</div>
+          <div class="explain" data-for="b">Nothing starts with "cas", so question 1 says no. But question 2 does say yes: "sun" starts with "s".</div>
+          <div class="explain" data-for="c">It would be a typo if <em>no</em> bubble started with "s". Here "sun" does, so the game switches to it.</div>
+        </div>
+        <div class="quiz" data-id="q-typo" data-answer="c">
+          <p>Same bubbles. You've typed <code>"ca"</code> and now press <kbd>x</kbd>. What happens?</p>
+          <button data-choice="a">The tray shows <code>"cax"</code></button>
+          <button data-choice="b">The tray switches to <code>"x"</code></button>
+          <button data-choice="c">It's a typo: the tray empties, and Octo says ouch</button>
+          <div class="explain" data-for="c">No word starts with "cax" and no word starts with "x", so both questions say no and <code>else</code> runs <code>mistake()</code>.</div>
+          <div class="explain" data-for="wrong">Ask the two questions in order. Does any word start with "cax"? With "x"?</div>
+        </div>
+
+        <div class="challenge" data-id="streak-three" data-kicker="Play time" data-success="A streak of three! No typos, no mercy.">
+          <p><strong>Build a streak of 3</strong>: pop three bubbles in a row without a typo.</p>
+          <p class="hint">Look at the live values for <code>streak</code>. A typo sets it back to 0.</p>
+        </div>
+        <p class="muted">Next: the stakes. What if the bubbles win?</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Lives, winning and losing">
+        <span class="step-kicker"></span>
+        <h2>Lives, winning and losing</h2>
+        <p>
+          A game needs stakes. From now on, a bubble that floats all the way to the surface <strong>costs a life</strong>, three lost
+          lives means the game is lost, and popping enough bubbles <strong>wins</strong> it. The game is always in one of three situations
+          (<code>"playing"</code>, <code>"won"</code> or <code>"lost"</code>), and the code has to know which. Let the bubbles escape
+          for a while, then try again with <kbd>Enter</kbd>:
+        </p>
+        <div class="cell" data-step="10-lives" data-watch="state, lives, popped, score"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="const MAX_LIVES">MAX_LIVES</code> and <code class="ref" data-match="const GOAL">GOAL</code> are constants for the rules, and
+            <code class="ref" data-match="let lives">lives</code> and <code class="ref" data-match="let popped">popped</code> are variables that change as you play.
+          </li>
+          <li>
+            <code class="ref" data-match='let state = "playing"'>let state = "playing";</code> is the star of this step. <code>state</code> holds a <em>string</em> that says
+            what the game is doing right now.
+          </li>
+          <li>
+            <code class="ref" data-match="function escapeBubble">escapeBubble(bubble)</code> bursts the bubble, then <code class="ref" data-match='state !== "playing"'>if (state !== "playing") return;</code> leaves
+            early unless the game is being played (<code>!==</code> means "is <em>not</em> equal to"). Otherwise, <code class="ref" data-match="lives -= 1">lives -= 1</code> and, at 0 lives,
+            <code class="ref" data-match="loseLevel();">loseLevel()</code>.
+          </li>
+          <li>
+            In <code>popBubble</code>, <code class="ref" data-match="popped += 1">popped += 1</code> counts the pop, and <code class="ref" data-match="popped >= GOAL">if (popped &gt;= GOAL)</code> checks whether you've reached the goal
+            (<code>&gt;=</code> means "at least").
+          </li>
+          <li>
+            <code class="ref" data-match="function startLevel">startLevel()</code> resets everything for a fresh try and sets <code>state = "playing"</code>. <code class="ref" data-match="function winLevel">winLevel()</code> and
+            <code class="ref" data-match="function loseLevel">loseLevel()</code> switch <code>state</code> to <code>"won"</code> or <code>"lost"</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="function onKeyDown">onKeyDown</code> now starts with <code class="ref" data-match='if (state === "playing")'>if (state === "playing")</code>: letters only count while you're playing. Otherwise,
+            <code class="ref" data-match="keys.RETURN">key === keys.RETURN || key === keys.SPACE</code> asks for Enter <strong>or</strong> Space (<code>||</code> means "or"), and calls
+            <code class="ref" data-match="function nextScreen">nextScreen()</code> to start again. <code class="ref" data-match="function onMouseDown">onMouseDown</code> lets a click do the same. (The scroll wheel counts as a mouse button too, so
+            <code>button !== mouse.LEFT</code> ignores it.)
+          </li>
+          <li>
+            In <code>update</code>, <code class="ref" data-match='if (state === "playing") {'>new bubbles only appear while playing</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="screen.blit(i < lives">screen.blit(i &lt; lives ? "heart" : "heart_empty", …)</code> draws a heart for every life in a loop (three, to begin with): full ones for the lives you have left, empty ones for the lives you've
+            lost. A row of dots, filled pink as you pop, shows how close you are to the goal.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawMessages">drawMessages()</code> draws a see-through dark layer over the game with <code class="ref" data-match="rgb(10, 28, 58, 150)">rgb(10, 28, 58, 150)</code> (the
+            fourth number is how solid it is), then a message that depends on <code>state</code>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🚦</span>
+          <div>
+            <span class="callout-title">Big idea: game states</span>
+            <p>
+              A game is always in <strong>exactly one state</strong>, and a state can be as simple as a string in a variable. The same key press means different things in different
+              states: a letter types while <code>"playing"</code> and does nothing when <code>"won"</code>, while <kbd>Enter</kbd> does the opposite. Checking <code>state</code>
+              at the top of each special function keeps things tidy.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="state-map">
+          <div class="widget-title">🗺️ The state map</div>
+          <div class="widget-sub">Right now the game above is in: <span class="state-now" data-now>(press Run above)</span></div>
+          <svg class="widget-svg" viewBox="0 -36 760 284" role="img" aria-label="Game states: playing, won and lost, and what moves the game between them">
+            <defs>
+              <marker id="octo-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" /></marker>
+            </defs>
+            <path class="edge" d="M236 92 L516 38" marker-end="url(#octo-arrow)" />
+            <text class="edge-label" x="386" y="52">popped &gt;= GOAL</text>
+            <path class="edge" d="M236 118 L516 172" marker-end="url(#octo-arrow)" />
+            <text class="edge-label" x="386" y="166">lives is 0</text>
+            <path class="edge" d="M516 22 C 420 -30, 170 -30, 150 74" marker-end="url(#octo-arrow)" />
+            <text class="edge-label" x="330" y="-18">Enter: play again</text>
+            <path class="edge" d="M516 190 C 420 240, 170 240, 150 136" marker-end="url(#octo-arrow)" />
+            <text class="edge-label" x="330" y="246">Enter: try again</text>
+            <g class="node" data-state="playing"><rect x="60" y="80" width="180" height="50" rx="16" /><text x="150" y="105">"playing"</text></g>
+            <g class="node" data-state="won"><rect x="520" y="12" width="160" height="50" rx="16" /><text x="600" y="37">"won"</text></g>
+            <g class="node" data-state="lost"><rect x="520" y="148" width="160" height="50" rx="16" /><text x="600" y="173">"lost"</text></g>
+          </svg>
+        </div>
+
+        <div class="tweak-row">
+          <div class="tweak" data-name="MAX_LIVES" data-min="1" data-max="6" data-label="Lives" data-icon="❤️"></div>
+          <div class="tweak" data-name="GOAL" data-min="1" data-max="15" data-label="Bubbles to win" data-icon="🎯"></div>
+        </div>
+
+        <div class="quiz" data-id="q-state" data-answer="a">
+          <p>The game is in the <code>"won"</code> state and you type <kbd>c</kbd>. What happens?</p>
+          <button data-choice="a">Nothing: letters only count while <code>state</code> is <code>"playing"</code></button>
+          <button data-choice="b">The game starts the next level</button>
+          <button data-choice="c">A "c" appears in the tray</button>
+          <div class="explain" data-for="a">Right. <code>onKeyDown</code> only types letters inside <code>if (state === "playing")</code>. In other states, only Enter, Space or a click do anything.</div>
+          <div class="explain" data-for="wrong">Look at the start of <code>onKeyDown</code>: which state does it check for before typing?</div>
+        </div>
+        <div class="quiz" data-id="q-lives" data-answer="c">
+          <p><code>lives</code> is 1 and a bubble reaches the surface. What runs next?</p>
+          <button data-choice="a"><code>lives</code> goes to −1 and the game carries on</button>
+          <button data-choice="b">Nothing, because the bubble was already popping</button>
+          <button data-choice="c"><code>lives</code> goes to 0, so <code>loseLevel()</code> runs and <code>state</code> becomes <code>"lost"</code></button>
+          <div class="explain" data-for="c">After <code>lives -= 1</code> makes it 0, the check <code>if (lives === 0)</code> a few lines further down is true, so <code>loseLevel()</code> runs.</div>
+          <div class="explain" data-for="wrong">Follow <code>escapeBubble</code> line by line with <code>lives</code> = 1.</div>
+        </div>
+
+        <div class="challenge" data-id="five-lives" data-success="Five lives. Generous!">
+          <p><strong>Give Octo 5 lives</strong>, so there are five hearts.</p>
+          <p class="hint">The number of lives is one of the constants at the top. The hearts are drawn in a loop that counts up to it.</p>
+          <pre class="answer">const MAX_LIVES = 5; // bubbles you can lose before the level is lost</pre>
+        </div>
+        <div class="challenge" data-id="win-it" data-kicker="Play time" data-success="You won! The sea is safe, for now.">
+          <p><strong>Win the game</strong>. Make it quicker by lowering <code>GOAL</code> if you like, then type your way to a "won" screen.</p>
+          <p class="hint">With <code>GOAL = 2</code> you only need to pop two bubbles.</p>
+          <pre class="answer">const GOAL = 2; // bubbles to pop to win</pre>
+        </div>
+        <p class="muted">Next: one level is nice, but five are better, and a string makes each one quick to write.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Levels written as sentences">
+        <span class="step-kicker"></span>
+        <h2>Levels written as sentences</h2>
+        <p>
+          One level is over quickly. Now let's make <strong>five</strong>, each with its own words, speed and goal. We could write five
+          copies of the game's rules, but there's a better way: put each level's details in <strong>data</strong> and let one set of
+          code read it. The words for a level are written as <em>one string</em>, with spaces between the words, and code chops it into a
+          list. Win the first level to meet the second:
+        </p>
+        <div class="cell" data-step="11-levels" data-watch="state, level, popped, score"></div>
+        <h3>Levels are data</h3>
+        <p>
+          <code class="ref" data-match="const LEVELS">LEVELS</code> is a list of objects, one per level. Each object has a <code class="ref" data-match="name:">name</code>, the
+          <code class="ref" data-match="words:">words</code> its bubbles use, a <code class="ref" data-match="speed:">speed</code> (how fast the bubbles float up),
+          an <code class="ref" data-match="every:">every</code> (seconds between new bubbles) and a <code class="ref" data-match="goal:">goal</code> (how many bubbles to pop to clear the level).
+        </p>
+        <p>
+          The variable <code class="ref" data-match="let level">level</code> says which level we're on, counting from 0. So <code>LEVELS[level]</code> is the object for the current level, and
+          <code>LEVELS[level].speed</code> is its speed: first pick the object out of the list, then pick the field out of the object. Want a new level? Add an object. No new code needed!
+        </p>
+        <div class="widget" id="split-chopper">
+          <div class="widget-title">✂️ The word chopper</div>
+          <div class="widget-sub">A level's words are one string. Type your own, pick what to cut at, and see the list that <code>.split(…)</code> makes.</div>
+          <label>A string <input class="word-input wide" type="text" value="cat sun fish crab" maxlength="40" spellcheck="false" autocomplete="off" aria-label="A string to split" /></label>
+          <div class="split-picks widget-controls">
+            <span>Cut at:</span>
+            <button class="btn btn-small btn-soft" type="button" data-sep=" " aria-pressed="true">a space <code>" "</code></button>
+            <button class="btn btn-small btn-soft" type="button" data-sep="," aria-pressed="false">a comma <code>","</code></button>
+            <button class="btn btn-small btn-soft" type="button" data-sep="" aria-pressed="false">nothing <code>""</code></button>
+          </div>
+          <div class="code-line" data-code></div>
+          <div class="chips" data-chips aria-live="polite"></div>
+          <div class="readout" data-readout></div>
+        </div>
+        <ul>
+          <li>
+            <code class="ref" data-match="function pickWord">pickWord()</code> chooses the next bubble's word. <code class="ref" data-match='.split(" ")'>LEVELS[level].words.split(" ")</code> chops the string at every space and hands back a
+            <strong>list of strings</strong>: <code>"cat sun fish".split(" ")</code> is <code>["cat", "sun", "fish"]</code>.
+          </li>
+          <li>
+            Then a loop builds <code class="ref" data-match="const fresh">fresh</code>, a list of the words that <em>aren't already floating by</em>, using
+            <code class="ref" data-match="findBubble(word)">findBubble(word)</code> from before. The check <code class="ref" data-match="word.length > 0">word.length &gt; 0</code> skips any empty word (typing two spaces in a row
+            would make one). <code class="ref" data-match="randomChoice(fresh)">randomChoice(fresh)</code> picks from those, so you never see two identical bubbles.
+          </li>
+          <li>
+            <code class="ref" data-match="LEVELS[level].speed">LEVELS[level].speed</code>, <code class="ref" data-match="LEVELS[level].every">LEVELS[level].every</code> and
+            <code class="ref" data-match="LEVELS[level].goal">LEVELS[level].goal</code> replace the old constants.
+          </li>
+          <li>
+            <code class="ref" data-match='level === LEVELS.length - 1 ? "finished" : "won"'>level === LEVELS.length - 1 ? "finished" : "won"</code> picks between two strings. <code>LEVELS.length - 1</code> is the number of the last level
+            (5 levels are numbered 0 to 4). If this was the last one, the game is <code>"finished"</code>, otherwise <code>"won"</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="function nextScreen">nextScreen()</code> now has three cases: after a win, <code class="ref" data-match="level += 1">level += 1</code>. After a loss, the score goes back to
+            <code class="ref" data-match="levelScore">levelScore</code> (what you had when the level began), so a retry is fair. Otherwise the game has finished, so everything starts again from level 1.
+          </li>
+          <li>
+            <code class="ref" data-match="introTimer">introTimer</code> counts down for 2.2 seconds at the start of each level, while the big level name is shown. Level names also go into the score bar with template strings like
+            <code class="ref" data-match="Level ${level + 1}: ${LEVELS[level].name}">`Level ${level + 1}: ${LEVELS[level].name}`</code>. (<code>level + 1</code>, because people count from 1 and the computer counts from 0.)
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">📋</span>
+          <div>
+            <span class="callout-title">Big idea: split, and levels as data</span>
+            <p>
+              <code>text.split(separator)</code> turns <strong>one string into a list of strings</strong>. Writing levels as a sentence of words is friendlier than a list full of quote
+              marks and commas, and it's quick to edit. And keeping a game's levels in a data list means designing a new level takes a few lines.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <div>
+            <span class="callout-title">Careful with level words</span>
+            <p>
+              Don't put a word in a level that's also the <em>start</em> of another word in the same level (like <code>"sea"</code> and <code>"seaweed"</code>). Typing
+              <code>sea</code> would finish the short word, so one of the two bubbles could never be popped while the other floats nearby. Try <code>.startsWith</code> on each pair in your head!
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-split" data-answer="c">
+          <p>How many items are in the list <code>"red green blue".split(" ")</code>?</p>
+          <button data-choice="a">1: it's one string</button>
+          <button data-choice="b">14: one for every letter</button>
+          <button data-choice="c">3: <code>["red", "green", "blue"]</code></button>
+          <div class="explain" data-for="c">It cuts at each space, so you get three pieces. Cutting at <code>""</code> (nothing) would give one item per letter!</div>
+          <div class="explain" data-for="wrong">Try it in the chopper above: type the string and look at the pieces.</div>
+        </div>
+        <div class="quiz" data-id="q-last" data-answer="a">
+          <p>There are 5 levels in <code>LEVELS</code>. What is <code>LEVELS.length - 1</code>?</p>
+          <button data-choice="a">4: the position of the last level</button>
+          <button data-choice="b">6</button>
+          <button data-choice="c">5</button>
+          <div class="explain" data-for="a">Positions start at 0, so five levels sit at 0, 1, 2, 3 and 4. The same goes for the letters of a word!</div>
+          <div class="explain" data-for="wrong"><code>LEVELS.length</code> is 5, but the last level's position is one less. Remember: counting starts at 0.</div>
+        </div>
+
+        <div class="challenge" data-id="ten-words" data-success="Ten words to choose from. Great variety!">
+          <p><strong>Give level 1 at least 10 words</strong>. Remember: a space between words, and no word that starts another one.</p>
+          <p class="hint">The words are one string in quote marks. Add new ones inside the quotes, each with a space before it.</p>
+          <pre class="answer">    words: "cat sun fish crab wave pearl moon bell seal reef kelp",</pre>
+        </div>
+        <div class="challenge" data-id="sixth-level" data-kicker="Bonus challenge" data-success="A sixth level! You're a level designer now.">
+          <p><strong>Add a sixth level</strong> with a name, at least 5 words, a speed, an <code>every</code> and a goal.</p>
+          <p class="hint">Copy one of the existing objects, paste it right before the closing <code>];</code>, and change its values. Each object ends with <code>},</code>: keep that comma on yours.</p>
+          <p class="hint">To try your level without winning five, change <code>let level = 0;</code> to <code>let level = 5;</code> and press Run.</p>
+          <pre class="answer">  {
+    name: "The Abyss",
+    words: "anglerfish abyss lantern shadow trench",
+    speed: 48,
+    every: 2,
+    goal: 12,
+  },
+];</pre>
+        </div>
+        <p class="muted">Next: the finishing touches that make it feel like a real game.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Polish: title, music and saving">
+        <span class="step-kicker"></span>
+        <h2>Polish: title, music and saving</h2>
+        <p>
+          The game works! The last step is the sprinkles on top that make it feel finished. This is the complete game, exactly the one
+          you played at the top of the page. Here's what's new:
+        </p>
+        <div class="cell" data-step="final" data-watch="state, level, streak, bestScore"></div>
+        <ul>
+          <li>
+            <strong>A title screen.</strong> The game now starts with <code class="ref" data-match='let state = "title"'>state = "title"</code>, and <code class="ref" data-match='state === "title"'>drawMessages</code> shows the name and a hint
+            while bubbles float by behind it. Enter starts the game.
+          </li>
+          <li>
+            <strong>Saving your best score.</strong> <code class="ref" data-match="function saveBest">saveBest()</code> checks <code>if (score &gt; bestScore)</code> and, when you've beaten your record,
+            <code class="ref" data-match="storage.set">storage.set("bestScore", …)</code> saves it. A saved value is still there next time you play, even after closing the page. It runs whenever you win or lose a level. A line near the top reads it back with
+            <code class="ref" data-match="storage.get">storage.get("bestScore") ?? 0</code>: the <code>??</code> means "or, if nothing was saved yet, use 0".
+          </li>
+          <li>
+            <strong>A musical word.</strong> <code class="ref" data-match="NOTES[(typed.length - 1)">NOTES[(typed.length - 1) % NOTES.length]</code> uses the <em>length of what you've typed</em> to pick a note from a list. The first letter plays the
+            first note, the second letter plays the next one up, and so on, so typing a word plays a little rising tune. The <code class="ref" data-match="% NOTES.length">%</code> means "the remainder after dividing":
+            <code>11 % 10</code> is 1, so the twelfth letter of a very long word wraps back round to the second note instead of running out. <code class="ref" data-match="tone.play(NOTES">tone.play</code> makes a sound with no sound file
+            needed: a note name, how long, and some options. Typos get a low buzz, and escapes a sad note.
+          </li>
+          <li>
+            <strong>Little tunes.</strong> <code class="ref" data-match="function playTune">playTune</code> uses <code>clock.schedule(…, delay)</code> to play each note a bit later than the one before. The
+            <code>() =&gt; …</code> is an arrow function again: a tiny function written right where it's needed.
+          </li>
+          <li>
+            <strong>A tentacle zap.</strong> When a bubble pops, <code class="ref" data-match="zap = {">zap</code> remembers where it was. <code>drawSea</code> draws two thick lines from Octo to that spot, a dark one under a lilac one (<code class="ref" data-match="screen.line">screen.line(x1, y1, x2, y2, color, width)</code> draws a straight line between two points), and
+            <code>update</code> forgets the zap after 0.15 seconds.
+          </li>
+          <li>
+            <strong>Life in the sea.</strong> A <code class="ref" data-match="const fish">fish</code> is a flip-book Actor (two pictures, 6 frames a second) that swims right and starts again on the left. Octo bobs gently with
+            <code class="ref" data-match="Math.sin(time * 3)">Math.sin</code>, and a <code class="ref" data-match="Streak x">streak counter</code> appears when you're on a roll.
+          </li>
+        </ul>
+
+        <div class="callout tip">
+          <span class="callout-icon">🎵</span>
+          <div>
+            <span class="callout-title">No sound?</span>
+            <p>Browsers stay silent until you've interacted with the page, so your first key press wakes the sound up. Check your volume too!</p>
+          </div>
+        </div>
+
+        <div class="challenge" data-id="loud-title" data-success="THE TITLE IS SHOUTING! One method, big effect.">
+          <p><strong>Show the title in CAPITALS</strong> on the title screen, using a string method you've already met.</p>
+          <p class="hint">Find the line in <code>drawMessages</code> that writes <code>TITLE</code>.</p>
+          <pre class="answer">    write(TITLE.toUpperCase(), middle, 140, 74, GOLD);</pre>
+        </div>
+        <div class="challenge" data-id="longer-tune" data-success="Fanfare! 🎺">
+          <p><strong>Make the winning tune longer</strong>: at least 5 notes. Then win a level to hear it.</p>
+          <p class="hint">Find <code>playTune(["C5", "E5", "G5", "C6"])</code> in <code>winLevel</code> and add notes to the list.</p>
+          <p class="hint">To hear it sooner, lower the first level's <code>goal: 6</code> to <code>goal: 1</code>, then pop one bubble.</p>
+          <pre class="answer">  playTune(["C5", "E5", "G5", "C6", "G5", "C6"]);</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="finale">
+        <h2>You made Octo Pop! 🎉</h2>
+        <p class="prose">
+          Look at everything you've done. You drew a sea with coordinates and pictures, then met <strong>strings</strong>: you measured
+          them with <code>.length</code>, picked out letters by position, joined them with <code>+=</code>, cut them with <code>slice</code>,
+          matched them with <code>startsWith</code> and <code>===</code>, and chopped sentences into lists with <code>split</code>. You used
+          the <strong>game loop</strong>, <strong>lists and loops</strong> for a whole school of bubbles, <strong>keys</strong> to build a
+          word letter by letter, <strong>if / else if / else</strong> to handle typos, <strong>states</strong> for winning and losing, and
+          <strong>data</strong> for levels. That's the toolkit behind a huge number of games, not only typing games.
+        </p>
+        <h3>Ideas to try next</h3>
+        <div class="idea-grid">
+          <div class="idea"><b>🌈 Rainbow letters</b>Keep a list of colours and pick one for each letter by its position with <code>COLORS[i % 3]</code>, inside <code>drawWord</code>.</div>
+          <div class="idea"><b>🔡 Shout it</b>Show words in CAPITALS with <code>.toUpperCase()</code> in <code>drawWord</code>, while still typing lowercase.</div>
+          <div class="idea"><b>🪞 Mirror bubbles</b>Show some words backwards: split a word into letters, <code>.reverse()</code> the list, then <code>.join("")</code> it back into a string.</div>
+          <div class="idea"><b>✨ Golden bubble</b>Give 1 bubble in 8 a golden look and triple points: <code>randomInt(1, 8) === 1</code> in <code>makeBubble</code>.</div>
+          <div class="idea"><b>⏱️ Typing speed</b>Count the letters you type and divide by <code>time</code> to show letters per second at the end of a level.</div>
+          <div class="idea"><b>📖 Two-word bubbles</b>Add a space to <code>ALPHABET</code> and a word like <code>"ice cream"</code> to a level. Does <code>split(" ")</code> still work?</div>
+        </div>
+        <div class="finale-actions">
+          <button class="btn btn-primary" type="button" id="download-final">⬇ Download your game</button>
+          <a class="btn btn-soft" href="index.html">All tutorials</a>
+        </div>
+        <p class="muted" style="margin-top: 16px">
+          The download is a folder with <code>main.js</code>, the <code>images</code> and <code>fonts</code> folders, and a README. It runs in the
+          js-game-zero sandbox, or with <code>jgz test octo_pop</code>. It includes any changes you made in the last step!
+        </p>
+
+        <h3>Words you learned</h3>
+        <dl class="glossary">
+          <div><dt>String</dt><dd>A piece of text inside quote marks, like <code>"octopus"</code>: a row of letters. The empty string, <code>""</code>, has no letters at all, and every string starts with it.</dd></div>
+          <div><dt>Length</dt><dd>How many letters a string (or items a list) holds: <code>"cat".length</code> is 3.</dd></div>
+          <div><dt>Index</dt><dd>A letter's or an item's position number. Counting starts at 0, so <code>"cat"[0]</code> is <code>"c"</code>.</dd></div>
+          <div><dt>Joining (<code>+</code>, <code>+=</code>)</dt><dd>Gluing strings end to end: <code>"cat" + "fish"</code> is <code>"catfish"</code>.</dd></div>
+          <div><dt>Slice</dt><dd>Cutting a piece out of a string: <code>"octopus".slice(0, -1)</code> is <code>"octopu"</code>.</dd></div>
+          <div><dt>startsWith</dt><dd>Asks whether a string begins with certain letters: <code>"crab".startsWith("cr")</code> is <code>true</code>.</dd></div>
+          <div><dt>=== (equals)</dt><dd>Asks whether two things are exactly the same. For strings, every letter and capital must match.</dd></div>
+          <div><dt>Split</dt><dd>Chops one string into a list of strings: <code>"a b".split(" ")</code> is <code>["a", "b"]</code>.</dd></div>
+          <div><dt>Template string</dt><dd>A string in `backticks` where <code>${…}</code> is replaced by a value: <code>`Score ${score}`</code>.</dd></div>
+          <div><dt>List and object</dt><dd>A list (array) holds values in order, like <code>["cat", "sun"]</code>, and its positions count from 0. An object bundles named values, like <code>{ x: 10, y: 20 }</code>.</dd></div>
+          <div><dt>Loop</dt><dd>Code that repeats: <code>for (let i = 0; …)</code> counts, and <code>for (const x of list)</code> visits each item.</dd></div>
+          <div><dt>Variable and constant</dt><dd>Named boxes for values. A variable (<code>let</code>) can change later; a constant (<code>const</code>) can't be swapped for something else.</dd></div>
+          <div><dt>Function</dt><dd>A named set of instructions. <code>draw</code> and <code>update</code> are functions the game calls for you, and the values you hand it when you call it are its arguments.</dd></div>
+          <div><dt>Method</dt><dd>An action a value can do, written after a dot with brackets: <code>"cat".toUpperCase()</code> gives <code>"CAT"</code>.</dd></div>
+          <div><dt>State</dt><dd>Which situation the game is in right now (<code>"playing"</code>, <code>"won"</code>…), kept in a variable.</dd></div>
+        </dl>
+      </section>
+
+      <footer class="page-footer">
+        Made with <a href="https://github.com/taharafiq/js-game-zero">js-game-zero</a>. Font: Fredoka (SIL Open Font License).
+        · <button type="button" data-reset-progress>Start this tutorial over</button>
+      </footer>
+    </main>
+
+    <script src="lib/jgz.js"></script>
+    <script src="lib/tutorial.js"></script>
+    <script src="lib/data/octo_pop.js"></script>
+    <script>
+      // ------------------------------------------------------------------
+      // Challenge checks. Each runs a few times a second while its cell's
+      // game is running: true = passed, a string = a gentle nudge.
+      // Model solutions live in tests/challenges/octo_pop.js.
+      // ------------------------------------------------------------------
+      const drawnText = (game) => game.drawn().filter((d) => d.kind === "text");
+      const drawnCircles = (game) => game.drawn().filter((d) => d.kind === "circle");
+
+      JGZT.challenge("new-word", (game) => {
+        const texts = drawnText(game);
+        return texts.length > 0 && texts.every((t) => t.text !== "octopus" && String(t.text).trim() !== "");
+      });
+      JGZT.challenge("big-bubble", (game) => {
+        const big = drawnCircles(game).filter((c) => c.radius >= 80);
+        if (big.length === 1) return "Nearly! Both the filled circle and its outline need the bigger radius.";
+        return big.length >= 2;
+      });
+
+      JGZT.challenge("octo-happy", (game) => game.read("octopus.image") === "octopus_happy");
+
+      JGZT.challenge("long-word", (game) => {
+        const word = game.read("bubble.word");
+        return typeof word === "string" && word.length >= 9;
+      });
+      JGZT.challenge("shout", (game) => {
+        const letters = drawnText(game).filter((t) => String(t.text).length === 1);
+        return letters.length >= 3 && letters.every((t) => /^[A-Z]$/.test(t.text));
+      });
+
+      JGZT.challenge("fast-bubble", (game) => game.read("BUBBLE_SPEED") >= 56);
+
+      const STARTER_WORDS = ["cat", "sun", "fish", "crab", "wave", "pearl", "moon", "bell"];
+      JGZT.challenge("my-word", (game) => {
+        const words = game.read("WORDS");
+        if (!Array.isArray(words)) return false;
+        if (words.some((word) => typeof word !== "string" || word.length === 0)) {
+          return "Every item in the list needs to be a string with some letters, like \"kraken\".";
+        }
+        return words.length >= 9 && words.some((word) => !STARTER_WORDS.includes(word));
+      });
+      JGZT.challenge("busy-sea", (game) => {
+        if (game.read("SPAWN_EVERY") > 1.5) return false;
+        return (game.read("bubbles.length") || 0) >= 4 || "Faster bubbles! Wait a few seconds for the sea to fill up.";
+      });
+
+      JGZT.challenge("digits", (game) => {
+        if (!/\d/.test(String(game.read("ALPHABET")))) return false;
+        return /\d/.test(String(game.read("typed") || "")) || "Digits are allowed now. Click the game and press a number key!";
+      });
+      JGZT.challenge("caps-tray", (game) => {
+        const typed = String(game.read("typed") || "");
+        if (typed.length === 0) return false;
+        return drawnText(game).some((t) => t.text === typed.toUpperCase() && t.text !== typed);
+      });
+
+      JGZT.challenge("ends-with", (game) => {
+        if (!/endsWith\(\s*typed\s*\)/.test(game.code)) return false;
+        const typed = String(game.read("typed") || "");
+        if (typed.length === 0) return "Now type the LAST letter of one of the words!";
+        const bubbles = game.read("bubbles") || [];
+        return bubbles.some((b) => b.word.endsWith(typed)) || "No word ends with that. Try the last letter of a bubble you can see.";
+      });
+
+      JGZT.challenge("double-points", (game) => {
+        if (!/word\.length\s*\*\s*2|2\s*\*\s*bubble\.word\.length/.test(game.code)) return false;
+        return game.read("score") > 0 || "Doubled! Now pop a bubble to see the points.";
+      });
+      JGZT.challenge("twelve-points", (game) => game.read("score") >= 12);
+
+      JGZT.challenge("streak-three", (game) => game.read("streak") >= 3);
+
+      JGZT.challenge("five-lives", (game) => game.read("MAX_LIVES") >= 5 && game.read("lives") >= 5);
+      JGZT.challenge("win-it", (game) => game.read("state") === "won");
+
+      JGZT.challenge("ten-words", (game) => {
+        const words = game.read("LEVELS[0].words");
+        return typeof words === "string" && words.split(" ").filter((word) => word.length > 0).length >= 10;
+      });
+      JGZT.challenge("sixth-level", (game) => {
+        const levels = game.read("LEVELS");
+        if (!Array.isArray(levels) || levels.length < 6) return false;
+        const level = levels[5];
+        if (typeof level.name !== "string" || level.name.length === 0) return "The new level needs a name in quote marks.";
+        if (typeof level.words !== "string" || level.words.split(" ").filter(Boolean).length < 5) {
+          return "Give the new level at least 5 words, in one string with spaces between them.";
+        }
+        return level.speed > 0 && level.every > 0 && level.goal > 0;
+      });
+
+      JGZT.challenge("loud-title", (game) => drawnText(game).some((t) => t.text === "OCTO POP"));
+      JGZT.challenge("longer-tune", (game) => {
+        const winning = game.code.match(/function winLevel[\s\S]*?playTune\(\[([^\]]*)\]\)/);
+        const notes = winning ? winning[1].match(/["'][A-G][#b]?\d["']/g) || [] : [];
+        if (notes.length < 5) return false;
+        return ["won", "finished"].includes(game.read("state")) || "Longer tune ready. Win a level to hear it!";
+      });
+
+      JGZT.start();
+
+      document.getElementById("download-final").addEventListener("click", () => {
+        const editable = JGZT.cell("cell-final");
+        JGZT.downloadProject(editable ? editable.code : JGZT.games.octo_pop.steps.final);
+      });
+
+      // ------------------------------------------------------------------
+      // Small helpers for the widgets.
+      // ------------------------------------------------------------------
+      function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      }
+      // Builds a code line out of plain pieces: ["text", ["str", "\"cat\""], ["res", "-> 3"]].
+      function codeLine(box, pieces) {
+        box.textContent = "";
+        for (const piece of pieces) {
+          if (typeof piece === "string") box.append(piece);
+          else box.append(el("span", piece[0], piece[1]));
+        }
+      }
+      const quote = (text) => `"${text}"`;
+      const lettersOnly = (text) => text.toLowerCase().replace(/[^a-z]/g, "");
+
+      // ------------------------------------------------------------------
+      // Coordinate readout: hover the first cells' games to see x and y.
+      // ------------------------------------------------------------------
+      function coordinateReadout(stepKey) {
+        const cell = JGZT.cell(stepKey);
+        const stage = cell.stage;
+        const label = el("div", "coord-label");
+        const vertical = el("div", "coord-line v");
+        const horizontal = el("div", "coord-line h");
+        stage.append(vertical, horizontal, label);
+        stage.addEventListener("mousemove", (event) => {
+          const canvas = stage.querySelector("canvas");
+          if (!canvas) return;
+          const box = canvas.getBoundingClientRect();
+          const stageBox = stage.getBoundingClientRect();
+          const x = Math.round(((event.clientX - box.left) / box.width) * 720);
+          const y = Math.round(((event.clientY - box.top) / box.height) * 480);
+          if (x < 0 || y < 0 || x > 720 || y > 480) return;
+          const left = event.clientX - stageBox.left;
+          const top = event.clientY - stageBox.top;
+          label.textContent = `x ${x}, y ${y}`;
+          label.style.left = `${Math.min(left, stageBox.width - 110)}px`;
+          label.style.top = `${Math.min(top, stageBox.height - 34)}px`;
+          vertical.style.left = `${left}px`;
+          horizontal.style.top = `${top}px`;
+          stage.classList.add("show-coords");
+        });
+        stage.addEventListener("mouseleave", () => stage.classList.remove("show-coords"));
+      }
+      coordinateReadout("01-sea");
+      coordinateReadout("02-octopus");
+
+      // ------------------------------------------------------------------
+      // Widget: letter boxes. Every letter has a number, starting at 0.
+      // ------------------------------------------------------------------
+      (function letterBoxes() {
+        const root = document.getElementById("letter-boxes");
+        const input = root.querySelector("input.word-input");
+        const letters = root.querySelector(".letters");
+        const range = root.querySelector("[data-pos]");
+        const rangeOut = root.querySelector("[data-pos-out]");
+        const readout = root.querySelector("[data-readout]");
+
+        function render() {
+          const word = lettersOnly(input.value);
+          const pos = Number(range.value);
+          rangeOut.textContent = pos;
+          letters.textContent = "";
+          [...word].forEach((letter, i) => {
+            const box = el("div", `letter${i === pos ? " is-picked" : ""}`);
+            box.append(el("b", "", letter), el("i", "", String(i)));
+            box.addEventListener("click", () => {
+              range.value = i;
+              render();
+            });
+            letters.append(box);
+          });
+          if (pos >= word.length) {
+            // Past the end: a dashed "nothing here" box.
+            const box = el("div", "letter is-gap is-picked");
+            box.append(el("b", "", "?"), el("i", "", String(pos)));
+            letters.append(box);
+          }
+          readout.textContent = "";
+          if (word.length === 0) {
+            readout.textContent = "Type a word above to see its letters.";
+            return;
+          }
+          const picked = pos < word.length ? quote(word[pos]) : "undefined";
+          const parts = [
+            el("b", "", `${quote(word)}.length`),
+            ` is ${word.length}.   `,
+            el("b", "", `${quote(word)}[${pos}]`),
+            ` is ${picked}.`,
+          ];
+          if (pos >= word.length) parts.push(` There is no letter number ${pos}: the last one is number ${word.length - 1}.`);
+          readout.append(...parts);
+        }
+        input.addEventListener("input", render);
+        range.addEventListener("input", render);
+        render();
+      })();
+
+      // ------------------------------------------------------------------
+      // Widget: slice scissors.
+      // ------------------------------------------------------------------
+      (function sliceScissors() {
+        const root = document.getElementById("slice-scissors");
+        const input = root.querySelector("input.word-input");
+        const letters = root.querySelector(".letters");
+        const start = root.querySelector("[data-start]");
+        const end = root.querySelector("[data-end]");
+        const startOut = root.querySelector("[data-start-out]");
+        const endOut = root.querySelector("[data-end-out]");
+        const code = root.querySelector("[data-code]");
+        const readout = root.querySelector("[data-readout]");
+
+        function render() {
+          const word = lettersOnly(input.value);
+          const a = Number(start.value);
+          const b = Number(end.value);
+          startOut.textContent = a;
+          endOut.textContent = b;
+          const n = word.length;
+          const clamp = (v) => (v < 0 ? Math.max(n + v, 0) : Math.min(v, n));
+          const from = clamp(a);
+          const to = clamp(b);
+          letters.textContent = "";
+          [...word].forEach((letter, i) => {
+            const cut = i >= from && i < to;
+            const box = el("div", `letter ${cut ? "is-cut" : "is-dim"}`);
+            box.append(el("b", "", letter), el("i", "", String(i)));
+            letters.append(box);
+          });
+          const piece = word.slice(a, b);
+          codeLine(code, [
+            ["str", quote(word)],
+            ".slice(",
+            ["num", String(a)],
+            ", ",
+            ["num", String(b)],
+            ")  ",
+            ["res", `→ ${quote(piece)}`],
+          ]);
+          readout.textContent =
+            n === 0
+              ? "Type a word above."
+              : piece.length === 0
+                ? "An empty piece: the start is at or after the end."
+                : `The piece is ${piece.length} letter${piece.length === 1 ? "" : "s"} long: positions ${from} up to, but not including, ${to}.`;
+        }
+        input.addEventListener("input", render);
+        start.addEventListener("input", render);
+        end.addEventListener("input", render);
+        root.querySelector("[data-backspace]").addEventListener("click", () => {
+          start.value = 0;
+          end.value = -1;
+          render();
+        });
+        render();
+      })();
+
+      // ------------------------------------------------------------------
+      // Widget: the letter judge. The same three questions typeLetter asks.
+      // ------------------------------------------------------------------
+      (function letterJudge() {
+        const root = document.getElementById("letter-judge");
+        const bubbleRow = root.querySelector("[data-bubbles]");
+        const tray = root.querySelector("[data-tray]");
+        const keysRow = root.querySelector("[data-keys]");
+        const readout = root.querySelector("[data-readout]");
+        const steps = [...root.querySelectorAll(".judge-step")];
+        const WORDS = ["cat", "car", "sun", "fish"];
+        let typed = "";
+        let popped = new Set();
+        let refill = null;
+
+        const live = () => WORDS.filter((word) => !popped.has(word));
+        const find = (letters) => live().find((word) => word.startsWith(letters));
+
+        function resetSteps() {
+          steps[0].innerHTML = "1. Does some bubble start with <code>typed + letter</code>?";
+          steps[1].innerHTML = "2. If not, does some bubble start with only <code>letter</code>?";
+          steps[2].textContent = "3. Otherwise…";
+          for (const step of steps) step.className = "judge-step";
+        }
+        function showStep(index, html, answer) {
+          steps[index].innerHTML = html;
+          steps[index].className = `judge-step is-asked ${answer === null ? "" : answer ? "is-yes" : "is-no"}`;
+        }
+        function render() {
+          bubbleRow.textContent = "";
+          for (const word of WORDS) {
+            const bubble = el("div", "word-bubble");
+            const isLive = !popped.has(word);
+            if (!isLive) bubble.classList.add("is-popped");
+            const lit = isLive && typed.length > 0 && word.startsWith(typed);
+            if (lit) bubble.classList.add("is-lit");
+            if (lit) {
+              bubble.append(el("span", "typed", word.slice(0, typed.length)), word.slice(typed.length));
+            } else {
+              bubble.textContent = word;
+            }
+            bubbleRow.append(bubble);
+          }
+          tray.textContent = "";
+          if (typed === "") tray.append(el("span", "hint", "type a letter"));
+          else tray.append(typed);
+        }
+        function maybeRefill() {
+          if (live().length > 0) return;
+          clearTimeout(refill);
+          refill = setTimeout(() => {
+            popped = new Set();
+            render();
+          }, 1400);
+        }
+        function press(letter) {
+          const attempt = typed + letter;
+          const first = find(attempt);
+          resetSteps();
+          tray.classList.remove("is-ouch");
+          void tray.offsetWidth; // restarts the little shake
+          showStep(
+            0,
+            `1. Does some bubble start with <code>typed + letter</code> = <code>${quote(typed)} + ${quote(letter)}</code> = <code>${quote(attempt)}</code>? <strong>${first ? `Yes: "${first}"` : "No"}</strong>`,
+            Boolean(first),
+          );
+          let message;
+          if (first) {
+            typed = attempt;
+            showStep(1, "2. (Skipped: question 1 already said yes.)", null);
+            showStep(2, `3. So: <code>typed += letter</code>. Carry on with this word: <code>typed</code> is now <code>${quote(typed)}</code>.`, true);
+            message = `Carrying on: ${quote(typed)}.`;
+          } else {
+            const second = find(letter);
+            showStep(
+              1,
+              `2. Does some bubble start with only <code>${quote(letter)}</code>? <strong>${second ? `Yes: "${second}"` : "No"}</strong>`,
+              Boolean(second),
+            );
+            if (second) {
+              typed = letter;
+              showStep(2, `3. So: <code>typed = letter</code>. Switch to a different word: <code>typed</code> is now <code>${quote(typed)}</code>.`, true);
+              message = `Switched to ${quote(typed)}.`;
+            } else {
+              typed = "";
+              showStep(2, "3. Neither question said yes, so <code>else</code> runs: <code>mistake()</code>. The tray empties and Octo says ouch.", false);
+              tray.classList.add("is-ouch");
+              message = "A typo! The tray was cleared.";
+            }
+          }
+          if (typed && live().includes(typed)) {
+            popped.add(typed);
+            message += ` ${quote(typed)} is complete, so the bubble pops! 🎉`;
+            typed = "";
+            maybeRefill();
+          }
+          readout.textContent = message;
+          render();
+        }
+        function erase() {
+          typed = typed.slice(0, -1);
+          resetSteps();
+          readout.textContent = `Backspace: typed.slice(0, -1) gives ${quote(typed)}.`;
+          render();
+        }
+
+        for (const letter of "abcdefghijklmnopqrstuvwxyz") {
+          const button = el("button", "", letter);
+          button.type = "button";
+          button.addEventListener("click", () => press(letter));
+          keysRow.append(button);
+        }
+        root.querySelector("[data-clear]").addEventListener("click", erase);
+        root.querySelector("[data-reset]").addEventListener("click", () => {
+          popped = new Set();
+          typed = "";
+          resetSteps();
+          readout.textContent = "Fresh bubbles!";
+          render();
+        });
+        root.tabIndex = 0;
+        root.addEventListener("keydown", (event) => {
+          if (event.ctrlKey || event.metaKey || event.altKey) return;
+          if (event.key === "Backspace") {
+            event.preventDefault();
+            erase();
+          } else if (/^[a-zA-Z]$/.test(event.key)) {
+            event.preventDefault();
+            press(event.key.toLowerCase());
+          }
+        });
+        resetSteps();
+        render();
+      })();
+
+      // ------------------------------------------------------------------
+      // Widget: the state map lights up the state the step-10 game is in.
+      // ------------------------------------------------------------------
+      (function stateMap() {
+        const root = document.getElementById("state-map");
+        const now = root.querySelector("[data-now]");
+        const nodes = root.querySelectorAll(".node");
+        const cell = JGZT.cell("10-lives");
+        setInterval(() => {
+          const game = cell.view();
+          const state = game.running ? game.read("state") : null;
+          now.textContent = state ? `"${state}"` : "(press Run above)";
+          for (const node of nodes) node.classList.toggle("is-on", node.dataset.state === state);
+        }, 150);
+      })();
+
+      // ------------------------------------------------------------------
+      // Widget: the word chopper. split() turns one string into a list.
+      // ------------------------------------------------------------------
+      (function wordChopper() {
+        const root = document.getElementById("split-chopper");
+        const input = root.querySelector("input.word-input");
+        const buttons = [...root.querySelectorAll("[data-sep]")];
+        const code = root.querySelector("[data-code]");
+        const chips = root.querySelector("[data-chips]");
+        const readout = root.querySelector("[data-readout]");
+        let separator = " ";
+
+        function render() {
+          const text = input.value;
+          const pieces = text.split(separator);
+          codeLine(code, [["str", quote(text)], ".split(", ["str", quote(separator)], ")"]);
+          chips.textContent = "";
+          pieces.forEach((piece, i) => {
+            const chip = el("div", "chip");
+            chip.append(el("b", piece === "" ? "is-empty" : "", quote(piece)), el("i", "", String(i)));
+            chips.append(chip);
+          });
+          readout.textContent = "";
+          readout.append(
+            `A list with `,
+            el("b", "", String(pieces.length)),
+            ` item${pieces.length === 1 ? "" : "s"}.`,
+            pieces.includes("") && text !== "" ? " The dashed one is an empty string: two separators in a row make one!" : "",
+          );
+        }
+        input.addEventListener("input", render);
+        for (const button of buttons) {
+          button.addEventListener("click", () => {
+            separator = button.dataset.sep;
+            for (const other of buttons) other.setAttribute("aria-pressed", String(other === button));
+            render();
+          });
+        }
+        render();
+      })();
+    </script>
+  </body>
+</html>

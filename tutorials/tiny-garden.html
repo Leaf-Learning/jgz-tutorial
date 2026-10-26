@@ -1,0 +1,2247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tiny Garden</title>
+    <meta name="description" content="Build a cosy plant-water-pick-sell garden game in JavaScript with js-game-zero — a hands-on tutorial for total beginners." />
+    <link rel="stylesheet" href="lib/tutorial.css" />
+    <style>
+      /* ---- Page-only styles for Tiny Garden's widgets ---- */
+
+      /* Programming ligatures turn !== into a single glyph, which hides the
+         real characters from beginners who need to type them. */
+      code,
+      pre,
+      kbd,
+      .readout {
+        font-variant-ligatures: none;
+      }
+
+      /* Six concept cards: three per row on wide screens, never an orphan. */
+      @media (min-width: 900px) {
+        .learn-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      .hero-mascots {
+        display: flex;
+        gap: 6px;
+        align-items: flex-end;
+        margin: 6px 0 0;
+      }
+      .hero-mascots img {
+        width: 64px;
+        height: 72px;
+        animation: sway 2.6s ease-in-out infinite;
+        transform-origin: 50% 100%;
+      }
+      .hero-mascots img:nth-child(2) {
+        animation-delay: -0.8s;
+      }
+      .hero-mascots img:nth-child(3) {
+        animation-delay: -1.6s;
+      }
+      @keyframes sway {
+        0%,
+        100% {
+          transform: rotate(-5deg);
+        }
+        50% {
+          transform: rotate(5deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero-mascots img {
+          animation: none;
+        }
+      }
+
+      /* Hover coordinates on the first two games */
+      .coord-label {
+        position: absolute;
+        z-index: 3;
+        padding: 4px 9px;
+        border-radius: 99px;
+        background: rgba(42, 33, 64, 0.86);
+        color: #fff;
+        font: 600 12px/1 var(--font-code);
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(12px, 12px);
+        white-space: nowrap;
+      }
+      .coord-line {
+        position: absolute;
+        z-index: 2;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 0 1px rgba(42, 33, 64, 0.25);
+      }
+      .coord-line.v {
+        top: 0;
+        bottom: 0;
+        width: 1px;
+      }
+      .coord-line.h {
+        left: 0;
+        right: 0;
+        height: 1px;
+      }
+      .stage.show-coords .coord-label,
+      .stage.show-coords .coord-line {
+        opacity: 1;
+      }
+
+      /* Code steppers (plot maker, selling loop) */
+      .stepper {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+      @media (max-width: 760px) {
+        .stepper {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .stepper-code {
+        margin: 0;
+        padding: 12px 0;
+        border-radius: 14px;
+        background: var(--ed-bg);
+        color: var(--ed-ink);
+        font: 13px/24px var(--font-code);
+        font-variant-ligatures: none; /* after the font shorthand, which resets it */
+        overflow-x: auto;
+      }
+      .stepper-code .sl {
+        display: block;
+        padding: 0 14px;
+        border-left: 4px solid transparent;
+        transition: background 0.2s;
+        white-space: pre;
+      }
+      .stepper-code .sl.is-on {
+        background: rgba(249, 226, 175, 0.18);
+        border-left-color: #f9e2af;
+      }
+
+      /* Widget pieces */
+      .widget select {
+        font: 600 0.95rem var(--font-body);
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 2px solid var(--line);
+        background: var(--card-2);
+        color: var(--ink);
+      }
+      .widget .btn[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .widget canvas {
+        border-radius: 14px;
+      }
+
+      /* Plot life map */
+      .state-svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .state-svg .node rect {
+        fill: var(--card-2);
+        stroke: var(--line);
+        stroke-width: 2;
+        transition:
+          fill 0.25s,
+          stroke 0.25s;
+      }
+      .state-svg .node text {
+        fill: var(--ink);
+        font: 600 17px var(--font-display);
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .state-svg .node text.count {
+        font: 600 13px var(--font-body);
+        opacity: 0.8;
+      }
+      .state-svg .node.is-on rect {
+        fill: var(--accent);
+        stroke: #fff;
+      }
+      .state-svg .node.is-on text {
+        fill: var(--accent-ink);
+      }
+      .state-svg .edge {
+        fill: none;
+        stroke: var(--muted);
+        stroke-width: 2;
+        opacity: 0.7;
+      }
+      .state-svg .edge-label {
+        fill: var(--muted);
+        font: 600 12px var(--font-body);
+        text-anchor: middle;
+      }
+      .state-svg marker path {
+        fill: var(--muted);
+      }
+
+      /* The selling loop */
+      .basket-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 78px;
+        align-items: flex-end;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 14px;
+        background: rgba(241, 217, 168, 0.55);
+        border: 2px dashed rgba(42, 33, 64, 0.2);
+      }
+      .basket-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 4px 6px;
+        border-radius: 12px;
+        border: 2px solid transparent;
+        font: 600 0.8rem var(--font-code);
+        transition:
+          background 0.2s,
+          border-color 0.2s,
+          opacity 0.2s;
+      }
+      .basket-item img {
+        width: 48px;
+        height: 54px;
+      }
+      .basket-item.is-now {
+        background: #fff;
+        border-color: var(--accent-2);
+        transform: translateY(-4px);
+      }
+      .basket-item.is-done {
+        opacity: 0.45;
+      }
+      .basket-add {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      .basket-add .btn img {
+        width: 22px;
+        height: 25px;
+        vertical-align: middle;
+        margin-right: 2px;
+      }
+
+      /* The seed table */
+      .table-wrap {
+        overflow-x: auto;
+      }
+      .seed-table {
+        width: 100%;
+        border-collapse: collapse;
+        font: 0.95rem var(--font-body);
+      }
+      .seed-table th {
+        text-align: left;
+        padding: 6px 10px;
+        font: 700 0.8rem var(--font-code);
+        color: var(--muted);
+        border-bottom: 2px solid var(--line);
+        white-space: nowrap;
+      }
+      .seed-table td {
+        padding: 4px 10px;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .seed-table td img {
+        width: 30px;
+        height: 34px;
+        display: block;
+      }
+      .seed-table td.pick {
+        cursor: pointer;
+        font-family: var(--font-code);
+        font-weight: 600;
+        border-radius: 8px;
+        transition: background 0.15s;
+      }
+      .seed-table td.pick:hover {
+        background: var(--inline-code);
+      }
+      .seed-table tr.is-row td {
+        background: rgba(255, 211, 77, 0.16);
+      }
+      .seed-table td.is-picked {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .rate {
+        display: inline-block;
+        width: 110px;
+        height: 12px;
+        vertical-align: middle;
+        margin-right: 6px;
+        border-radius: 99px;
+        background: rgba(42, 33, 64, 0.1);
+        overflow: hidden;
+      }
+      .rate-bar {
+        display: block;
+        height: 100%;
+        border-radius: 99px;
+        background: var(--accent-2);
+      }
+    </style>
+  </head>
+  <body class="theme-tiny-garden" data-game="tiny_garden" data-tutorial="Tiny Garden">
+    <main class="page">
+      <!-- ============================================================ -->
+      <section class="hero">
+        <div class="hero-kicker">🌱 Tutorial 6 · Growing things</div>
+        <h1>Tiny <span class="pop">Garden</span></h1>
+        <p class="hero-lede">
+          Plant a seed, water it, watch it grow, pick the flower and sell it to buy rarer seeds. You'll build this cosy
+          little garden from a completely empty screen, one small step at a time. Nothing can go wrong in it, and nobody is
+          in a hurry.
+        </p>
+        <ul class="hero-meta">
+          <li>⏱ About 2 hours</li>
+          <li>🌱 Total beginners welcome (no other tutorial needed first)</li>
+          <li>💻 Nothing to install — the code runs right on this page</li>
+        </ul>
+        <div class="hero-mascots" aria-hidden="true">
+          <img data-art="daisy" alt="" />
+          <img data-art="sunflower" alt="" />
+          <img data-art="moonbloom" alt="" />
+        </div>
+
+        <h3>Play it first</h3>
+        <p class="prose">
+          Press <strong>Play</strong>, then click the garden. Click an <strong>empty plot</strong> to plant a seed. A little
+          raindrop means it's thirsty, so click the plant again to <strong>water</strong> it. When a flower blooms it
+          glows: click it to <strong>pick</strong> it. Then click the <strong>stall</strong> to sell what's in your basket,
+          and spend your coins on <strong>rarer seeds</strong> from the shelf at the bottom. Can you grow every flower?
+        </p>
+        <div class="cell" id="hero-game" data-step="final" data-play-only></div>
+
+        <div class="learn-grid">
+          <div class="learn-card"><span class="emoji">🎨</span><b>Drawing with code</b>Coordinates, colours and pictures, placed by numbers.</div>
+          <div class="learn-card"><span class="emoji">⏱️</span><b>Timers &amp; the game loop</b>Things that happen over time: drifting clouds and growing plants.</div>
+          <div class="learn-card"><span class="emoji">🧺</span><b>Lists &amp; loops</b>A whole garden of plots, and a basket that holds many flowers.</div>
+          <div class="learn-card"><span class="emoji">🚦</span><b>States &amp; decisions</b>Every plot is empty, growing or ready, and one click does a different job in each.</div>
+          <div class="learn-card"><span class="emoji">📋</span><b>Data tables</b>Every flower is one line of data, so a new flower is mostly one new line.</div>
+          <div class="learn-card"><span class="emoji">🪙</span><b>Coins &amp; saving</b>Selling, buying with rules, and a garden that's still there tomorrow.</div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🧭</span>
+          <div>
+            <span class="callout-title">How this page works</span>
+            <p>
+              Each step has <strong>code on the left</strong> and <strong>the game on the right</strong>. Change anything you
+              like, then press <strong>▶ Run</strong> (or <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>). Lines that are
+              new in a step glow green, and hovering a dotted code word in the text lights up the matching lines.
+              <strong>🎯 Challenges check themselves</strong> while your game runs. You can't break anything:
+              <strong>↺ Reset</strong> always brings the step back.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="A sunny patch">
+        <span class="step-kicker"></span>
+        <h2>A sunny patch</h2>
+        <p>
+          Every game needs a window to happen in. In js-game-zero (the small game engine that runs everything on this page) you open one with a few lines. Here's your entire
+          first program. Press <strong>Run</strong>:
+        </p>
+        <div class="cell" data-step="01-garden"></div>
+        <p>A blue sky, a glowing sun and a stripe of grass. Let's read it line by line.</p>
+        <ul>
+          <li>
+            <code class="ref">WIDTH = 640;</code> and <code class="ref">HEIGHT = 400;</code> set the size of the game window in
+            <span class="term" tabindex="0" data-tip="The tiny dots a screen is made of. This game is 640 dots wide and 400 tall.">pixels</span>.
+            They must be written in capitals, exactly like that, because the game looks for those exact names.
+          </li>
+          <li>
+            <code class="ref">TITLE</code> is the game's name. Words go inside quote marks, which makes them a
+            <span class="term" tabindex="0" data-tip="A piece of text. Strings always go inside quote marks: &quot;like this&quot;.">string</span>.
+          </li>
+          <li>
+            <code class="ref" data-match="function draw">function draw() { … }</code> is a
+            <span class="term" tabindex="0" data-tip="A named set of instructions. Everything between its { curly brackets } runs when the function is called.">function</span>:
+            a named recipe. The game runs <code>draw</code> about <strong>60 times every second</strong> to paint the
+            picture, like the pages of a flip book.
+          </li>
+          <li>
+            Lines that start with <code class="ref" data-match="// The sun">//</code> are <span class="term" tabindex="0" data-tip="Notes for humans. The computer skips everything after // on a line.">comments</span>:
+            notes to remind people what the code does. The computer ignores them.
+          </li>
+          <li>
+            <code class="ref" data-match="screen.fill">screen.fill</code> paints the whole window. Given two colours, it fades
+            from the first (at the top) to the second (at the bottom). Colours like <code>"#aee6ff"</code> are
+            <span class="term" tabindex="0" data-tip="A colour written as # and six digits: two each for how much red, green and blue light to mix.">hex codes</span>.
+            Plain names like <code>"gold"</code> or <code>"hotpink"</code> work too.
+          </li>
+          <li>
+            <code class="ref" data-match='screen.circle(560, 50, 38'>screen.circle(560, 50, 38, "#ffd34d")</code> draws a filled circle. The
+            numbers and colour mean: <strong>x</strong>, <strong>y</strong>, <strong>radius</strong> (how far it reaches from its middle),
+            and <strong>colour</strong>.
+          </li>
+          <li>
+            The sun's glow is a bigger circle drawn first. Its colour is
+            <code class="ref" data-match="rgb(">rgb(255, 236, 160, 70)</code>: a mix of red, green and blue light (each from 0 to 255). The
+            optional fourth number is how solid it is: 0 is invisible and 255 is solid, so 70 is mostly see-through.
+          </li>
+          <li>
+            <code class="ref" data-match="screen.rect">screen.rect(0, 144, WIDTH, 256, "#9bd160")</code> draws a filled rectangle: the x and y of its
+            top-left corner, its width, its height, and its colour. We used <code>WIDTH</code> for the width, so the grass
+            always stretches all the way across.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🧠</span>
+          <div>
+            <span class="callout-title">Big idea: x and y</span>
+            <p>
+              Every spot in the window has two numbers. <strong>x</strong> says how far across from the left edge.
+              <strong>y</strong> says how far <em>down</em> from the top. So <code>(0, 0)</code> is the top-left corner, and y
+              gets <em>bigger</em> as you go <em>down</em>. That surprises everyone at first!
+            </p>
+            <p>👉 <strong>Hover over the game above</strong> to see the x and y of any spot.</p>
+          </div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🖌️</span>
+          <div>
+            <span class="callout-title">Painting order</span>
+            <p>
+              The computer paints in the order you write the lines, like painting on a real canvas. Things painted
+              <strong>later</strong> cover things painted <strong>earlier</strong>. That's why the sky comes first, then the
+              sun, then the grass.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <span class="callout-icon">🐞</span>
+          <div>
+            <span class="callout-title">Break it on purpose</span>
+            <p>
+              Delete the closing bracket <code>)</code> at the end of one of the <code>screen.circle</code> lines and press
+              <strong>Run</strong>. You'll get a friendly message that says what went wrong and where. Errors are normal:
+              every programmer sees them all day. Put the bracket back, or press <strong>↺ Reset</strong>, to fix it.
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-origin" data-answer="b">
+          <p>Where is the spot <code>(0, 0)</code>?</p>
+          <button data-choice="a">Right in the middle of the window</button>
+          <button data-choice="b">The top-left corner</button>
+          <button data-choice="c">The bottom-left corner, like in maths class</button>
+          <div class="explain" data-for="b">x counts from the left edge and y counts down from the top, so both are 0 in the top-left corner.</div>
+          <div class="explain" data-for="c">That's how graphs work in maths, but screens count y <em>downwards</em> from the top.</div>
+          <div class="explain" data-for="a">The middle would be (320, 200): half of 640 and half of 400.</div>
+        </div>
+
+        <div class="challenge" data-id="sun-left" data-success="The sun moved! You changed a program and saw the result.">
+          <p><strong>Move the sun</strong> (and its glow) into the left half of the sky: its x should be less than 320.</p>
+          <p class="hint">Both sun circles start at x = 560. The first number inside <code>screen.circle(…)</code> is the x.</p>
+          <p class="hint">Smaller x is further left. Change <em>both</em> circles to around 120, so the glow stays with the sun.</p>
+          <pre class="answer">  screen.circle(120, 50, 56, rgb(255, 236, 160, 70));
+  screen.circle(120, 50, 38, "#ffd34d");</pre>
+        </div>
+        <div class="challenge" data-id="tall-grass" data-success="Lots of room to garden.">
+          <p><strong>Make more room for the garden</strong>: start the grass at y = 100 or higher up.</p>
+          <p class="hint">The grass is the <code>screen.rect</code> line. Its second number is the y of its top edge.</p>
+          <p class="hint">Moving the top up leaves a gap at the bottom unless the grass gets taller too. The fourth number is the height: the top y plus the height should still reach 400, the bottom of the window.</p>
+          <pre class="answer">  screen.rect(0, 100, WIDTH, 300, "#9bd160");</pre>
+        </div>
+        <p class="muted">A sky is nice, but pictures are nicer. Next up: art, and a cloud.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Pictures and names">
+        <span class="step-kicker"></span>
+        <h2>Pictures, names and a cloud</h2>
+        <p>
+          Circles and rectangles only go so far, but we have <em>art</em>! Games keep their pictures in an
+          <code>images</code> folder. These are the two we need now:
+        </p>
+        <div class="art-tray" data-filter="^(cloud|hills)$"></div>
+        <div class="cell" data-step="02-pictures"></div>
+        <p>
+          Rolling hills with a fence, and a sleepy cloud. This step has three new ideas: pictures, a name for the cloud's
+          position, and a tidier way to organise the drawing.
+        </p>
+        <ul>
+          <li>
+            <code class="ref" data-match='screen.blit("hills"'>screen.blit("hills", [0, 44])</code> draws a picture. Give its name (the file
+            without <code>.svg</code>) and the spot where its top-left corner goes, as a list in
+            <span class="term" tabindex="0" data-tip="Square brackets hold a list of values in order: [x, y] is a list of two numbers.">[square brackets]</span>.
+            The hills are drawn <em>after</em> the cloud, so they cover its bottom edge.
+          </li>
+          <li>
+            <code class="ref" data-match='screen.blit("cloud"'>screen.blit("cloud", [cloudX, 36])</code> uses a name instead of a number for the cloud's x. The name
+            comes from the new line near the top.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawBackground">drawBackground()</code> is a second function. We moved all the scenery into
+            it, and <code class="ref" data-match="  drawBackground();">draw()</code> now <em>calls</em> it by writing its name with
+            brackets. Functions let you give a name to a chunk of work.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">📦</span>
+          <div>
+            <span class="callout-title">Big idea: variables</span>
+            <p>
+              A <span class="term" tabindex="0" data-tip="A named box that holds a value. You can read what's inside, or put something new in.">variable</span>
+              is a labelled box that holds a value. <code class="ref" data-match="let cloudX">let cloudX = 40;</code> means "make a box called
+              <code>cloudX</code> and put 40 in it". Anywhere you write <code>cloudX</code> afterwards, the computer uses
+              whatever is in the box right now. Better still, you can <em>change</em> what's inside, and that's how things
+              will move.
+            </p>
+          </div>
+        </div>
+        <p>Try it. The slider rewrites that line of code and re-runs the game for you:</p>
+        <div class="tweak-row">
+          <div class="tweak" data-name="cloudX" data-min="-60" data-max="640" data-label="cloudX: the cloud's x" data-icon="☁️"></div>
+        </div>
+
+        <div class="quiz" data-id="q-order" data-answer="c">
+          <p>What would change if you wrote the <code>screen.blit("cloud", …)</code> line <em>after</em> the <code>screen.blit("hills", …)</code> line?</p>
+          <button data-choice="a">Nothing: the order only matters for the sky</button>
+          <button data-choice="b">The cloud would disappear</button>
+          <button data-choice="c">The cloud would be painted on top of the hills instead of tucked behind them</button>
+          <div class="explain" data-for="c">Whatever is painted later lands on top. Try swapping the two lines and pressing Run!</div>
+          <div class="explain" data-for="wrong">Think about painting order: the last thing painted is the one you can see in front.</div>
+        </div>
+
+        <div class="challenge" data-id="cloud-over-sun" data-success="A cloud hiding the sun. Gloomy, but cosy.">
+          <p><strong>Park the cloud in front of the sun.</strong></p>
+          <p class="hint">The sun is at x = 560, and the cloud is about 96 pixels wide. Which number moves the cloud?</p>
+          <p class="hint">Change <code>cloudX</code> to something around 520, or drag its slider.</p>
+          <pre class="answer">let cloudX = 520; // where the cloud is, across</pre>
+        </div>
+        <div class="challenge" data-id="second-cloud" data-success="Two clouds! It's getting properly sky-like up there.">
+          <p><strong>Add a second cloud</strong> somewhere else in the sky.</p>
+          <p class="hint">Copy the <code>screen.blit("cloud", …)</code> line and paste it right underneath.</p>
+          <p class="hint">Give the copy a different position, like <code>[300, 20]</code>, so the two clouds aren't on top of each other. Keep it high up: the hills are painted afterwards and would hide a cloud placed lower down.</p>
+          <pre class="answer">  screen.blit("cloud", [cloudX, 36]);
+  screen.blit("cloud", [300, 20]);</pre>
+        </div>
+        <p class="muted">The cloud sits still. Let's make it drift.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="The game loop: a drifting cloud">
+        <span class="step-kicker"></span>
+        <h2>The game loop: a drifting cloud</h2>
+        <p>
+          Here's the secret behind every video game. The computer draws a picture, changes things a tiny bit, draws again,
+          changes things a tiny bit, draws again… about 60 times a second. Your eyes blend those pictures into motion.
+          That's the <strong>game loop</strong>. Press <strong>Run</strong> and watch the cloud:
+        </p>
+        <div class="cell" data-step="03-drift" data-watch="cloudX"></div>
+        <p>Watch the <strong>Live values</strong> box while it runs: <code>cloudX</code> changes every frame!</p>
+        <ul>
+          <li>
+            <code class="ref" data-match="function update">update(dt)</code> is a second special function. The game calls it every frame, right
+            <em>before</em> <code>draw()</code>. <strong>update changes things, draw shows them.</strong>
+          </li>
+          <li>
+            <code class="ref" data-match="dt">dt</code> is the time since the last frame, in seconds. It's usually about 0.017, which is one
+            sixtieth of a second.
+          </li>
+          <li>
+            <code class="ref" data-match="const CLOUD_SPEED">const CLOUD_SPEED = 14;</code> is a
+            <span class="term" tabindex="0" data-tip="Like a variable, but it can never change. Made with const. Capital letters are a habit that says: this is a setting.">constant</span>:
+            a box whose contents never change. We write it in capitals to say "this is a setting you can tune".
+          </li>
+          <li>
+            <code class="ref" data-match="cloudX += CLOUD_SPEED * dt">cloudX += CLOUD_SPEED * dt;</code> means "add <code>CLOUD_SPEED × dt</code> to
+            <code>cloudX</code>". Speed × time = distance, so each frame the cloud moves exactly as far as it should in that
+            sliver of time.
+          </li>
+          <li>
+            <code class="ref" data-match="if (cloudX > WIDTH)">if (cloudX &gt; WIDTH) cloudX = -100;</code> is a decision. The part in brackets is a
+            yes-or-no question: is <code>cloudX</code> <em>greater than</em> <code>WIDTH</code>? If yes, the rest of the line
+            runs and the cloud jumps back to the left, hidden off the edge of the window. If no, it's skipped.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🔁</span>
+          <div>
+            <span class="callout-title">Big idea: the game loop</span>
+            <p>
+              Each frame the game does the same two jobs: <code>update(dt)</code> nudges the numbers a little, then
+              <code>draw()</code> paints a picture from those numbers. Nothing "moves" by itself: it's a flip book, and
+              <code>update</code> decides what each page looks like.
+            </p>
+            <p>
+              We multiply by <code>dt</code> because not every computer manages 60 frames a second. A slow one takes fewer,
+              bigger steps, and a fast one takes more, smaller ones, but the cloud arrives at the same place at the same time
+              on both.
+            </p>
+          </div>
+        </div>
+
+        <div class="tweak-row">
+          <div class="tweak" data-name="CLOUD_SPEED" data-min="0" data-max="300" data-label="Cloud speed" data-icon="💨" data-unit=" px/s"></div>
+        </div>
+
+        <div class="quiz" data-id="q-dt" data-answer="b">
+          <p>
+            <code>CLOUD_SPEED</code> is 14. A slow computer takes a frame that lasts <code>dt = 0.5</code> seconds. How far does
+            the cloud move in that one frame?
+          </p>
+          <button data-choice="a">14 pixels</button>
+          <button data-choice="b">7 pixels</button>
+          <button data-choice="c">0.5 pixels</button>
+          <div class="explain" data-for="b"><code>14 × 0.5 = 7</code>. Half a second of drifting at 14 pixels a second is 7 pixels.</div>
+          <div class="explain" data-for="wrong">Multiply the speed by the time: <code>CLOUD_SPEED * dt</code>.</div>
+        </div>
+
+        <div class="challenge" data-id="fast-cloud" data-success="Zoom! A very windy day.">
+          <p><strong>Make a windy day</strong>: the cloud should drift at 60 pixels a second or faster.</p>
+          <p class="hint">Look for the constant at the top, or use the slider.</p>
+          <pre class="answer">const CLOUD_SPEED = 80; // pixels per second</pre>
+        </div>
+        <div class="challenge" data-id="cloud-left" data-success="Drifting the other way, and wrapping round like a champion.">
+          <p>
+            <strong>Make the cloud drift to the left instead.</strong> When it leaves the left edge it should reappear on the
+            right.
+          </p>
+          <p class="hint">A negative speed moves things the other way. But careful: the wrap-around line only watches the <em>right</em> edge, so a left-drifting cloud would never come back.</p>
+          <p class="hint">Change the <code>if</code> so it asks whether <code>cloudX</code> is <em>less than</em> <code>-100</code> (use <code>&lt;</code>), and send the cloud back to <code>WIDTH</code>.</p>
+          <p class="hint">A fast speed like <code>-150</code> lets you see it wrap quickly.</p>
+          <pre class="answer">const CLOUD_SPEED = -150;
+// …
+  if (cloudX &lt; -100) cloudX = WIDTH;</pre>
+        </div>
+        <p class="muted">The sky is alive. Time to dig the garden.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Rows of soil: lists and loops">
+        <span class="step-kicker"></span>
+        <h2>Rows of soil: lists and loops</h2>
+        <p>
+          A garden needs somewhere to plant. We want eight plots of soil in two rows of four. Writing out eight copies of the
+          same drawing code would be a chore (and what if you wanted nine?). Instead we'll keep a <strong>list</strong> of
+          plots and let a <strong>loop</strong> do the repeating. Press <strong>Run</strong>, then move your mouse over the
+          garden:
+        </p>
+        <div class="art-tray" data-filter="^soil"></div>
+        <div class="cell" data-step="04-plots"></div>
+        <p>Eight plots of soil, and the one under your mouse glows. Here's how they got there.</p>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🧺</span>
+          <div>
+            <span class="callout-title">Big idea: lists and loops</span>
+            <p>
+              A <span class="term" tabindex="0" data-tip="Also called an array. An ordered list of values in [square brackets].">list</span>
+              (programmers say <em>array</em>) holds many things in order. <code class="ref" data-match="let plots = []">let plots = [];</code> makes an empty
+              one, and <code class="ref" data-match="plots.push(plot)">plots.push(plot)</code> adds something to the end.
+            </p>
+            <p>
+              A <span class="term" tabindex="0" data-tip="Code that repeats. A loop runs the lines inside its { } more than once.">loop</span>
+              runs the same lines again and again. Lists and loops go together like seeds and soil.
+            </p>
+          </div>
+        </div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match="new Actor">new Actor("soil_dry", { topLeft: [x, y] })</code> makes an
+            <span class="term" tabindex="0" data-tip="A picture with a position. You can draw it, move it, swap its picture and ask if it touches something.">Actor</span>:
+            a picture that knows where it is. The part in curly brackets, <code>{ topLeft: [x, y] }</code>, is an
+            <span class="term" tabindex="0" data-tip="A bundle of named values in { curly brackets }, like { x: 10, y: 20 }.">object</span>:
+            a bundle of named settings (there's more about objects in the next step). <code>topLeft</code> says which
+            corner of the picture goes at that spot.
+          </li>
+          <li>
+            <code class="ref" data-match="for (let row">for (let row = 0; row &lt; ROWS; row++)</code> is a
+            <span class="term" tabindex="0" data-tip="A loop that counts: start somewhere, keep going while a question is true, and add one each time.">counting loop</span>:
+            start <code>row</code> at 0, keep going while <code>row</code> is less than <code>ROWS</code>, and add one
+            (<code>row++</code>) each time round. It runs its inside <code>ROWS</code> times.
+          </li>
+          <li>
+            Inside it, <code class="ref" data-match="for (let col">for (let col …)</code> is another loop. Loops inside loops are called
+            <em>nested</em>: for every row, the inner loop runs through every column. That's <code>ROWS × COLUMNS</code> = 8
+            plots.
+          </li>
+          <li>
+            <code class="ref" data-match="GARDEN_LEFT + col * PLOT_STEP_X">GARDEN_LEFT + col * PLOT_STEP_X</code> places a plot: column 0 sits at
+            <code>GARDEN_LEFT</code>, column 1 is one plot-step further right, column 2 is two steps further… and the same idea
+            gives the y of each row.
+          </li>
+          <li>
+            <code class="ref" data-match="makePlots();">makePlots();</code> at the very bottom runs the function once, when the game starts.
+          </li>
+        </ul>
+
+        <div class="widget" id="plot-maker">
+          <div class="widget-title">🌱 Plot maker</div>
+          <div class="widget-sub">
+            Press <strong>Next plot</strong> to run the loops one plot at a time. Watch which line of code is running, and
+            how the numbers turn into a position.
+          </div>
+          <canvas width="640" height="300"></canvas>
+          <div class="stepper" style="margin-top: 12px">
+            <pre class="stepper-code" aria-label="The two loops"><span class="sl" data-line="outer">for (let row = 0; row &lt; ROWS; row++) {</span><span class="sl" data-line="inner">  for (let col = 0; col &lt; COLUMNS; col++) {</span><span class="sl" data-line="make">    // x = GARDEN_LEFT + col * PLOT_STEP_X</span><span class="sl" data-line="make2">    // y = GARDEN_TOP + row * PLOT_STEP_Y</span><span class="sl" data-line="end1">  }</span><span class="sl" data-line="end2">}</span></pre>
+            <div>
+              <div class="readout" aria-live="polite">Press <b>Next plot</b> to start.</div>
+            </div>
+          </div>
+          <div class="widget-controls">
+            <button class="btn btn-primary btn-small" data-action="step">Next plot ▶</button>
+            <button class="btn btn-soft btn-small" data-action="all">Run the whole loop</button>
+            <button class="btn btn-soft btn-small" data-action="reset">↺ Start over</button>
+          </div>
+        </div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match="function drawPlot">drawPlot(plot)</code> draws one plot. <code class="ref" data-match="plot.draw()">plot.draw()</code> paints the
+            picture, and <code class="ref" data-match="plot.touches(mouse.pos)">plot.touches(mouse.pos)</code> asks "is the mouse pointer over this plot?" (<code>mouse.pos</code> is
+            wherever the pointer is right now). If so, an extra glow picture is painted on top, at
+            <code>[plot.left, plot.top]</code>: every Actor knows its own <code>left</code> and <code>top</code> edges.
+          </li>
+          <li>
+            <code class="ref" data-match="for (const plot of plots)">for (const plot of plots)</code> is the other kind of loop. It visits <strong>each item</strong>
+            of a list in turn, calling it <code>plot</code> while it's there. It's how <code>draw()</code> paints all eight
+            plots.
+          </li>
+        </ul>
+        <p>Now play with the grid. Each slider rewrites a number in the code and re-runs it:</p>
+        <div class="tweak-row">
+          <div class="tweak" data-name="COLUMNS" data-min="1" data-max="5" data-label="Columns" data-icon="↔️"></div>
+          <div class="tweak" data-name="ROWS" data-min="1" data-max="3" data-label="Rows" data-icon="↕️"></div>
+          <div class="tweak" data-name="PLOT_STEP_X" data-min="96" data-max="130" data-label="Gap across" data-unit=" px" data-icon="📏"></div>
+        </div>
+
+        <div class="quiz" data-id="q-column" data-answer="c">
+          <p>
+            <code>GARDEN_LEFT</code> is 20 and <code>PLOT_STEP_X</code> is 108. Where does the left edge of the plot in
+            <strong>column 2</strong> sit?
+          </p>
+          <button data-choice="a">128</button>
+          <button data-choice="b">344</button>
+          <button data-choice="c">236</button>
+          <div class="explain" data-for="c"><code>20 + 2 × 108 = 236</code>. Column 2 is the <em>third</em> column, because counting starts at 0.</div>
+          <div class="explain" data-for="a">That's column 1 (<code>20 + 1 × 108</code>). The first column is column 0.</div>
+          <div class="explain" data-for="b">That's column 3. Remember that counting starts at 0, so column 2 is the third plot along.</div>
+        </div>
+
+        <div class="challenge" data-id="bigger-garden" data-success="A proper allotment! Twelve plots or more.">
+          <p><strong>Dig a bigger garden</strong>: at least 12 plots.</p>
+          <p class="hint">The number of plots is <code>ROWS × COLUMNS</code>. Both are constants near the top.</p>
+          <pre class="answer">const COLUMNS = 5; // how many plots across...
+const ROWS = 3; // ...and how many down</pre>
+        </div>
+        <div class="challenge" data-id="glow-corner" data-kicker="Play time" data-success="The bottom-right plot is glowing.">
+          <p><strong>Make the bottom-right plot glow</strong> by moving your mouse over it (on a phone, tap it).</p>
+          <p class="hint">Move the pointer over the game, to the last plot in the second row.</p>
+        </div>
+        <p class="muted">Nice soil. Now we need something to plant in it.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Click to plant">
+        <span class="step-kicker"></span>
+        <h2>Click to plant</h2>
+        <p>
+          Soil that does nothing isn't much of a garden. Each plot needs to <em>remember</em> what's going on in it, and the
+          game needs to notice clicks. Click an empty plot and a seed appears:
+        </p>
+        <div class="art-tray" data-filter="^seed$"></div>
+        <div class="cell" data-step="05-plant" data-watch="plots[0].state, plots[0].seed, selected"></div>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🚦</span>
+          <div>
+            <span class="callout-title">Big idea: state</span>
+            <p>
+              A thing's <span class="term" tabindex="0" data-tip="Which situation something is in right now, kept in a variable, often as a word like &quot;empty&quot;.">state</span>
+              is which situation it's in right now. Every plot is always in exactly one state, kept as a word:
+              <code class="ref" data-match='plot.state = "empty"'>"empty"</code> to begin with, then <code class="ref" data-match='plot.state = "growing"'>"growing"</code>
+              once there's a seed in it. Watch <code>plots[0].state</code> in the Live values box as you click.
+              (<code>plots[0]</code> is the first plot in the list: the one in the top-left corner.)
+            </p>
+          </div>
+        </div>
+
+        <ul>
+          <li>
+            Actors let us stick on <strong>extra facts</strong> of our own: <code class="ref" data-match='plot.state = "empty"'>plot.state</code> and
+            <code class="ref" data-match="plot.seed = 0">plot.seed</code>. The second one says which flower is planted there, as a
+            position in the <code>SEEDS</code> list.
+          </li>
+          <li>
+            <code class="ref" data-match="const SEEDS">SEEDS</code> is a list of
+            <span class="term" tabindex="0" data-tip="A bundle of named values in { curly brackets }, like { x: 10, y: 20 }. Read a part with a dot: object.x">objects</span>.
+            Each object is one kind of flower: <code>{ name: "Daisy", image: "daisy", … }</code> is a bundle of named values. You
+            read a value with a dot, like <code>seed.name</code>. For now there's only the daisy, and we'll use most of its
+            values later.
+          </li>
+          <li>
+            <code class="ref" data-match="let selected">selected</code> is which seed packet you'll plant, as a position in the list. Positions
+            start at 0, so <code>0</code> means the first flower: the daisy.
+          </li>
+          <li>
+            <code class="ref" data-match="function onMouseDown">onMouseDown(pos, button)</code> is a third special function. The game calls it whenever
+            you press the mouse button (or tap the screen), and <code>pos</code> is where. The first line,
+            <code class="ref" data-match="button !== mouse.LEFT">if (button !== mouse.LEFT) return;</code>, ignores anything but
+            the left button (<code>!==</code> means "is not equal to"), because the scroll wheel counts as a button too.
+            <code>return</code> means "stop here and leave the function", so a click from any other button does nothing.
+          </li>
+          <li>
+            The loop in <code>onMouseDown</code> asks every plot <code class="ref" data-match="plot.touches(pos)">plot.touches(pos)</code> and hands
+            the lucky one to <code class="ref" data-match="function tendPlot">tendPlot(plot)</code>.
+          </li>
+          <li>
+            <code class="ref" data-match='plot.state === "empty"'>if (plot.state === "empty")</code> asks whether the plot is empty. <code>===</code> means
+            "is exactly equal to". Only then does <code class="ref" data-match="function plantSeed">plantSeed(plot)</code> change the state to
+            <code>"growing"</code>.
+          </li>
+          <li>
+            In <code>drawPlot</code>, <code class="ref" data-match='plot.state === "empty") return'>if (plot.state === "empty") return;</code> means "an empty plot has nothing
+            more to draw, so leave the function early". Otherwise
+            <code class="ref" data-match='screen.blit("seed"'>screen.blit("seed", …)</code> paints a seed on the soil.
+          </li>
+        </ul>
+
+        <div class="callout warn">
+          <span class="callout-icon">🐞</span>
+          <div>
+            <span class="callout-title">One equals sign or three?</span>
+            <p>
+              <code>=</code> <em>puts a value into a box</em>: <code>plot.state = "growing"</code>. <code>===</code>
+              <em>asks a question</em>: <code>plot.state === "empty"</code>. Mixing them up is one of the most common
+              mistakes there is. If an <code>if</code> misbehaves, check how many equals signs it has.
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-planted" data-answer="b">
+          <p>A plot already has a seed in it (its state is <code>"growing"</code>). What happens right now when you click it?</p>
+          <button data-choice="a">A second seed is planted on top of the first</button>
+          <button data-choice="b">Nothing: <code>tendPlot</code> only has a job for <code>"empty"</code> plots so far</button>
+          <button data-choice="c">The seed is picked up again</button>
+          <div class="explain" data-for="b">The <code>if</code> only runs <code>plantSeed</code> when the state is <code>"empty"</code>. Anything else skips it. In a few steps a click on a growing plot will do something new.</div>
+          <div class="explain" data-for="wrong">Read <code>tendPlot</code>. What does it check before doing anything?</div>
+        </div>
+
+        <div class="challenge" data-id="plant-three" data-kicker="Play time" data-success="Three seeds in the ground.">
+          <p><strong>Plant seeds in at least three plots.</strong></p>
+          <p class="hint">Click an empty plot and watch it fill with a seed. (The Live values box only watches <code>plots[0]</code>, the top-left plot, so click that one to see its state change to <code>"growing"</code>.)</p>
+        </div>
+        <p class="muted">The seeds aren't doing much yet. Next they grow.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Growing up: timers">
+        <span class="step-kicker"></span>
+        <h2>Growing up: timers</h2>
+        <p>
+          Plants take time. Time in a game is a number you keep adding to, exactly like the cloud's position. Plant a
+          few seeds and wait:
+        </p>
+        <div class="art-tray" data-filter="^(seed|sprout|bud|daisy)$"></div>
+        <div class="cell" data-step="06-grow" data-watch="plots[0].state, plots[0].growth"></div>
+        <p>Each seed becomes a sprout, then a bud, then a daisy, four seconds after it was planted. Here's the machinery.</p>
+
+        <ul>
+          <li>
+            Each plot now has <code class="ref" data-match="plot.growth = 0">plot.growth</code>: how many seconds it has been growing.
+          </li>
+          <li>
+            <code class="ref" data-match="function growPlot">growPlot(plot, dt)</code> runs for every plot, every frame (the loop in <code>update</code> calls it).
+            <code class="ref" data-match="if (plot.state !== &quot;growing&quot;) return;">if (plot.state !== "growing") return;</code> skips plots that aren't growing
+            (<code>!==</code> means "is not equal to").
+          </li>
+          <li>
+            <code class="ref" data-match="plot.growth += dt">plot.growth += dt;</code> is the same trick as the cloud: add a slice of time every frame, and
+            <code>growth</code> counts up in seconds.
+          </li>
+          <li>
+            <code class="ref" data-match="SEEDS[plot.seed].grow">SEEDS[plot.seed].grow</code> looks up how long this flower takes. <code>plot.seed</code> is a position
+            in the list, so <code>SEEDS[plot.seed]</code> is the daisy's object, and <code>.grow</code> is its
+            <code>4</code> seconds. When <code class="ref" data-match="plot.growth >= SEEDS">plot.growth &gt;= …</code> is true (<code>&gt;=</code> means "at least"), the state becomes
+            <code>"ready"</code>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">⏱️</span>
+          <div>
+            <span class="callout-title">Big idea: a timer is a number</span>
+            <p>
+              A <span class="term" tabindex="0" data-tip="A number that changes with time: it counts up like a stopwatch, or down like a countdown.">timer</span>
+              is a number that changes with time. To count up, add <code>dt</code> every frame. To check whether a
+              time is up, compare it with a limit using <code>&gt;=</code>. That's all "growing" is: a number climbing
+              towards 4.
+            </p>
+          </div>
+        </div>
+
+        <ul>
+          <li>
+            The picture changes as it grows. <code class="ref" data-match="const STAGES">STAGES</code> is a list of picture names, from newly planted to nearly in
+            bloom.
+          </li>
+          <li>
+            <code class="ref" data-match="function plantImage">plantImage(plot)</code> picks the right one. <code class="ref" data-match="const progress">progress</code> is
+            <code>growth ÷ grow</code>: 0 when planted, 1 when ready, and 0.5 when it's halfway. <code class="ref" data-match="STAGES.length">STAGES.length</code> is how many
+            names are in the list (3), so multiplying the progress by it gives a number from 0 up to 3. <code class="ref" data-match="Math.floor">Math.floor</code> chops off everything after the decimal point (it rounds
+            <em>down</em>), so 1.7 becomes 1. <code>STAGES[1]</code> is <code>"sprout"</code>.
+          </li>
+          <li>
+            Once the plot is <code>"ready"</code>, <code class="ref" data-match='plot.state === "ready"'>return seed.image</code> shows the finished flower instead.
+          </li>
+        </ul>
+
+        <div class="quiz" data-id="q-stage" data-answer="b">
+          <p>
+            A daisy needs 4 seconds. After 2 seconds, <code>progress</code> is 0.5. There are 3 stages. Which picture shows?
+          </p>
+          <button data-choice="a"><code>"seed"</code></button>
+          <button data-choice="b"><code>"sprout"</code></button>
+          <button data-choice="c"><code>"bud"</code></button>
+          <div class="explain" data-for="b"><code>0.5 × 3 = 1.5</code>, and <code>Math.floor(1.5)</code> is 1. <code>STAGES[1]</code> is the second name in the list, <code>"sprout"</code>.</div>
+          <div class="explain" data-for="a">That would be <code>STAGES[0]</code>. Work out <code>0.5 × 3</code>, then round it <em>down</em>.</div>
+          <div class="explain" data-for="c">That's <code>STAGES[2]</code>, which needs the multiplication to reach 2 or more. <code>0.5 × 3</code> is only 1.5.</div>
+        </div>
+
+        <div class="challenge" data-id="quick-daisy" data-kicker="Play time" data-success="Instant daisies! Plant one and watch it zoom.">
+          <p><strong>Grow daisies in 2 seconds or less</strong>, then plant one and watch it bloom.</p>
+          <p class="hint">The daisy's line in <code>SEEDS</code> has a <code>grow</code> value. That's its growing time in seconds.</p>
+          <pre class="answer">const SEEDS = [{ name: "Daisy", image: "daisy", cost: 0, grow: 1, price: 3 }];</pre>
+        </div>
+        <div class="challenge" data-id="more-stages" data-kicker="Play time" data-success="Four pictures on the way up. Slow and graceful.">
+          <p><strong>Give plants a fourth growth picture</strong>, then plant one and watch.</p>
+          <p class="hint"><code>STAGES</code> is a list of names. Add one more name to it. Repeating a name is fine.</p>
+          <p class="hint">Nothing else needs to change! <code>STAGES.length</code> adjusts the maths on its own.</p>
+          <pre class="answer">const STAGES = ["seed", "sprout", "sprout", "bud"];</pre>
+        </div>
+        <p class="muted">Right now plants grow all by themselves. That's a bit too automatic. They should be thirsty!</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Thirsty plants: watering">
+        <span class="step-kicker"></span>
+        <h2>Thirsty plants: watering</h2>
+        <p>
+          Let's make the plants need a drink. A newly planted seed starts out thirsty, and shows a raindrop. Click it to
+          water it: the soil darkens and the plant grows for a few seconds, until the water runs out. Daisies are quick,
+          so one drink is enough for them, but slower flowers will need several. Press
+          <strong>Run</strong>, plant a seed, then click it again:
+        </p>
+        <div class="art-tray" data-filter="^(drop|soil_dry|soil_wet)$"></div>
+        <div class="cell" data-step="07-water" data-watch="plots[0].state, plots[0].wet, plots[0].growth"></div>
+        <p>
+          Watch the Live values: <code>wet</code> counts <em>down</em> while <code>growth</code> counts <em>up</em>, and when
+          <code>wet</code> hits zero, growth stops.
+        </p>
+
+        <ul>
+          <li>
+            Each plot has a new fact, <code class="ref" data-match="plot.wet = 0">plot.wet</code>: the seconds of water it has left.
+            <code class="ref" data-match="const WATER_TIME">WATER_TIME</code> is how many seconds one drink gives.
+          </li>
+          <li>
+            <code class="ref" data-match="function waterPlot">waterPlot(plot)</code> fills the plot up: <code>plot.wet = WATER_TIME;</code>
+          </li>
+          <li>
+            In <code>tendPlot</code>, <code class="ref" data-match='else if (plot.state === "growing")'>else if</code> adds a second possibility. Read it as: "if the plot is
+            empty, plant a seed; <strong>otherwise</strong>, if it's growing, water it."
+          </li>
+          <li>
+            In <code>growPlot</code>, <code class="ref" data-match="if (plot.wet <= 0) return">if (plot.wet &lt;= 0) return;</code> says "no water left? Stop here: nothing grows".
+            Otherwise <code class="ref" data-match="plot.wet -= dt">plot.wet -= dt;</code> counts the water down while <code>plot.growth += dt</code> counts the growth up.
+            (<code>-=</code> subtracts, and <code>&lt;=</code> means "at most".)
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">⏳</span>
+          <div>
+            <span class="callout-title">Big idea: counting up and counting down</span>
+            <p>
+              Timers come in two flavours. A <strong>stopwatch</strong> counts up from zero: <code>growth</code> climbs until
+              it reaches the target. A <strong>countdown</strong> starts full and falls to zero: <code>wet</code> drops until
+              it hits zero. Two small numbers, and a plant has a whole life.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="growth-lab">
+          <div class="widget-title">🌿 Growth lab</div>
+          <div class="widget-sub">
+            Pick a flower and press <strong>Water</strong> whenever it gets thirsty. Watch the two timers, and the picture
+            that <code>plantImage</code> chooses. (Tulips and roses are a preview: you'll plant them yourself in step 10.)
+          </div>
+          <canvas width="760" height="250"></canvas>
+          <div class="widget-controls">
+            <label>
+              Flower
+              <select data-flower>
+                <option value="0">Daisy (grows in 4 s)</option>
+                <option value="1">Tulip (grows in 7 s)</option>
+                <option value="3">Rose (grows in 16 s)</option>
+              </select>
+            </label>
+            <button class="btn btn-primary btn-small" type="button" data-water>💧 Water</button>
+            <button class="btn btn-soft btn-small" type="button" data-fast aria-pressed="false">⏩ Fast forward</button>
+            <button class="btn btn-soft btn-small" type="button" data-restart>↺ Replant</button>
+          </div>
+          <div class="readout" data-readout aria-live="polite"></div>
+        </div>
+
+        <ul>
+          <li>
+            In <code>drawPlot</code>, <code class="ref" data-match='plot.wet > 0 ? "soil_wet"'>plot.wet &gt; 0 ? "soil_wet" : "soil_dry"</code> uses the
+            <span class="term" tabindex="0" data-tip="A short way to choose between two things: question ? answerIfYes : answerIfNo.">question-mark choice</span>:
+            if the question before <code>?</code> is true, use the first picture, otherwise the one after the <code>:</code>. Wet soil
+            gets the darker picture.
+          </li>
+          <li>
+            The raindrop appears when <code class="ref" data-match='plot.state === "growing" &amp;&amp; plot.wet <= 0'>plot.state === "growing" &amp;&amp; plot.wet &lt;= 0</code>.
+            <code>&amp;&amp;</code> means <strong>and</strong>: both questions must be true.
+          </li>
+          <li>
+            It bobs with <code class="ref" data-match="Math.sin">Math.sin</code>. <code>Math.sin</code> of a number that keeps growing swings smoothly between −1 and
+            1, like a pendulum. Times 3, that's a wobble of up to 3 pixels. <code class="ref" data-match="time += dt">time</code> is a new stopwatch
+            variable for it, and adding <code>plot.left</code> makes the plots wobble out of step with each other.
+          </li>
+        </ul>
+
+        <p>
+          Want to see thirst for yourself? Drag this slider down to 2 seconds, plant a seed, and water it: the daisy stops
+          growing when its short drink runs out and waits for you to water it again.
+        </p>
+        <div class="tweak" data-name="WATER_TIME" data-min="1" data-max="20" data-label="How long a drink lasts" data-icon="💧" data-unit=" s"></div>
+
+        <div class="quiz" data-id="q-thirsty" data-answer="c">
+          <p>
+            A plant has <code>growth = 3</code> (it needs 4) and <code>wet = 0</code>. Nobody waters it for ten seconds. What is
+            its growth afterwards?
+          </p>
+          <button data-choice="a">13</button>
+          <button data-choice="b">4: it finishes growing anyway</button>
+          <button data-choice="c">Still 3</button>
+          <div class="explain" data-for="c"><code>growPlot</code> returns early when <code>wet</code> is 0 or less, so neither timer moves. The plant waits patiently. It can't die: this is a cosy game.</div>
+          <div class="explain" data-for="wrong">Look at <code>growPlot</code>. What does the line with <code>return</code> do when there's no water?</div>
+        </div>
+
+        <div class="challenge" data-id="long-drink" data-kicker="Play time" data-success="A long, deep drink. Plants need far fewer waterings now.">
+          <p><strong>Make one drink last 10 seconds or more</strong>, then plant a seed and water it to try.</p>
+          <p class="hint">Look for the constant near the top, or use the slider.</p>
+          <pre class="answer">const WATER_TIME = 10; // seconds of growing that one watering gives a plant</pre>
+        </div>
+        <div class="challenge" data-id="water-two" data-kicker="Play time" data-success="Two thirsty plants watered, and two darker patches of soil.">
+          <p><strong>Water two plots at the same time</strong>: plant two seeds, then click each one again.</p>
+          <p class="hint">Click an empty plot to plant, then click that same plot again to water it. Do it for a second plot.</p>
+        </div>
+        <p class="muted">The garden works. Time to cut some flowers.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Bloom! Picking flowers">
+        <span class="step-kicker"></span>
+        <h2>Bloom! Picking flowers</h2>
+        <p>
+          When a plant has grown for long enough, its state becomes <code>"ready"</code>, and it blooms. Now there's a reason
+          to click it: <strong>picking</strong> the flower into a basket. The same click that planted a seed and watered a
+          plant now does a third job. Play it through, from seed to basket:
+        </p>
+        <div class="art-tray" data-filter="^(daisy|basket)$"></div>
+        <div class="cell" data-step="08-pick" data-watch="basket.length, plots[0].state"></div>
+        <p>
+          A glowing daisy means "pick me". Click it and it joins the basket at the top of the window.
+        </p>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🚦</span>
+          <div>
+            <span class="callout-title">Big idea: one click, three jobs</span>
+            <p>
+              Look at <code class="ref" data-match="function tendPlot">tendPlot</code> now. It's a chain of questions about the plot's state. Whichever matches
+              first decides what a click does: <strong>empty</strong> plants, <strong>growing</strong> waters,
+              <strong>ready</strong> picks. A thing that moves between a few named states, with rules for each move, is
+              called a <span class="term" tabindex="0" data-tip="A way of organising a game: something is always in one state, and clicks or time move it to another.">state machine</span>.
+              Games are full of them.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="plot-life">
+          <div class="widget-title">🗺️ A plot's life</div>
+          <div class="widget-sub">
+            Play the game above. Each box shows how many of your eight plots are in that state right now.
+          </div>
+          <svg class="state-svg" viewBox="0 0 760 256" role="img" aria-label="A plot's states: empty, growing and ready, and what moves it between them">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" /></marker>
+            </defs>
+            <path class="edge" d="M150 120 H 300" marker-end="url(#arrow)" />
+            <text class="edge-label" x="225" y="104">click: plantSeed</text>
+            <path class="edge" d="M440 120 H 590" marker-end="url(#arrow)" />
+            <text class="edge-label" x="515" y="96">growth reaches</text>
+            <text class="edge-label" x="515" y="112">the grow time</text>
+            <path class="edge" d="M670 156 C 670 236, 80 236, 80 156" marker-end="url(#arrow)" />
+            <text class="edge-label" x="375" y="244">click: pickFlower</text>
+            <path class="edge" d="M330 90 C 320 30, 420 30, 410 90" marker-end="url(#arrow)" />
+            <text class="edge-label" x="370" y="30">click: waterPlot</text>
+            <g class="node" data-state="empty"><rect x="20" y="90" width="130" height="64" rx="18" /><text x="85" y="114">empty</text><text class="count" x="85" y="138" data-count="empty">0 plots</text></g>
+            <g class="node" data-state="growing"><rect x="300" y="90" width="140" height="64" rx="18" /><text x="370" y="114">growing</text><text class="count" x="370" y="138" data-count="growing">0 plots</text></g>
+            <g class="node" data-state="ready"><rect x="590" y="90" width="140" height="64" rx="18" /><text x="660" y="114">ready</text><text class="count" x="660" y="138" data-count="ready">0 plots</text></g>
+          </svg>
+        </div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match="let basket = []">basket</code> is a list, like <code>plots</code>, but it holds the <em>kinds</em> of flower you've picked.
+            <code class="ref" data-match="basket.push(plot.seed)">basket.push(plot.seed)</code> adds this plot's flower kind (a position in <code>SEEDS</code>) to the end.
+            Then <code>plot.state = "empty"</code> clears the plot and <code>plot.wet = 0</code> dries its soil, ready for the next seed.
+          </li>
+          <li>
+            When a plot is <code>"ready"</code>, <code class="ref" data-match="const pulse">pulse</code> makes a soft glow behind it that grows and shrinks, using
+            <code>Math.sin</code> again with the <code>time</code> stopwatch.
+          </li>
+          <li>
+            <code class="ref" data-match="function write">write(text, x, y, size, color)</code> is our own helper for writing words. Inside it, <code class="ref" data-match="screen.draw.text">screen.draw.text</code> takes
+            its settings as an object of named values: where its <code>center</code> goes, its <code>size</code>, its
+            <code>fontname</code> (a font file in the game's <code>fonts</code> folder) and a soft <code>shadow</code>.
+          </li>
+          <li>
+            <code class="ref" data-match='color || "#2a2140"'>color || "#2a2140"</code> uses <code>||</code>, which means <strong>or</strong>. If a colour was handed to
+            <code>write</code>, use it; if not (it's empty), use dark plum. That lets most calls skip the colour.
+          </li>
+          <li>
+            <code class="ref" data-match="write(`x">write(`x ${basket.length}`, 74, 24, 22)</code> shows how many flowers you hold. Text in
+            <span class="term" tabindex="0" data-tip="Text inside `backticks` where ${…} pastes in a value: `x ${3}` becomes x 3.">backticks</span>
+            can have <code>${…}</code> holes, and whatever is inside a hole is pasted in as words.
+            <code>basket.length</code> is how many things are in the list.
+          </li>
+        </ul>
+
+        <div class="quiz" data-id="q-after-pick" data-answer="a">
+          <p>You click a <code>"ready"</code> plot. Which state is it in afterwards?</p>
+          <button data-choice="a"><code>"empty"</code>: ready for a new seed</button>
+          <button data-choice="b"><code>"growing"</code>: it starts again from the seed</button>
+          <button data-choice="c"><code>"ready"</code>: you can pick it as many times as you like</button>
+          <div class="explain" data-for="a"><code>pickFlower</code> sets <code>plot.state = "empty"</code>. The flower moved to the basket, so the plot has nothing in it, and the next click will plant a seed.</div>
+          <div class="explain" data-for="wrong">Read <code>pickFlower</code>. What does its second line set the state to? Then check the map above.</div>
+        </div>
+
+        <div class="challenge" data-id="pick-three" data-kicker="Play time" data-success="Three flowers in the basket. Not bad for a first harvest.">
+          <p><strong>Grow and pick three flowers</strong> so the basket says <code>x 3</code>.</p>
+          <p class="hint">For each plot: click to plant, click to water, wait about four seconds, then click the glowing flower.</p>
+          <p class="hint">Plant all three first, then water all three, so they bloom together.</p>
+        </div>
+        <p class="muted">A basket full of flowers is nice, but what are they worth? Time to open for business.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="The market stall: coins">
+        <span class="step-kicker"></span>
+        <h2>The market stall: coins</h2>
+        <p>
+          A little stall appears on the right. Click it and everything in your basket is sold, and the coins pile up at the
+          top. Pick a few flowers, then press the stall:
+        </p>
+        <div class="art-tray" data-filter="^(stall|coin)$"></div>
+        <div class="cell" data-step="09-sell" data-watch="coins, basket.length, message"></div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match="const stall">const stall = new Actor("stall", { midBottom: [548, 302] })</code> is another Actor. <code>midBottom</code> is the middle of its
+            bottom edge, so the stall stands on the grass at that spot. <code class="ref" data-match="stall.touches(pos)">stall.touches(pos)</code> in <code>onMouseDown</code> notices a click on it.
+          </li>
+          <li>
+            <code class="ref" data-match="let coins">coins</code> is a variable for your money. <code class="ref" data-match="function sellBasket">sellBasket()</code> does the selling.
+          </li>
+          <li>
+            It starts with a guard: <code class="ref" data-match="basket.length === 0">if (basket.length === 0)</code> means "the basket is empty", so it says so with
+            <code>say(…)</code> and <code>return</code>s, leaving the function early.
+          </li>
+          <li>
+            <code class="ref" data-match="function say">say(words)</code> stores a message and a <code>messageTime</code> of 2.5 seconds. <code>update</code> counts that down
+            (<code class="ref" data-match="messageTime -= dt">messageTime -= dt</code>), and <code>drawHud</code> shows the message while the time is above zero. A countdown again!
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">➕</span>
+          <div>
+            <span class="callout-title">Big idea: adding things up with a loop</span>
+            <p>
+              To add up a whole list, start a running total at zero and add each item as the loop visits it:
+            </p>
+            <pre class="code-block">let total = 0;
+for (const kind of basket) {
+  total += SEEDS[kind].price;
+}</pre>
+            <p>
+              Each <code>kind</code> in the basket is a position in <code>SEEDS</code>, so <code>SEEDS[kind].price</code> is what
+              that flower sells for. <code class="ref" data-match="total += SEEDS[kind].price">total += …</code> adds it to the total. When the loop ends, the total is the whole basket's
+              worth. Then <code class="ref" data-match="coins += total">coins += total;</code> pays you and <code class="ref" data-match="basket = []">basket = [];</code> empties the basket with a fresh empty list.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="basket-sum">
+          <div class="widget-title">🧮 The selling loop</div>
+          <div class="widget-sub">
+            Fill a basket by clicking flowers (the flowers you haven't unlocked yet are a preview), then press <strong>Step</strong> to run the loop one flower at a time.
+          </div>
+          <div class="basket-row" data-basket aria-label="The basket"></div>
+          <div class="basket-add" data-add></div>
+          <div class="stepper">
+            <pre class="stepper-code" aria-label="The selling loop"><span class="sl" data-line="start">let total = 0;</span><span class="sl" data-line="for">for (const kind of basket) {</span><span class="sl" data-line="add">  total += SEEDS[kind].price;</span><span class="sl" data-line="end">}</span><span class="sl" data-line="pay">coins += total;</span></pre>
+            <div>
+              <div class="readout" aria-live="polite" data-readout>Press <b>Step</b> to start.</div>
+            </div>
+          </div>
+          <div class="widget-controls">
+            <button class="btn btn-primary btn-small" type="button" data-action="step">Step ▶</button>
+            <button class="btn btn-soft btn-small" type="button" data-action="all">Run the whole loop</button>
+            <button class="btn btn-soft btn-small" type="button" data-action="reset">↺ Start over</button>
+          </div>
+        </div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match="function drawStall">drawStall()</code> draws the stall, and a bobbing "Sell here!" sign whenever there's something in the basket.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawHud">drawHud()</code> now also draws the coin picture and your coins, plus the message.
+          </li>
+        </ul>
+
+        <div class="quiz" data-id="q-total" data-answer="b">
+          <p>
+            The basket is <code>[0, 1, 0]</code>: two daisies (3 coins each) and a tulip (7 coins, a flower you'll add in the next step).
+            What is <code>total</code> after the loop?
+          </p>
+          <button data-choice="a">10</button>
+          <button data-choice="b">13</button>
+          <button data-choice="c">3</button>
+          <div class="explain" data-for="b"><code>0 + 3 + 7 + 3 = 13</code>. The loop visits all three flowers, even the repeated daisy.</div>
+          <div class="explain" data-for="a">That counts the daisy once. The loop visits every item in the basket, and there are two daisies.</div>
+          <div class="explain" data-for="c">That's only the first flower. The loop keeps going until it has visited every item.</div>
+        </div>
+
+        <div class="challenge" data-id="daisy-gold" data-kicker="Play time" data-success="Golden daisies! A very good day at the market.">
+          <p><strong>Make daisies worth 10 coins each</strong>, then pick and sell one to see your coins reach 10.</p>
+          <p class="hint">A flower's selling price is stored with the flower, in the <code>SEEDS</code> list.</p>
+          <pre class="answer">const SEEDS = [{ name: "Daisy", image: "daisy", cost: 0, grow: 4, price: 10 }];</pre>
+        </div>
+        <p class="muted">Coins are for spending. Next we stock the shelf with rarer seeds.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="More flowers: data tables">
+        <span class="step-kicker"></span>
+        <h2>More flowers: seeds as data</h2>
+        <p>
+          One flower is a bit samey. Here comes the payoff for putting the daisy in a table: to add four more flowers, we add
+          <strong>four lines of data</strong>. The planting, growing and selling code doesn't change at all, because it
+          always looks everything up in <code>SEEDS</code>. (The shelf needs a little new code, because those packets have to be
+          drawn somewhere.) We'll also add a <strong>shelf</strong> of seed packets along
+          the bottom, so you can choose what to plant. Click a packet, then plant!
+        </p>
+        <div class="art-tray" data-filter="^(tulip|sunflower|rose|moonbloom|packet|packet_on)$"></div>
+        <div class="cell" data-step="10-seeds" data-watch="selected, plots[0].seed"></div>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">📋</span>
+          <div>
+            <span class="callout-title">Big idea: data tables</span>
+            <p>
+              <code class="ref" data-match="const SEEDS">SEEDS</code> is a <strong>table</strong>: a list where every item is an object with the same named
+              values. The list's position picks the row (<code>SEEDS[2]</code>), and a dot picks the column
+              (<code>SEEDS[2].price</code>). Games keep almost everything that can change (levels, enemies, prices) in tables
+              like this, so changing the game means changing data, not code.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="seed-table">
+          <div class="widget-title">📋 The seed table</div>
+          <div class="widget-sub">
+            Click any value in the table to see the code that fetches it. The bars show roughly how many coins each flower
+            earns for every second of watered growing.
+          </div>
+          <div class="table-wrap">
+            <table class="seed-table">
+              <thead>
+                <tr><th>#</th><th>Flower</th><th>name</th><th>cost</th><th>grow</th><th>price</th><th>coins per growing second</th></tr>
+              </thead>
+              <tbody data-rows></tbody>
+            </table>
+          </div>
+          <div class="readout" data-readout aria-live="polite">Click a value in the table.</div>
+        </div>
+
+        <ul>
+          <li>
+            The four new lines in <code>SEEDS</code> follow the daisy's pattern. Notice that rarer flowers cost more to unlock, take longer to
+            grow and sell for much more. Look at the <code>cost</code> and <code>price</code> columns grow.
+          </li>
+          <li>
+            <code class="ref" data-match="function makeSlots">makeSlots()</code> makes one seed packet for every flower: <code class="ref" data-match="i < SEEDS.length">for (let i = 0; i &lt; SEEDS.length; i++)</code> counts through the
+            table, and <code>SLOT_LEFT + i * SLOT_STEP</code> spaces the packets out across the window, like the plots.
+          </li>
+          <li>
+            <code class="ref" data-match="slot.icon = new Actor">slot.icon</code> sticks a second Actor onto each packet: a small copy of the flower's picture
+            (<code>scale: 0.45</code> means 45% of its full size), looked up with <code>SEEDS[i].image</code>.
+            An Actor's <code class="ref" data-match="center: [slot.x">x</code> is its middle, across, so
+            <code>slot.x</code> puts the picture in the middle of its packet.
+          </li>
+          <li>
+            <code class="ref" data-match="function chooseSeed">chooseSeed(index)</code> remembers the packet you clicked in <code>selected</code>, and <code>onMouseDown</code> calls it for whichever packet
+            <code class="ref" data-match="slots[i].touches(pos)">touches</code> the click.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawShelf">drawShelf()</code> draws a wooden board, then every packet with its flower, name and price. The line
+            <code class="ref" data-match='i === selected ? "packet_on"'>slot.image = i === selected ? "packet_on" : "packet"</code> uses the question-mark choice again: the chosen packet gets the glowing picture.
+          </li>
+        </ul>
+
+        <div class="quiz" data-id="q-index" data-answer="c">
+          <p>What is <code>SEEDS[2].name</code>?</p>
+          <button data-choice="a"><code>"Tulip"</code></button>
+          <button data-choice="b"><code>"Rose"</code></button>
+          <button data-choice="c"><code>"Sunflower"</code></button>
+          <div class="explain" data-for="c">Positions count from 0: Daisy is 0, Tulip is 1, Sunflower is 2.</div>
+          <div class="explain" data-for="a">That's <code>SEEDS[1]</code>. The first row is number 0.</div>
+          <div class="explain" data-for="b">That's <code>SEEDS[3]</code>. Count from 0: Daisy, Tulip, Sunflower.</div>
+        </div>
+
+        <div class="challenge" data-id="rename-daisy" data-success="Welcome, Buttercup. Hello, new name on the shelf!">
+          <p><strong>Rename the daisy</strong> to anything you like. Its new name should appear on the shelf.</p>
+          <p class="hint">The name is stored in the first line of <code>SEEDS</code>.</p>
+          <pre class="answer">  { name: "Buttercup", image: "daisy", cost: 0, grow: 4, price: 3 },</pre>
+        </div>
+        <div class="challenge" data-id="sixth-flower" data-kicker="Stretch challenge" data-success="A sixth flower, with hardly any new code. That's the power of tables.">
+          <p><strong>Add a sixth flower</strong> to <code>SEEDS</code>, and make its packet fit on the shelf.</p>
+          <p class="hint">Copy the last line of <code>SEEDS</code> and paste it underneath (every line already ends with a comma, which keeps the list tidy). Then change its name and numbers. You can reuse any of the pictures.</p>
+          <p class="hint">Six packets 122 pixels apart don't fit. The gap is <code>SLOT_STEP</code>: make it smaller (100 works).</p>
+          <pre class="answer">  { name: "Moonbloom", image: "moonbloom", cost: 800, grow: 22, price: 70 },
+  { name: "Pansy", image: "daisy", cost: 1500, grow: 26, price: 120 },
+];
+// …
+const SLOT_STEP = 100; // distance from one packet to the next</pre>
+        </div>
+        <p class="muted">Right now every seed is free to plant. Time to make the rare ones cost something.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="The shop: buying rarer seeds">
+        <span class="step-kicker"></span>
+        <h2>The shop: buying rarer seeds</h2>
+        <p>
+          Now the shelf becomes a shop. You start with daisy seeds only. The other packets are faded and show a price: click
+          one when you have enough coins and it's yours. <strong>Sell some flowers</strong> first, then try:
+        </p>
+        <div class="cell" data-step="11-shop" data-watch="coins, owned, selected, message"></div>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🔐</span>
+          <div>
+            <span class="callout-title">Big idea: rules are questions</span>
+            <p>
+              Almost every rule in a game is a question with an <code>if</code>. "Can I buy this?" is
+              <code class="ref" data-match="coins >= seed.cost">coins &gt;= seed.cost</code>. If the answer is yes, the buying code runs. If no, a different part runs instead.
+              Even a "no" gets an answer here: the shop tells you what the seed costs, so you always know what to do next.
+            </p>
+          </div>
+        </div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match="let owned">owned</code> is a list of <span class="term" tabindex="0" data-tip="A value that is either true or false.">true/false values</span>, one for each flower in
+            <code>SEEDS</code>. <code class="ref" data-match="function makeOwned">makeOwned()</code> fills it in when the game starts: <code class="ref" data-match="seed.cost === 0">seed.cost === 0</code> is
+            <code>true</code> only for a seed that costs nothing, which is why the daisy is the one you start with.
+          </li>
+          <li>
+            <code class="ref" data-match="function chooseSeed">chooseSeed(index)</code> now has three branches. <code class="ref" data-match="if (owned[index])">if (owned[index])</code>: you already have it, so choose it.
+            <code class="ref" data-match="else if (coins >= seed.cost)">else if (coins &gt;= seed.cost)</code>: you can afford it, so <code>coins -= seed.cost</code> takes the coins,
+            <code>owned[index] = true</code> unlocks it, and it's chosen. Otherwise (<code>else</code>): you can't, so say what it costs.
+          </li>
+          <li>
+            Nothing bad happens if you can't afford a seed: you get a message and that's all. This is a game with no way to lose.
+          </li>
+          <li>
+            <code class="ref" data-match="owned.includes(false)">!owned.includes(false)</code> checks the whole list: <code>owned.includes(false)</code> is true if any value is
+            <code>false</code>, and <code>!</code> flips it, so the test passes once <em>no</em> locked seeds are left. That's the
+            "garden complete" message.
+          </li>
+          <li>
+            <code class="ref" data-match="slot.icon.opacity = owned[i]">slot.icon.opacity = owned[i] ? 1 : 0.4</code> fades the pictures of locked seeds. In <code>drawShelf</code>, owned
+            packets show what they <em>sell</em> for, and locked ones show the coin and the <em>cost</em>.
+          </li>
+        </ul>
+
+        <div class="quiz" data-id="q-poor" data-answer="b">
+          <p>You have 30 coins and click the Sunflower packet, which you don't own yet and costs 100. What happens?</p>
+          <button data-choice="a">You get the sunflower, and your coins go down to −70</button>
+          <button data-choice="b">A message says it costs 100 coins, and nothing else changes</button>
+          <button data-choice="c">Nothing at all, not even a message</button>
+          <div class="explain" data-for="b">The <code>else</code> branch runs: <code>say(…)</code> shows the price, and your coins and packets stay as they were.</div>
+          <div class="explain" data-for="a">The buying code only runs when <code>coins &gt;= seed.cost</code> is true. 30 is not at least 100.</div>
+          <div class="explain" data-for="c">There's a final <code>else</code> that handles exactly this case. Read <code>chooseSeed</code> to the end.</div>
+        </div>
+
+        <div class="challenge" data-id="start-rich" data-kicker="Play time" data-success="A rich start, and a sunflower in the garden on day one.">
+          <p><strong>Start the game with 100 coins</strong>, then buy the Sunflower seeds straight away.</p>
+          <p class="hint">Your coins live in a variable near the top, with a starting value.</p>
+          <pre class="answer">let coins = 100;</pre>
+        </div>
+        <p class="muted">The game now plays from start to finish! Two more steps make it feel finished: sound and bounce, then a title screen and saving.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Sound and bounce">
+        <span class="step-kicker"></span>
+        <h2>Sound and bounce</h2>
+        <p>
+          Everything works, but it all happens in silence and stillness. A few lines of polish will make the garden feel
+          alive: little sounds, bouncing plants and coins that float upwards. <strong>Turn your device's volume up</strong>, click the game once so it can make sound, then play:
+        </p>
+        <div class="cell" data-step="12-juice" data-watch="coins, floaters.length"></div>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🎬</span>
+          <div>
+            <span class="callout-title">Big idea: tweens</span>
+            <p>
+              A <span class="term" tabindex="0" data-tip="A smooth change of a number over time, like sliding a value from 0 to 10 in half a second.">tween</span>
+              slides a number smoothly from where it is to where you want it. <code class="ref" data-match='animate(plot, { hop: 0, duration: 0.5, tween: "bounceEnd" })'>animate(plot, { hop: 0, duration: 0.5, tween: "bounceEnd" })</code>
+              says: "change <code>plot.hop</code> to 0 over half a second, bouncing like a dropped ball". Set <code>hop</code> to −14 first and the plant
+              starts 14 pixels up and bounces down into place. Any number can be tweened, and the <code>tween</code> name picks the style.
+            </p>
+          </div>
+        </div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match='tone.play("C5"'>tone.play("C5", 0.1, { waveform: "triangle", volume: 0.25 })</code> makes a sound without any sound file. Give a note name (C5 is a note,
+            C6 is the same note higher up), how many seconds it lasts, and some settings: the <code>waveform</code> is the sound's flavour, and
+            <code>volume</code> goes from 0 to 1.
+          </li>
+          <li>
+            <code class="ref" data-match="function playTune">playTune(notes)</code> plays a list of notes one after another. <code class="ref" data-match="clock.schedule">clock.schedule(…, delay)</code> runs something
+            <em>later</em>, and <code class="ref" data-match="i * 0.1">i * 0.1</code> makes note 0 wait 0 seconds, note 1 wait 0.1, note 2 wait 0.2, and so on. The <code>() =&gt; …</code> is an
+            <span class="term" tabindex="0" data-tip="A short way to write a small function right where you need it: () => doSomething().">arrow function</span>: a tiny function with no name, written right where it's used.
+          </li>
+          <li>
+            <code class="ref" data-match="plot.hop">plot.hop</code> is a new fact on every plot: how far it's lifted up. <code>drawPlot</code> adds it to the plant's y, and
+            <code>plantSeed</code>, <code>waterPlot</code> and <code>growPlot</code> kick it with a tween.
+          </li>
+          <li>
+            <code class="ref" data-match="const bob">bob</code> makes a ready flower sway gently up and down, with <code>Math.sin</code> and the <code>time</code> stopwatch again.
+          </li>
+          <li>
+            <code class="ref" data-match="function floatText">floatText(words, x, y)</code> makes a little "+8" message. It's a plain object with a <code>y</code> and an <code>opacity</code>, and <code>animate</code> tweens
+            <em>both</em>: up 40 pixels while fading out. <code class="ref" data-match="floaters.filter">floaters.filter(…)</code> in <code>update</code> keeps only the ones that haven't faded away yet: the
+            <code>(floater) =&gt; floater.opacity &gt; 0</code> part is another arrow function, a tiny test that answers "is this one still visible?" for each floater in turn.
+            <code>drawHud</code> draws the ones that are left.
+          </li>
+          <li>
+            When you can't afford a seed, <code class="ref" data-match="slots[index].angle = 8">the packet wobbles</code>: it's tilted 8 degrees and then tweened back with the springy
+            <code>"spring"</code> style.
+          </li>
+        </ul>
+
+        <div class="quiz" data-id="q-tune" data-answer="b">
+          <p>In <code>playTune</code>, what does <code>i * 0.1</code> do?</p>
+          <button data-choice="a">Makes each note quieter than the last</button>
+          <button data-choice="b">Delays each note a little more than the one before it, so they play one after another</button>
+          <button data-choice="c">Plays all the notes at the same moment, as a chord</button>
+          <div class="explain" data-for="b">With <code>i</code> counting 0, 1, 2, 3, the notes start at 0, 0.1, 0.2 and 0.3 seconds.</div>
+          <div class="explain" data-for="wrong">It's the second thing handed to <code>clock.schedule</code>: the delay, in seconds, before the function runs.</div>
+        </div>
+
+        <div class="challenge" data-id="own-tune" data-kicker="Play time" data-success="Your own market-day jingle! 🎺">
+          <p><strong>Compose a longer selling jingle</strong>: at least 5 notes. Then sell something to hear it.</p>
+          <p class="hint">Find <code>playTune(["C5", "E5", "G5", "C6"])</code> in <code>sellBasket</code> and add more notes to the list.</p>
+          <p class="hint">Notes that go up in pitch sound cheerful: try <code>"C5", "E5", "G5", "C6", "E6"</code>.</p>
+          <pre class="answer">  playTune(["C5", "E5", "G5", "C6", "E6"]);</pre>
+        </div>
+        <p class="muted">One more thing: the game forgets everything when you close the page.</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="step" data-title="Title screen and saving">
+        <span class="step-kicker"></span>
+        <h2>A title screen, and a garden that remembers</h2>
+        <p>
+          The finishing touches are a proper welcome and a garden that's still there tomorrow. This is the complete game, exactly
+          the one you played at the top of the page. Play for a bit, then press <strong>Run</strong> again: the garden
+          comes back as you left it!
+        </p>
+        <div class="cell" data-step="final" data-watch="state, coins, hasSaved"></div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match='let state = "title"'>state</code> is the <em>whole game's</em> state, a word like each plot has. It starts as <code>"title"</code>.
+            <code class="ref" data-match='state === "title"'>if (state === "title")</code> in <code>onMouseDown</code> changes it to <code>"playing"</code>, and a click that starts the game doesn't also plant a seed
+            because of the <code>return</code> that follows.
+          </li>
+          <li>
+            <code class="ref" data-match='state !== "playing") return'>if (state !== "playing") return;</code> in <code>update</code> freezes the garden on the title screen: the cloud keeps drifting, but nothing grows.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawTitle">drawTitle()</code> paints a see-through white panel and some words, and <code>draw()</code> only calls it while the state is <code>"title"</code>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">💾</span>
+          <div>
+            <span class="callout-title">Big idea: save the facts, not the pictures</span>
+            <p>
+              <code class="ref" data-match='storage.set("garden"'>storage.set("garden", …)</code> saves a value in the browser, so it's still there next time. But it can only keep
+              <em>plain</em> things: numbers, words, true/false, lists and objects made of them. A plot is an Actor with a picture
+              attached, and a picture can't be saved.
+            </p>
+            <p>
+              So <code class="ref" data-match="function saveGarden">saveGarden()</code> copies out only the <strong>facts</strong> that matter (<code>state</code>, <code>seed</code>, <code>growth</code> and
+              <code>wet</code> for every plot, plus your coins, owned seeds and basket) into plain lists and objects. <code class="ref" data-match="function loadGarden">loadGarden()</code> does the reverse: it reads the facts back and puts them onto fresh plots.
+            </p>
+          </div>
+        </div>
+
+        <ul>
+          <li>
+            <code class="ref" data-match='storage.get("garden")'>storage.get("garden")</code> returns what was saved, or nothing if this is a first visit. <code class="ref" data-match="if (!saved) return">if (!saved) return;</code> means "nothing saved? Then
+            there's nothing to load": <code>!</code> means "not".
+          </li>
+          <li>
+            <code class="ref" data-match="hasSaved">hasSaved</code> lets the title screen say "Welcome back!".
+          </li>
+          <li>
+            The garden saves after every click (<code class="ref" data-match="  saveGarden();">saveGarden()</code> at the end of <code>onMouseDown</code>) and also
+            <code class="ref" data-match="scheduleInterval">clock.scheduleInterval(saveGarden, 5)</code>, which runs a function again and again, here every 5 seconds, so growth is saved even when you're only watching.
+          </li>
+        </ul>
+
+        <div class="quiz" data-id="q-save" data-answer="b">
+          <p>Why does <code>saveGarden</code> copy out each plot's <code>state</code>, <code>seed</code>, <code>growth</code> and <code>wet</code>, rather than saving the plots themselves?</p>
+          <button data-choice="a">To make the save file bigger and more impressive</button>
+          <button data-choice="b">Because a plot has a picture attached, and storage can only keep plain values like numbers and words</button>
+          <button data-choice="c">Because plots can't be copied</button>
+          <div class="explain" data-for="b">Anything storage keeps must be plain: numbers, words, true/false, lists and simple objects. The facts are all it needs to rebuild the plot later.</div>
+          <div class="explain" data-for="wrong">Think about what a plot actually <em>is</em>: an Actor, with a picture and position as well as the facts we added.</div>
+        </div>
+
+        <div class="challenge" data-id="rename-title" data-success="It's your garden now. Name it whatever you like!">
+          <p><strong>Rename the game</strong> on its title screen to anything you like.</p>
+          <p class="hint">Look in <code>drawTitle</code> for the line that writes <code>"Tiny Garden"</code>.</p>
+          <pre class="answer">  write("Dewdrop Meadow", WIDTH / 2, 126, 58, "#3f9b4f");</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section class="finale">
+        <h2>You made a garden! 🎉</h2>
+        <p class="prose">
+          Look at everything you did: you drew with <strong>coordinates</strong>, made things move with the
+          <strong>game loop</strong>, built a garden with <strong>lists and loops</strong>, gave every plot a
+          <strong>state</strong> and let one click do three jobs, used <strong>timers</strong> to grow and water plants, kept
+          every flower in a <strong>data table</strong>, added up a basket with a <strong>loop</strong>, wrote rules with
+          <code>if</code>, smoothed motion with <strong>tweens</strong>, and saved your garden. That's the toolkit behind
+          almost every game ever made.
+        </p>
+        <h3>Ideas to try next</h3>
+        <div class="idea-grid">
+          <div class="idea"><b>🐝 A visiting bee</b>Make a bee Actor that drifts across the garden. Give a bonus when you click it: check <code>bee.touches(pos)</code> in <code>onMouseDown</code>.</div>
+          <div class="idea"><b>🌧️ Rain showers</b>Every 30 seconds, water every plot at once. Use <code>clock.scheduleInterval</code> and a loop that calls <code>waterPlot</code>.</div>
+          <div class="idea"><b>🏡 Buy more plots</b>Charge coins for a ninth plot: when you pay, make one more soil Actor like <code>makePlots</code> does and <code>plots.push(plot)</code> it.</div>
+          <div class="idea"><b>🎨 Draw your own flower</b>Save a new SVG picture in <code>images</code> and add one line to <code>SEEDS</code>. A sixth packet needs a smaller <code>SLOT_STEP</code> to fit on the shelf.</div>
+          <div class="idea"><b>🧾 Orders from neighbours</b>"Bring me 3 tulips for 40 coins!" Keep an order as an object, and check the basket against it when you sell.</div>
+          <div class="idea"><b>🌙 Day and night</b>Fade the sky from blue to navy using <code>time</code> and <code>Math.sin</code>, and let the moonbloom glow after dark.</div>
+        </div>
+        <div class="finale-actions">
+          <button class="btn btn-primary" type="button" id="download-final">⬇ Download your game</button>
+          <a class="btn btn-primary" href="firefly-flash.html" style="--accent: #ffd34d; --accent-ink: #2a1f00">Try Firefly Flash ✨ →</a>
+          <a class="btn btn-soft" href="index.html">All tutorials</a>
+        </div>
+        <p class="muted" style="margin-top: 16px">
+          The download is a folder with <code>main.js</code>, the <code>images</code> and <code>fonts</code> folders, and a
+          README (which explains how to run it). It runs in the js-game-zero sandbox, or with <code>jgz test tiny_garden</code>. It includes any changes you
+          made in the last step!
+        </p>
+
+        <h3>Words you learned</h3>
+        <dl class="glossary">
+          <div><dt>Coordinates</dt><dd>Two numbers, x (across from the left) and y (down from the top), that name a spot on the screen.</dd></div>
+          <div><dt>Function</dt><dd>A named set of instructions. <code>draw</code> and <code>update</code> are functions the game calls for you.</dd></div>
+          <div><dt>Variable</dt><dd>A named box holding a value that can change, made with <code>let</code>.</dd></div>
+          <div><dt>Constant</dt><dd>Like a variable, but it never changes. Made with <code>const</code>.</dd></div>
+          <div><dt>Game loop</dt><dd>Update, draw, repeat, about 60 times a second.</dd></div>
+          <div><dt>dt</dt><dd>Seconds since the last frame. Multiply speeds by it so games run at the same pace everywhere.</dd></div>
+          <div><dt>Timer</dt><dd>A number that changes with time: it counts up like a stopwatch (<code>growth</code>) or down like a countdown (<code>wet</code>).</dd></div>
+          <div><dt>if / else</dt><dd>Runs code only when a yes-or-no question is true, and <code>else</code> says what to do when it isn't.</dd></div>
+          <div><dt>List (array)</dt><dd>An ordered list of values, like <code>[1, 2, 3]</code>. Positions count from 0.</dd></div>
+          <div><dt>Object</dt><dd>A bundle of named values, like <code>{ name: "Daisy", price: 3 }</code>.</dd></div>
+          <div><dt>Loop</dt><dd>Code that repeats: <code>for (let i = 0; …)</code> counts, and <code>for (const x of list)</code> visits each item.</dd></div>
+          <div><dt>Actor</dt><dd>A picture with a position that you can move, draw and ask whether it touches something.</dd></div>
+          <div><dt>State</dt><dd>Which situation something is in right now (empty, growing, ready…), kept in a variable.</dd></div>
+          <div><dt>Data table</dt><dd>A list of objects that all have the same named values, like <code>SEEDS</code>. Adding a row adds a thing to the game.</dd></div>
+          <div><dt>Tween</dt><dd>A smooth change of a number over time, made with <code>animate</code>.</dd></div>
+          <div><dt>Storage</dt><dd>A place to keep plain values between visits, so a game can remember.</dd></div>
+        </dl>
+      </section>
+
+      <footer class="page-footer">
+        Made with <a href="https://github.com/taharafiq/js-game-zero">js-game-zero</a>. Art drawn for this tutorial; the font is Fredoka (SIL Open Font License).
+        <br />
+        <button type="button" data-reset-progress>Start this tutorial over</button>
+      </footer>
+    </main>
+
+    <script src="lib/jgz.js"></script>
+    <script src="lib/tutorial.js"></script>
+    <script src="lib/data/tiny_garden.js"></script>
+    <script>
+      // ------------------------------------------------------------------
+      // Challenge checks. Each runs a few times a second while its cell's
+      // game is running: true = passed, a string = a gentle nudge.
+      // Model solutions live in tests/challenges/tiny_garden.js.
+      // ------------------------------------------------------------------
+      const circles = (game) => game.drawn().filter((d) => d.kind === "circle");
+      const pictures = (game, name) => game.drawn().filter((d) => d.kind === "image" && d.image === name);
+      const plotsOf = (game) => game.read("plots") || [];
+
+      JGZT.challenge("sun-left", (game) => {
+        const sun = circles(game).find((c) => String(c.color).toLowerCase() === "#ffd34d");
+        if (!sun || sun.x >= 320) return false;
+        const glow = circles(game).find((c) => c !== sun && c.radius > sun.radius);
+        if (glow && Math.abs(glow.x - sun.x) > 40) return "The glow stayed behind! Move the big see-through circle to the same x as the sun.";
+        return true;
+      });
+      JGZT.challenge("tall-grass", (game) => {
+        const grass = game.drawn().find((d) => d.kind === "rect" && d.width >= 600);
+        return Boolean(grass && grass.y <= 100);
+      });
+      JGZT.challenge("cloud-over-sun", (game) => {
+        const x = game.read("cloudX");
+        return x >= 464 && x <= 560;
+      });
+      JGZT.challenge("second-cloud", (game) => pictures(game, "cloud").length >= 2);
+      JGZT.challenge("fast-cloud", (game) => game.read("CLOUD_SPEED") >= 60);
+      JGZT.challenge("cloud-left", (game) => {
+        if (!(game.read("CLOUD_SPEED") < 0)) return false;
+        const x = game.read("cloudX");
+        if (x < -150) return "The cloud sailed off the left edge and never came back. Make it reappear on the right.";
+        return x > 300; // it has wrapped round to the other side
+      });
+      JGZT.challenge("bigger-garden", (game) => (game.read("plots.length") || 0) >= 12);
+      JGZT.challenge("glow-corner", (game) =>
+        game.drawn().some((d) => d.kind === "image" && d.image === "soil_glow" && d.x > 300 && d.y > 200),
+      );
+      JGZT.challenge("plant-three", (game) => {
+        const planted = plotsOf(game).filter((plot) => plot.state === "growing").length;
+        if (planted >= 3) return true;
+        return planted > 0 ? `${planted} planted. Keep going!` : false;
+      });
+      JGZT.challenge("quick-daisy", (game) => {
+        if (!(game.read("SEEDS[0].grow") <= 2)) return false;
+        return plotsOf(game).some((plot) => plot.state === "ready") || "Quick daisies! Now plant a seed and watch it bloom.";
+      });
+      JGZT.challenge("more-stages", (game) => {
+        if (!(game.read("STAGES.length") >= 4)) return false;
+        return (
+          plotsOf(game).some((plot) => plot.state === "growing" || plot.state === "ready") ||
+          "Four pictures ready. Now plant a seed and watch it grow."
+        );
+      });
+      JGZT.challenge("long-drink", (game) => {
+        if (!(game.read("WATER_TIME") >= 10)) return false;
+        return plotsOf(game).some((plot) => plot.wet > 6) || "A deep drink is ready. Plant a seed, then water it.";
+      });
+      JGZT.challenge("water-two", (game) => plotsOf(game).filter((plot) => plot.wet > 0).length >= 2);
+      JGZT.challenge("pick-three", (game) => {
+        const picked = game.read("basket.length") || 0;
+        if (picked >= 3) return true;
+        return picked > 0 ? `${picked} in the basket. Keep going!` : false;
+      });
+      JGZT.challenge("daisy-gold", (game) => {
+        if (!(game.read("SEEDS[0].price") >= 10)) return false;
+        return game.read("coins") >= 10 || "Golden daisies are ready. Pick one and sell it at the stall!";
+      });
+      JGZT.challenge("rename-daisy", (game) => {
+        const name = game.read("SEEDS[0].name");
+        if (typeof name !== "string" || name === "Daisy" || name.trim() === "") return false;
+        return game.drawn().some((d) => d.kind === "text" && d.text === name) || "Renamed! Press Run to see it on the shelf.";
+      });
+      JGZT.challenge("sixth-flower", (game) => {
+        if (!((game.read("SEEDS.length") || 0) >= 6)) return false;
+        if (!(game.read("slots[5].x") < 600)) {
+          return "Your sixth packet is off the edge of the window! The gap between packets is SLOT_STEP: make it smaller.";
+        }
+        return true;
+      });
+      JGZT.challenge("start-rich", (game) => {
+        const owned = game.read("owned");
+        if (owned && owned[2] === true) return true;
+        return game.read("coins") >= 100 ? "Rich! Now click the Sunflower packet to buy it." : false;
+      });
+      JGZT.challenge("own-tune", (game) => {
+        const found = game.code.match(/function sellBasket[\s\S]*?playTune\(\[([^\]]*)\]\)/);
+        const notes = found ? found[1].match(/["'][A-G][#b]?\d["']/g) || [] : [];
+        if (notes.length < 5) return false;
+        return game.read("coins") >= 3 || "Longer jingle ready. Sell some flowers to hear it!";
+      });
+      JGZT.challenge("rename-title", (game) => {
+        if (game.read("state") !== "title") return false;
+        const texts = game.drawn().filter((d) => d.kind === "text");
+        return texts.length > 0 && !texts.some((t) => t.text === "Tiny Garden") && texts.some((t) => String(t.text).trim() !== "");
+      });
+
+      JGZT.start();
+
+      document.getElementById("download-final").addEventListener("click", () => {
+        const editable = JGZT.cell("cell-final");
+        JGZT.downloadProject(editable ? editable.code : JGZT.games.tiny_garden.steps.final);
+      });
+
+      (() => {
+        "use strict";
+        const GAME = JGZT.games.tiny_garden;
+        const art = (name) => GAME.assets[`images/${name}.svg`];
+
+        // Small pictures in the prose (<img data-art="daisy">).
+        for (const img of document.querySelectorAll("img[data-art]")) img.src = art(img.dataset.art);
+
+        // Loaded <img> elements for drawing into widget canvases.
+        const loaded = {};
+        function picture(name, onLoad) {
+          if (!loaded[name]) {
+            loaded[name] = new Image();
+            loaded[name].src = art(name);
+          }
+          if (onLoad) loaded[name].addEventListener("load", onLoad);
+          return loaded[name];
+        }
+
+        function isVisible(node) {
+          const box = node.getBoundingClientRect();
+          return box.bottom > 0 && box.top < innerHeight;
+        }
+
+        // Reads `const NAME = 1.5;` from a cell's code (falls back if missing).
+        function readConst(code, name, fallback) {
+          const match = code.match(new RegExp(`\\b(?:const|let)\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)`));
+          return match ? Number(match[1]) : fallback;
+        }
+
+        // ----------------------------------------------------------------
+        // Coordinate readout: hover the first cells' games to see x and y.
+        // ----------------------------------------------------------------
+        function coordinateReadout(stepKey) {
+          const cell = JGZT.cell(stepKey);
+          const stage = cell.stage;
+          const label = document.createElement("div");
+          label.className = "coord-label";
+          const vertical = document.createElement("div");
+          vertical.className = "coord-line v";
+          const horizontal = document.createElement("div");
+          horizontal.className = "coord-line h";
+          stage.append(vertical, horizontal, label);
+          stage.addEventListener("mousemove", (event) => {
+            const canvas = stage.querySelector("canvas");
+            if (!canvas) return;
+            const box = canvas.getBoundingClientRect();
+            const stageBox = stage.getBoundingClientRect();
+            const x = Math.round(((event.clientX - box.left) / box.width) * 640);
+            const y = Math.round(((event.clientY - box.top) / box.height) * 400);
+            if (x < 0 || y < 0 || x > 640 || y > 400) return;
+            const left = event.clientX - stageBox.left;
+            const top = event.clientY - stageBox.top;
+            label.textContent = `x ${x}, y ${y}`;
+            label.style.left = `${Math.min(left, stageBox.width - 110)}px`;
+            label.style.top = `${Math.min(top, stageBox.height - 34)}px`;
+            vertical.style.left = `${left}px`;
+            horizontal.style.top = `${top}px`;
+            stage.classList.add("show-coords");
+          });
+          stage.addEventListener("mouseleave", () => stage.classList.remove("show-coords"));
+        }
+        coordinateReadout("01-garden");
+        coordinateReadout("02-pictures");
+
+        // ----------------------------------------------------------------
+        // Widget: plot maker. Runs the two nested loops one plot at a time,
+        // using the constants currently in step 4's code.
+        // ----------------------------------------------------------------
+        (function plotMaker() {
+          const root = document.getElementById("plot-maker");
+          const canvas = root.querySelector("canvas");
+          const W = 640;
+          const H = 300;
+          const TOP = 100; // the canvas shows the game window from y = 100 downwards
+          const ctx = JGZT.setupCanvas(canvas, W, H);
+          const readout = root.querySelector(".readout");
+          const lines = {};
+          for (const line of root.querySelectorAll(".sl")) lines[line.dataset.line] = line;
+          const cell = JGZT.cell("04-plots");
+          const soil = picture("soil_dry", () => draw());
+          let placed = 0;
+          let current = null;
+
+          function settings() {
+            const code = cell.code;
+            return {
+              columns: readConst(code, "COLUMNS", 4),
+              rows: readConst(code, "ROWS", 2),
+              left: readConst(code, "GARDEN_LEFT", 20),
+              top: readConst(code, "GARDEN_TOP", 128),
+              stepX: readConst(code, "PLOT_STEP_X", 108),
+              stepY: readConst(code, "PLOT_STEP_Y", 90),
+            };
+          }
+          function where(s, index) {
+            const row = Math.floor(index / s.columns);
+            const col = index % s.columns;
+            return { row, col, x: s.left + col * s.stepX, y: s.top + row * s.stepY };
+          }
+          function highlight(names) {
+            for (const [name, line] of Object.entries(lines)) line.classList.toggle("is-on", names.includes(name));
+          }
+          function draw() {
+            const s = settings();
+            ctx.fillStyle = "#9bd160";
+            ctx.fillRect(0, 0, W, H);
+            ctx.setLineDash([6, 5]);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(42, 33, 64, 0.35)";
+            for (let i = 0; i < s.columns * s.rows; i++) {
+              const p = where(s, i);
+              ctx.strokeRect(p.x + 3, p.y - TOP + 3, 90, 84);
+            }
+            ctx.setLineDash([]);
+            for (let i = 0; i < Math.min(placed, s.columns * s.rows); i++) {
+              const p = where(s, i);
+              if (soil.complete) ctx.drawImage(soil, p.x, p.y - TOP, 96, 90);
+            }
+            if (current && placed > 0) {
+              ctx.fillStyle = "#2a2140";
+              ctx.font = "600 15px Fredoka, sans-serif";
+              ctx.textAlign = "center";
+              ctx.fillText(`row ${current.row}, col ${current.col}`, current.x + 48, current.y - TOP + 18);
+              ctx.strokeStyle = "#ff7aa8";
+              ctx.lineWidth = 3;
+              ctx.strokeRect(current.x + 1, current.y - TOP + 1, 94, 88);
+            }
+            ctx.fillStyle = "rgba(42, 33, 64, 0.55)";
+            ctx.font = "600 12px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(`(the game window, from y = ${TOP} down)`, 8, H - 8);
+          }
+          function step() {
+            const s = settings();
+            const total = s.columns * s.rows;
+            if (placed >= total) {
+              readout.innerHTML = `Both loops have finished: <b>${s.rows} rows × ${s.columns} columns = ${total} plots</b>.`;
+              highlight([]);
+              return;
+            }
+            current = where(s, placed);
+            placed += 1;
+            highlight(current.col === 0 ? ["outer", "inner", "make", "make2"] : ["inner", "make", "make2"]);
+            readout.innerHTML =
+              `<b>row ${current.row}, col ${current.col}</b><br>` +
+              `x = ${s.left} + ${current.col} × ${s.stepX} = <b>${current.x}</b><br>` +
+              `y = ${s.top} + ${current.row} × ${s.stepY} = <b>${current.y}</b>` +
+              (placed === total ? `<br>That was the last plot: ${total} in all.` : "");
+            draw();
+          }
+          function reset() {
+            placed = 0;
+            current = null;
+            highlight([]);
+            readout.innerHTML = "Press <b>Next plot</b> to start.";
+            draw();
+          }
+          root.querySelector('[data-action="step"]').addEventListener("click", step);
+          root.querySelector('[data-action="all"]').addEventListener("click", () => {
+            reset();
+            const s = settings();
+            for (let i = 0; i < s.columns * s.rows; i++) step();
+          });
+          root.querySelector('[data-action="reset"]').addEventListener("click", reset);
+          JGZT.on("change", (changed) => {
+            if (changed === cell) reset();
+          });
+          draw();
+        })();
+
+        // ----------------------------------------------------------------
+        // Widget: growth lab. One plot, simulated with the same rules as
+        // growPlot: growth only counts up while there is water left.
+        // ----------------------------------------------------------------
+        (function growthLab() {
+          const root = document.getElementById("growth-lab");
+          const canvas = root.querySelector("canvas");
+          const W = 760;
+          const H = 250;
+          const ctx = JGZT.setupCanvas(canvas, W, H);
+          const select = root.querySelector("[data-flower]");
+          const fastButton = root.querySelector("[data-fast]");
+          const readout = root.querySelector("[data-readout]");
+          const cell = JGZT.cell("07-water");
+          const STAGES = ["seed", "sprout", "bud"];
+          const FLOWERS = {
+            0: { name: "Daisy", image: "daisy", grow: 4 },
+            1: { name: "Tulip", image: "tulip", grow: 7 },
+            3: { name: "Rose", image: "rose", grow: 16 },
+          };
+          for (const name of ["seed", "sprout", "bud", "daisy", "tulip", "rose", "soil_dry", "soil_wet", "drop"]) picture(name, () => draw());
+          let fast = false;
+          let sim;
+          const flower = () => FLOWERS[select.value];
+          const waterTime = () => readConst(cell.code, "WATER_TIME", 5);
+          function restart() {
+            sim = { time: 0, wet: 0, growth: 0, ready: false, samples: [{ time: 0, growth: 0, wet: false }] };
+            draw();
+          }
+          function water() {
+            if (sim.ready) return;
+            sim.wet = waterTime();
+            draw();
+          }
+          function advance(dt) {
+            const f = flower();
+            if (sim.ready) return;
+            sim.time += dt;
+            if (sim.wet > 0) {
+              sim.wet -= dt;
+              sim.growth += dt;
+              if (sim.growth >= f.grow) {
+                sim.growth = f.grow;
+                sim.ready = true;
+              }
+            }
+            sim.samples.push({ time: sim.time, growth: sim.growth, wet: sim.wet > 0 });
+          }
+          function stageName(progress) {
+            return STAGES[Math.floor(progress * STAGES.length)];
+          }
+          function draw() {
+            const f = flower();
+            const maxWet = waterTime();
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = "rgba(155, 209, 96, 0.22)";
+            ctx.fillRect(0, 0, W, H);
+            // --- the plot: soil, plant and a thirsty drop
+            const thirsty = !sim.ready && sim.wet <= 0;
+            const soil = picture(sim.wet > 0 ? "soil_wet" : "soil_dry");
+            if (soil.complete) ctx.drawImage(soil, 40, 120, 128, 120);
+            const progress = Math.min(1, sim.growth / f.grow);
+            const plantName = sim.ready ? f.image : stageName(progress);
+            const plant = picture(plantName);
+            if (plant.complete) ctx.drawImage(plant, 56, 92, 96, 108);
+            if (thirsty) {
+              const drop = picture("drop");
+              if (drop.complete) ctx.drawImage(drop, 150, 56 + 3 * Math.sin(performance.now() / 160), 28, 35);
+            }
+            // --- two bars
+            const bar = (x, y, w, fraction, color, label) => {
+              ctx.fillStyle = "rgba(42, 33, 64, 0.12)";
+              ctx.fillRect(x, y, w, 16);
+              ctx.fillStyle = color;
+              ctx.fillRect(x, y, w * Math.max(0, Math.min(1, fraction)), 16);
+              ctx.strokeStyle = "#2a2140";
+              ctx.lineWidth = 2;
+              ctx.strokeRect(x, y, w, 16);
+              ctx.fillStyle = "#2a2140";
+              ctx.font = "600 14px sans-serif";
+              ctx.textAlign = "left";
+              ctx.fillText(label, x, y - 6);
+            };
+            bar(200, 150, 70, sim.wet / maxWet, "#5bbcf0", "wet");
+            bar(200, 200, 70, sim.growth / f.grow, "#78ad42", "growth");
+            // --- the graph of growth over time
+            const gx = 310;
+            const gy = 24;
+            const gw = 420;
+            const gh = 190;
+            const span = Math.max(12, f.grow * 3);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+            ctx.fillRect(gx, gy, gw, gh);
+            ctx.strokeStyle = "rgba(42, 33, 64, 0.5)";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(gx, gy, gw, gh);
+            ctx.font = "600 13px sans-serif";
+            ctx.fillStyle = "#2a2140";
+            ctx.textAlign = "left";
+            ctx.setLineDash([4, 5]);
+            ctx.lineWidth = 1;
+            const marks = [
+              [f.grow / 3, "sprout starts"],
+              [(2 * f.grow) / 3, "bud starts"],
+              [f.grow, "bloom!"],
+            ];
+            for (const [value, label] of marks) {
+              const y = gy + gh - (value / f.grow) * (gh - 14);
+              ctx.beginPath();
+              ctx.moveTo(gx, y);
+              ctx.lineTo(gx + gw, y);
+              ctx.stroke();
+              ctx.fillText(`${label} (${value.toFixed(1)} s)`, gx + 6, y - 4);
+            }
+            ctx.setLineDash([]);
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+            for (let i = 1; i < sim.samples.length; i++) {
+              const a = sim.samples[i - 1];
+              const b = sim.samples[i];
+              const x1 = gx + (Math.min(a.time, span) / span) * gw;
+              const x2 = gx + (Math.min(b.time, span) / span) * gw;
+              const y1 = gy + gh - (a.growth / f.grow) * (gh - 14);
+              const y2 = gy + gh - (b.growth / f.grow) * (gh - 14);
+              ctx.strokeStyle = b.wet ? "#2f8f46" : "#9a8fb5";
+              ctx.beginPath();
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+              ctx.stroke();
+            }
+            ctx.fillStyle = "#2a2140";
+            ctx.textAlign = "center";
+            ctx.fillText("time →", gx + gw / 2, gy + gh + 16);
+            ctx.textAlign = "left";
+            ctx.fillStyle = "#2f8f46";
+            ctx.fillText("green = watered, grey = thirsty (flat!)", gx + 6, gy + gh - 6);
+            // --- the sums
+            const step = Math.floor(progress * STAGES.length);
+            if (sim.ready) {
+              readout.innerHTML = `<b>growth ${f.grow.toFixed(1)}</b> reached the grow time (${f.grow}): the plot's state becomes <b>"ready"</b> and shows the ${f.name.toLowerCase()}.`;
+            } else if (thirsty) {
+              readout.innerHTML = `<b>wet = 0</b>: thirsty, so <code>growPlot</code> returns early. growth stays at <b>${sim.growth.toFixed(1)}</b>. Press Water!`;
+            } else {
+              readout.innerHTML =
+                `<b>wet = ${sim.wet.toFixed(1)}</b> (counting down) · <b>growth = ${sim.growth.toFixed(1)}</b> of ${f.grow} (counting up)<br>` +
+                `progress = ${sim.growth.toFixed(1)} ÷ ${f.grow} = <b>${progress.toFixed(2)}</b> → × 3 = ${(progress * 3).toFixed(2)} → Math.floor → <b>${step}</b> → <b>"${STAGES[step]}"</b>`;
+            }
+          }
+          let last = performance.now();
+          function tick(now) {
+            const real = Math.min(0.1, (now - last) / 1000);
+            last = now;
+            if (isVisible(root)) {
+              advance(real * (fast ? 3 : 1));
+              draw();
+            }
+            requestAnimationFrame(tick);
+          }
+          root.querySelector("[data-water]").addEventListener("click", water);
+          root.querySelector("[data-restart]").addEventListener("click", restart);
+          select.addEventListener("change", restart);
+          fastButton.addEventListener("click", () => {
+            fast = !fast;
+            fastButton.setAttribute("aria-pressed", String(fast));
+          });
+          restart();
+          requestAnimationFrame(tick);
+        })();
+
+        // ----------------------------------------------------------------
+        // Widget: a plot's life. Counts how many of the live game's plots
+        // are in each state.
+        // ----------------------------------------------------------------
+        (function plotLife() {
+          const root = document.getElementById("plot-life");
+          const nodes = root.querySelectorAll(".node");
+          const cell = JGZT.cell("08-pick");
+          setInterval(() => {
+            const game = cell.view();
+            const plots = game.running ? game.read("plots") || [] : [];
+            for (const node of nodes) {
+              const state = node.dataset.state;
+              const count = plots.filter((plot) => plot.state === state).length;
+              node.querySelector("[data-count]").textContent = game.running ? `${count} ${count === 1 ? "plot" : "plots"}` : "(press Run)";
+              node.classList.toggle("is-on", count > 0);
+            }
+          }, 200);
+        })();
+
+        // ----------------------------------------------------------------
+        // Widget: the selling loop. Steps through
+        //   for (const kind of basket) { total += SEEDS[kind].price; }
+        // ----------------------------------------------------------------
+        (function basketSum() {
+          const root = document.getElementById("basket-sum");
+          const FLOWERS = [
+            { name: "Daisy", image: "daisy", price: 3 },
+            { name: "Tulip", image: "tulip", price: 7 },
+            { name: "Sunflower", image: "sunflower", price: 15 },
+            { name: "Rose", image: "rose", price: 32 },
+            { name: "Moonbloom", image: "moonbloom", price: 70 },
+          ];
+          const basketRow = root.querySelector("[data-basket]");
+          const addRow = root.querySelector("[data-add]");
+          const readout = root.querySelector("[data-readout]");
+          const lines = {};
+          for (const line of root.querySelectorAll(".sl")) lines[line.dataset.line] = line;
+          let basket = [0, 1, 0];
+          let cursor = 0; // 0 = before the loop, 1..n = visiting a flower, n+1 = loop finished
+          let total = 0;
+
+          function highlight(names) {
+            for (const [name, line] of Object.entries(lines)) line.classList.toggle("is-on", names.includes(name));
+          }
+          function render() {
+            basketRow.innerHTML = "";
+            if (basket.length === 0) basketRow.innerHTML = '<span class="muted">The basket is empty. Add some flowers below.</span>';
+            basket.forEach((kind, i) => {
+              const item = document.createElement("div");
+              item.className = "basket-item";
+              if (cursor >= 1 && i === cursor - 1) item.classList.add("is-now");
+              else if (cursor > i + 1) item.classList.add("is-done");
+              item.innerHTML = `<img src="${art(FLOWERS[kind].image)}" alt="${FLOWERS[kind].name}" /><span>${i}</span>`;
+              basketRow.append(item);
+            });
+          }
+          function reset() {
+            cursor = 0;
+            total = 0;
+            highlight([]);
+            readout.innerHTML = "Press <b>Step</b> to start.";
+            render();
+          }
+          function step() {
+            const n = basket.length;
+            if (cursor > n + 1) return;
+            if (cursor === 0) {
+              total = 0;
+              highlight(["start"]);
+              readout.innerHTML = "<code>total</code> starts at <b>0</b>.";
+            } else if (cursor <= n) {
+              const kind = basket[cursor - 1];
+              const before = total;
+              total += FLOWERS[kind].price;
+              highlight(["for", "add"]);
+              readout.innerHTML =
+                `<code>kind = ${kind}</code> (${FLOWERS[kind].name})<br>` +
+                `<code>SEEDS[${kind}].price</code> = ${FLOWERS[kind].price}<br>` +
+                `total = ${before} + ${FLOWERS[kind].price} = <b>${total}</b>`;
+            } else {
+              highlight(["end", "pay"]);
+              readout.innerHTML = `Every flower has been visited. <code>coins += total</code> pays <b>${total} coins</b>.`;
+            }
+            cursor += 1;
+            render();
+          }
+          for (const [kind, flower] of FLOWERS.entries()) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "btn btn-soft btn-small";
+            button.innerHTML = `<img src="${art(flower.image)}" alt="" /> ${flower.name} <span class="muted">${flower.price}</span>`;
+            button.addEventListener("click", () => {
+              if (basket.length < 8) basket.push(kind);
+              reset();
+            });
+            addRow.append(button);
+          }
+          const clear = document.createElement("button");
+          clear.type = "button";
+          clear.className = "btn btn-soft btn-small";
+          clear.textContent = "Empty basket";
+          clear.addEventListener("click", () => {
+            basket = [];
+            reset();
+          });
+          addRow.append(clear);
+          root.querySelector('[data-action="step"]').addEventListener("click", step);
+          root.querySelector('[data-action="all"]').addEventListener("click", () => {
+            reset();
+            for (let i = 0; i < basket.length + 2; i++) step();
+          });
+          root.querySelector('[data-action="reset"]').addEventListener("click", reset);
+          reset();
+        })();
+
+        // ----------------------------------------------------------------
+        // Widget: the seed table. Click a value to see the code that reads it.
+        // ----------------------------------------------------------------
+        (function seedTable() {
+          const root = document.getElementById("seed-table");
+          const SEEDS = [
+            { name: "Daisy", image: "daisy", cost: 0, grow: 4, price: 3 },
+            { name: "Tulip", image: "tulip", cost: 25, grow: 7, price: 7 },
+            { name: "Sunflower", image: "sunflower", cost: 100, grow: 11, price: 15 },
+            { name: "Rose", image: "rose", cost: 300, grow: 16, price: 32 },
+            { name: "Moonbloom", image: "moonbloom", cost: 800, grow: 22, price: 70 },
+          ];
+          const body = root.querySelector("[data-rows]");
+          const readout = root.querySelector("[data-readout]");
+          const best = Math.max(...SEEDS.map((seed) => seed.price / seed.grow));
+          SEEDS.forEach((seed, i) => {
+            const row = document.createElement("tr");
+            row.dataset.row = i;
+            const rate = seed.price / seed.grow;
+            row.innerHTML =
+              `<td class="pick" data-field="">${i}</td>` +
+              `<td><img src="${art(seed.image)}" alt="${seed.name}" /></td>` +
+              `<td class="pick" data-field="name">"${seed.name}"</td>` +
+              `<td class="pick" data-field="cost">${seed.cost}</td>` +
+              `<td class="pick" data-field="grow">${seed.grow}</td>` +
+              `<td class="pick" data-field="price">${seed.price}</td>` +
+              `<td><span class="rate"><span class="rate-bar" style="width: ${(rate / best) * 100}%"></span></span> ${rate.toFixed(2)}</td>`;
+            body.append(row);
+          });
+          body.addEventListener("click", (event) => {
+            const cell = event.target.closest("td.pick");
+            if (!cell) return;
+            const row = cell.parentElement;
+            const i = Number(row.dataset.row);
+            const field = cell.dataset.field;
+            for (const other of root.querySelectorAll(".is-picked, .is-row")) other.classList.remove("is-picked", "is-row");
+            row.classList.add("is-row");
+            cell.classList.add("is-picked");
+            const seed = SEEDS[i];
+            if (!field) {
+              readout.innerHTML =
+                `<code>SEEDS[${i}]</code> is the whole <b>${ordinal(i)} row</b> (counting from 0): ` +
+                `<code>{ name: "${seed.name}", image: "${seed.image}", cost: ${seed.cost}, grow: ${seed.grow}, price: ${seed.price} }</code>`;
+            } else {
+              const value = field === "name" ? `"${seed.name}"` : seed[field];
+              readout.innerHTML = `<code>SEEDS[${i}].${field}</code> → <b>${value}</b> &nbsp;(the ${ordinal(i)} row, then its <code>${field}</code> value)`;
+            }
+          });
+          function ordinal(i) {
+            return ["first", "second", "third", "fourth", "fifth"][i];
+          }
+        })();
+      })();
+    </script>
+  </body>
+</html>

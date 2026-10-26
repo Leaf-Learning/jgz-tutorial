@@ -1,0 +1,2476 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pancake Stack — build a catch-and-stack game</title>
+    <meta
+      name="description"
+      content="A playful, interactive tutorial: build Pancake Stack, a game where a bear chef catches falling pancakes into a wobbly tower, with js-game-zero. Learn the game loop, timers, lists, sine waves, game states and data-driven difficulty."
+    />
+    <link rel="stylesheet" href="lib/tutorial.css" />
+    <style>
+      /* ---- Page-only styles for Pancake Stack's widgets ---- */
+
+      /* Programming ligatures turn !== into a single glyph, which hides the
+         real characters from beginners who need to type them. */
+      code,
+      pre,
+      kbd,
+      .readout {
+        font-variant-ligatures: none;
+      }
+
+      /* Six concept cards: three per row on wide screens, never an orphan. */
+      @media (min-width: 900px) {
+        .learn-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      .hero-mascots {
+        display: flex;
+        gap: 18px;
+        align-items: flex-end;
+        margin: 22px 0 0;
+      }
+      .hero-mascots img {
+        animation: bob 2.6s ease-in-out infinite;
+      }
+      .hero-mascots img:nth-child(1) {
+        width: 74px;
+        height: 83px;
+      }
+      .hero-mascots img:nth-child(2) {
+        width: 72px;
+        height: 26px;
+        animation-delay: -0.8s;
+      }
+      .hero-mascots img:nth-child(3) {
+        width: 38px;
+        height: 36px;
+        animation-delay: -1.6s;
+      }
+      @keyframes bob {
+        0%,
+        100% {
+          transform: translateY(0) rotate(-3deg);
+        }
+        50% {
+          transform: translateY(-5px) rotate(3deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero-mascots img {
+          animation: none;
+        }
+      }
+
+      /* Coordinates readout that follows the pointer over the first games. */
+      .coord-label {
+        position: absolute;
+        z-index: 3;
+        padding: 4px 9px;
+        border-radius: 99px;
+        background: rgba(42, 33, 64, 0.88);
+        color: #fff;
+        font: 600 12px/1 var(--font-code);
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(12px, 12px);
+        white-space: nowrap;
+      }
+      .coord-line {
+        position: absolute;
+        z-index: 2;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(42, 33, 64, 0.5);
+      }
+      .coord-line.v {
+        top: 0;
+        bottom: 0;
+        width: 1px;
+      }
+      .coord-line.h {
+        left: 0;
+        right: 0;
+        height: 1px;
+      }
+      .stage.show-coords .coord-label,
+      .stage.show-coords .coord-line {
+        opacity: 1;
+      }
+
+      /* Widgets share a sky-blue canvas backdrop. */
+      .widget canvas.sky {
+        background: linear-gradient(#bfe6ff, #fff1d6);
+        cursor: ew-resize;
+      }
+      .widget canvas.sky.is-plain {
+        cursor: default;
+      }
+      .widget .control-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 22px;
+        align-items: center;
+        margin-top: 12px;
+      }
+      .widget .control-row label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 0.92rem;
+      }
+      .widget .control-row output {
+        font: 700 0.86rem var(--font-code);
+        min-width: 3.4em;
+        color: var(--accent);
+      }
+      .verdict {
+        font-weight: 800;
+      }
+      .verdict.is-true {
+        color: #1f9d6b;
+      }
+      .verdict.is-false {
+        color: #d63d63;
+      }
+
+      /* The list that mirrors the falling pancakes in the rain widget. */
+      .rain-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+      @media (max-width: 760px) {
+        .rain-layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .rain-list {
+        margin: 0;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: var(--ed-bg);
+        color: var(--ed-ink);
+        font: 13px/22px var(--font-code);
+        font-variant-ligatures: none;
+        min-height: 150px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .rain-list .kept {
+        color: #a6e3a1;
+      }
+      .timer-bar {
+        height: 14px;
+        border-radius: 99px;
+        background: var(--card-2);
+        border: 1px solid var(--line);
+        overflow: hidden;
+        margin: 6px 0 10px;
+      }
+      .timer-bar > span {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, var(--accent-3), var(--accent));
+        transform-origin: left;
+      }
+
+      /* The rush table explorer. */
+      .rush-table {
+        font-variant-ligatures: none;
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 6px;
+        font-size: 0.92rem;
+      }
+      .rush-table th {
+        text-align: left;
+        font: 700 0.76rem var(--font-body);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        padding: 0 10px;
+      }
+      .rush-table td {
+        padding: 8px 10px;
+        background: var(--card-2);
+        border-top: 2px solid transparent;
+        border-bottom: 2px solid transparent;
+        font-family: var(--font-code);
+        font-size: 0.86rem;
+      }
+      .rush-table td:first-child {
+        border-radius: 10px 0 0 10px;
+        border-left: 2px solid transparent;
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 0.98rem;
+      }
+      .rush-table td:last-child {
+        border-radius: 0 10px 10px 0;
+        border-right: 2px solid transparent;
+      }
+      .rush-table tr.is-passed td {
+        background: color-mix(in srgb, var(--accent-2) 12%, var(--card));
+      }
+      .rush-table tr.is-current td {
+        background: color-mix(in srgb, var(--accent) 20%, var(--card));
+        border-color: var(--accent);
+        border-left-color: transparent;
+        border-right-color: transparent;
+      }
+      .rush-table tr.is-current td:first-child {
+        border-left-color: var(--accent);
+      }
+      .rush-table tr.is-current td:last-child {
+        border-right-color: var(--accent);
+      }
+      .rush-table .check {
+        font-weight: 800;
+      }
+      .rush-bars {
+        display: grid;
+        gap: 6px;
+        margin-top: 10px;
+        font-size: 0.86rem;
+      }
+      .rush-bar {
+        display: grid;
+        grid-template-columns: 130px minmax(0, 1fr) 90px;
+        gap: 10px;
+        align-items: center;
+      }
+      .rush-bar .track {
+        height: 12px;
+        border-radius: 99px;
+        background: var(--card-2);
+        border: 1px solid var(--line);
+        overflow: hidden;
+      }
+      .rush-bar .track > span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent-3), var(--accent));
+        transition: width 0.2s;
+      }
+      .rush-table .check .short {
+        display: none;
+      }
+      @media (max-width: 600px) {
+        .rush-table .check .long {
+          display: none;
+        }
+        .rush-table .check .short {
+          display: inline;
+        }
+        .rush-table td,
+        .rush-table th {
+          padding-left: 6px;
+          padding-right: 6px;
+        }
+        .rush-bar {
+          grid-template-columns: 96px minmax(0, 1fr) 76px;
+          gap: 6px;
+        }
+      }
+      .rush-bar b {
+        font-family: var(--font-code);
+        font-size: 0.82rem;
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body class="theme-pancake-stack" data-game="pancake_stack" data-tutorial="Pancake Stack">
+    <main class="page">
+      <!-- ================================================================ -->
+      <section class="hero">
+        <div class="hero-kicker">🥞 Tutorial 4 · Falling things and wobbly towers</div>
+        <h1>Pancake <span class="pop">Stack</span></h1>
+        <p class="hero-lede">
+          A bear chef, a sky that rains pancakes, and a tower of breakfast that gets taller… and
+          <em>wobblier</em>… with every catch. Slide under the pancakes, don't let three of them
+          hit the ground, and see how high you can stack. You'll build the whole game yourself,
+          one small step at a time, right here in this page.
+        </p>
+        <ul class="hero-meta">
+          <li>⏱ About 2 hours</li>
+          <li>🌱 Total beginners welcome (a little quicker after Firefly Flash)</li>
+          <li>💻 Nothing to install — the code runs in this page</li>
+        </ul>
+        <div class="hero-mascots" aria-hidden="true">
+          <img data-art="bear_happy" alt="" />
+          <img data-art="pancake_berry" alt="" />
+          <img data-art="heart" alt="" />
+        </div>
+      </section>
+
+      <p class="prose">
+        <strong>Here's what you'll make.</strong> Click the game, then slide the bear with
+        <kbd>←</kbd> <kbd>→</kbd> (or <kbd>A</kbd> <kbd>D</kbd>), or point with the mouse or a
+        finger. Catch pancakes on the plate. Every full stack of ten is served for bonus points.
+        Miss three and it's game over!
+      </p>
+      <div class="cell" id="hero-game" data-step="final" data-play-only></div>
+
+      <div class="learn-grid">
+        <div class="learn-card">
+          <span class="emoji">🎨</span><b>Drawing a scene</b>Coordinates, shapes and painting
+          order: a sky, a sun and some rolling hills.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">🎮</span><b>Keys, mouse and touch</b>The game loop, <code>dt</code>,
+          and a bear that glides after your finger.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">🌧️</span><b>Things that fall</b>Speed, countdown timers and lists
+          of pancakes, all raining down at once.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">🥞</span><b>Stacking</b>A list that grows, a loop that places every
+          pancake, and a tune that climbs as you go.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">🌊</span><b>Wobble</b>A sine wave makes the tower sway: the higher
+          the pancake, the bigger the swing.
+        </div>
+        <div class="learn-card">
+          <span class="emoji">📈</span><b>Rules and rising difficulty</b>Lives, game states, a
+          table of busier and busier rushes, and saving your best.
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="callout-icon">👋</span>
+        <div>
+          <span class="callout-title">How this page works</span>
+          <p>
+            Every step has a <strong>live code editor</strong> next to the <strong>real
+            game</strong>. Change the code, press <strong>▶ Run</strong> (or
+            <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>), and see what happens. Lines that
+            are new in a step glow green. <strong>🎯 Challenges</strong> check themselves while
+            your game runs. You can't break anything — <strong>↺ Reset</strong> always puts a step
+            back.
+          </p>
+          <p>
+            Never coded before? Perfect: this page starts from an empty window. Words with a dotted
+            underline, like
+            <span class="term" tabindex="0" data-tip="A named box that holds a value, like let score = 0;">variable</span>,
+            explain themselves when you hover or tap them. Already built
+            <a href="firefly-flash.html">Firefly Flash</a>? Steps 1 and 2 will feel familiar, and
+            the new ideas start at step 3.
+          </p>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="A sunny morning">
+        <span class="step-kicker"></span>
+        <h2>A sunny morning</h2>
+        <p>
+          Every game starts with an empty window, and you decide what goes in it. Ours begins with
+          a bright morning: a sky, a sun, some hills and a field of grass. Here's your entire first
+          program. Press <strong>Run</strong>:
+        </p>
+        <div class="cell" data-step="01-sunny-morning"></div>
+        <p>Good morning! Let's read it line by line.</p>
+        <ul>
+          <li>
+            <code class="ref" data-match="WIDTH = 720">WIDTH = 720;</code> and
+            <code class="ref" data-match="HEIGHT = 480">HEIGHT = 480;</code> set the size of the
+            window in
+            <span class="term" tabindex="0" data-tip="The tiny dots a screen is made of. This game is 720 dots wide and 480 tall.">pixels</span>.
+            They need capital letters, because the game looks for those exact names.
+          </li>
+          <li>
+            <code class="ref" data-match="TITLE">TITLE</code> is the game's name. Words go inside
+            quote marks, which makes them a
+            <span class="term" tabindex="0" data-tip="A piece of text. Strings always go inside quote marks: &quot;like this&quot;.">string</span>.
+          </li>
+          <li>
+            <code class="ref" data-match="function draw">function draw() { … }</code> is a
+            <span class="term" tabindex="0" data-tip="A named set of instructions. Everything between its { curly brackets } runs when the function is called.">function</span>:
+            a named recipe. The game follows it about <strong>60 times every second</strong> to
+            paint the picture, like the pages of a flip book.
+          </li>
+          <li>
+            Lines that start with <code>//</code> are
+            <span class="term" tabindex="0" data-tip="Notes for humans. The computer skips everything after // on a line.">comments</span>:
+            notes to remind people what the code does. The computer skips them.
+          </li>
+          <li>
+            <code class="ref" data-match="screen.fill">screen.fill</code> paints the whole window.
+            With two colours it fades from the first (top) to the second (bottom): morning blue to
+            cream.
+          </li>
+          <li>
+            <code class="ref" data-match='screen.circle(590, 96, 46'>screen.circle(590, 96, 46, "#ffd34d")</code>
+            draws a filled circle. The numbers and colour mean: <strong>x</strong>,
+            <strong>y</strong>, <strong>radius</strong> (how far it reaches from its middle), and
+            <strong>colour</strong>.
+          </li>
+          <li>
+            <code class="ref" data-match='screen.rect(0, 420'>screen.rect(0, 420, WIDTH, 60, "#8cc65a")</code>
+            draws a filled rectangle: the x and y of its top-left corner, then its width, its
+            height, and its colour. Using <code>WIDTH</code> means the grass always stretches all
+            the way across.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🧠</span>
+          <div>
+            <span class="callout-title">Big idea: x and y</span>
+            <p>
+              Every spot in the window has two numbers. <strong>x</strong> says how far across from
+              the left edge. <strong>y</strong> says how far <em>down</em> from the top. So
+              <code>(0, 0)</code> is the top-left corner, and y gets <em>bigger</em> as you go
+              <em>down</em>. That surprises everyone at first!
+            </p>
+            <p>👉 <strong>Hover over the game above</strong> to see the x and y of any spot.</p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-origin" data-answer="b">
+          <p>
+            The sun is drawn with <code>screen.circle(590, 96, 46, …)</code>. Which number would you
+            change to move it <em>lower</em> in the sky?
+          </p>
+          <button data-choice="a"><code>590</code></button>
+          <button data-choice="b"><code>96</code></button>
+          <button data-choice="c"><code>46</code></button>
+          <div class="explain" data-for="b">
+            Yes: the second number is y, and bigger y means lower on the screen. Change both 96s (the glow behind the sun uses the same y) to 200 and watch it sink.
+          </div>
+          <div class="explain" data-for="a"><code>590</code> is x, so changing it slides the sun sideways.</div>
+          <div class="explain" data-for="c"><code>46</code> is the radius. Changing it makes the sun bigger or smaller, but it stays put.</div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">🖌️</span>
+          <div>
+            <span class="callout-title">Painting order</span>
+            <p>
+              The computer paints in the order you write the lines, like painting on a real canvas.
+              Things painted <strong>later</strong> cover things painted <strong>earlier</strong>.
+              That's why the sky is first and the grass is last. And colours? Write a name like
+              <code>"gold"</code> or <code>"hotpink"</code>, or a hex code like
+              <code>"#ffd34d"</code> (a colour picker will give you one).
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-order" data-answer="c">
+          <p>
+            What would you see if you moved the <code>screen.fill(…)</code> line to the
+            <em>bottom</em> of <code>draw()</code>?
+          </p>
+          <button data-choice="a">The sun would turn into a moon</button>
+          <button data-choice="b">The game would show an error</button>
+          <button data-choice="c">Only the sky, because it would be painted over everything else</button>
+          <div class="explain" data-for="c">
+            <code>screen.fill</code> paints the <em>whole</em> window, so anything drawn before it
+            gets covered up. Try it, then press ↺ Reset!
+          </div>
+          <div class="explain" data-for="wrong">Think about painting order: what does a fill do to everything already on the canvas?</div>
+        </div>
+
+        <div class="challenge" data-id="night-sky" data-success="Lights out! A sleepy, starry sky.">
+          <p><strong>Turn morning into night.</strong> Give the sky dark, night-time colours.</p>
+          <p class="hint">The sky is the <code>screen.fill(…)</code> line. It has two colours: the top and the bottom.</p>
+          <p class="hint">Try very dark blues and purples, like <code>"#0d0a24"</code> and <code>"#3a2b6e"</code>.</p>
+          <pre class="answer">screen.fill("#0d0a24", "#3a2b6e");</pre>
+        </div>
+
+        <div class="challenge" data-id="cloud" data-success="A fluffy cloud! Three circles make a surprisingly good one.">
+          <p><strong>Add a cloud</strong> to the sky: three white-ish circles side by side, overlapping a little.</p>
+          <p class="hint">Copy the sun's <code>screen.circle</code> line three times. Give each a different x, a similar y (a number below 250 is high in the sky), a radius around 25 and a colour like <code>"white"</code>.</p>
+          <p class="hint">Put them <em>after</em> the sky, or the sky will paint right over them!</p>
+          <pre class="answer">screen.circle(200, 120, 28, "white");
+screen.circle(235, 108, 34, "white");
+screen.circle(272, 122, 26, "white");</pre>
+        </div>
+        <p class="muted">The sun is up, but there's nobody here to enjoy it. Time to meet the chef.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Meet the bear">
+        <span class="step-kicker"></span>
+        <h2>Meet the bear</h2>
+        <p>
+          A sunny morning needs someone to enjoy it. Meet <strong>Bear</strong>, our chef. Here's all the
+          art for the game: every picture is a file in the game's <code>images</code> folder, and
+          you use it by its name.
+        </p>
+        <div class="art-tray"></div>
+        <p>
+          Bear has three faces: <code>bear_idle</code> for most of the time, <code>bear_happy</code>
+          after a catch and <code>bear_ouch</code> after a miss. We'll start with the calm one.
+        </p>
+        <div class="cell" data-step="02-bear"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="const FLOOR">const FLOOR = 455;</code> makes a
+            <span class="term" tabindex="0" data-tip="A named box you fill once. You can't swap what's in it for something else. Made with const.">constant</span>:
+            a box with a label on it. <code>FLOOR</code> is the y of the ground under the bear's feet. Giving a
+            number a name makes the code easier to read: <code>FLOOR</code> says far more than
+            <code>455</code> does.
+          </li>
+          <li>
+            <code class="ref" data-match="const chef">const chef = new Actor(…)</code>
+            uses <code>new</code>, which means "make a brand new one", to make an
+            <span class="term" tabindex="0" data-tip="A picture that knows where it is. It has an x, a y, an image, an angle… and can move and draw itself.">Actor</span>:
+            a picture that remembers where it is. <code>"bear_idle"</code> is the picture's name
+            (the file <code>bear_idle.svg</code> without the ending).
+          </li>
+          <li>
+            <code class="ref" data-match="midBottom">midBottom: [WIDTH / 2, FLOOR]</code> says
+            which part of the picture to put at that spot: its <em>middle-bottom</em>, the bear's
+            feet. <code>WIDTH / 2</code> is half the width: the middle of the screen. The computer
+            does the maths for you. The <code>{ … }</code> around it is an
+            <span class="term" tabindex="0" data-tip="A bundle of named values in { curly brackets }, like { x: 10, y: 20 }.">object</span>:
+            a bundle of named options. The <code>[ … ]</code> holds a list of two numbers: x, then y.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawScenery">drawScenery()</code> is the scenery from last step,
+            moved into a function of its own so <code>draw()</code> stays short. Now
+            <code class="ref" data-match="drawScenery();">draw()</code> only calls it, then draws the
+            bear with <code class="ref" data-match="chef.draw">chef.draw()</code>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">📦</span>
+          <div>
+            <span class="callout-title">Big idea: names for things</span>
+            <p>
+              Programmers give things names. <code>const</code> makes a name for a box you fill once:
+              you can't swap what's in it for something else. (<code>chef</code> is a constant too: its
+              box always holds the same bear, although the bear itself can move around.)
+              <code>let</code>, which you'll meet soon, makes a box you <em>can</em> refill, and
+              <code>function</code> makes a name for a recipe. A good name tells you what something
+              <em>is</em>.
+            </p>
+          </div>
+        </div>
+
+        <div class="tweak" data-name="FLOOR" data-min="360" data-max="470" data-label="Where the ground is" data-icon="🦶"></div>
+
+        <div class="quiz" data-id="q-anchor" data-answer="b">
+          <p>
+            <code>midBottom: [360, 455]</code> puts which part of the bear's picture at
+            <code>x = 360, y = 455</code>?
+          </p>
+          <button data-choice="a">The middle of the picture</button>
+          <button data-choice="b">The middle of its bottom edge: the feet</button>
+          <button data-choice="c">The top-left corner</button>
+          <div class="explain" data-for="b">
+            Yes: <code>mid</code> + <code>Bottom</code>. That's why the slider above lifts the
+            bear's feet up and down. For the bear it's the ground we care about.
+          </div>
+          <div class="explain" data-for="wrong">Read the name: <code>mid</code> is for middle and <code>Bottom</code> is the bottom edge.</div>
+        </div>
+
+        <div class="challenge" data-id="bear-left" data-success="Bear moved house. Look, a new view!">
+          <p><strong>Move the bear to the left side</strong> of the screen (anywhere left of x = 250).</p>
+          <p class="hint">The bear's x comes from <code>[WIDTH / 2, FLOOR]</code>. Which of those two is the sideways one?</p>
+          <pre class="answer">const chef = new Actor("bear_idle", { midBottom: [150, FLOOR] });</pre>
+        </div>
+        <p class="muted">A bear that can't move is a statue. Let's fix that.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Slide, bear, slide">
+        <span class="step-kicker"></span>
+        <h2>Slide, bear, slide</h2>
+        <p>
+          Everything so far has been a still picture. To make things move, a game does what a
+          flip book does: it shows a picture, makes a tiny change, shows the next picture, and
+          does that about 60 times a second. First it <strong>updates</strong> the world, then it
+          <strong>draws</strong> it. Click the game, then press the <kbd>←</kbd> and <kbd>→</kbd> keys:
+        </p>
+        <div class="cell" data-step="03-slide" data-watch="chef.x"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="function update">function update(dt)</code> is the
+            other function the game calls for you, right before every <code>draw()</code>.
+            Anything that should change goes in it.
+          </li>
+          <li>
+            <code class="ref" data-match="dt">dt</code> is short for "delta time": the number of
+            <strong>seconds</strong> since the last frame. At 60 frames a second it's about
+            <code>0.0167</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="keyboard.left">keyboard.left</code> is <code>true</code>
+            while the left arrow is held down, and <code>false</code> the rest of the time. The
+            <span class="term" tabindex="0" data-tip="Runs the code after it only when the question in brackets is true.">if</span>
+            checks it: <em>if the left key is down, do this</em>.
+          </li>
+          <li>
+            <code class="ref" data-match="chef.x -= ">chef.x -= CHEF_SPEED * dt</code> means
+            "make <code>chef.x</code> smaller by this much". The dot in <code>chef.x</code> reaches inside
+            <code>chef</code> to get the x that belongs to it, and <code>*</code> is how code writes
+            "times". (<code>-=</code> is short for "subtract from itself"; <code>+=</code> adds.)
+            Smaller x is further left.
+          </li>
+          <li>
+            <code class="ref" data-match="chef.x = clamp">clamp(chef.x, EDGE, WIDTH - EDGE)</code>
+            squeezes a number into a range. If <code>chef.x</code> tries to go past the
+            <code>EDGE</code> on either side, it's put back at the edge. The bear can't leave the
+            window. (A single <code>=</code> means "work out the right-hand side first, then put the answer
+            in the box on the left", which is why <code>chef.x</code> can appear on both sides.)
+          </li>
+          <li>
+            The numbers sit at the top as constants with a note on each, so you can play with them:
+            <code class="ref" data-match="const CHEF_SPEED">CHEF_SPEED</code> and
+            <code class="ref" data-match="const EDGE">EDGE</code>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">⏱️</span>
+          <div>
+            <span class="callout-title">Big idea: speed × dt</span>
+            <p>
+              Why not write <code>chef.x -= 8</code>? Because a faster computer runs more frames
+              a second, and the bear would zip about on it. Instead we say how far the bear goes
+              in a <em>second</em> and multiply by <code>dt</code> to get this frame's share:
+              <code>460 × 0.0167 ≈ 7.7</code> pixels now, and 60 frames later it adds up to 460
+              pixels. Every computer agrees.
+            </p>
+          </div>
+        </div>
+
+        <div class="tweak-row">
+          <div class="tweak" data-name="CHEF_SPEED" data-min="100" data-max="900" data-step="10" data-label="Bear's speed" data-unit=" px/s" data-icon="💨"></div>
+          <div class="tweak" data-name="EDGE" data-min="0" data-max="260" data-label="Edge margin" data-unit=" px" data-icon="↔️"></div>
+        </div>
+
+        <div class="callout warn">
+          <span class="callout-icon">🧪</span>
+          <div>
+            <span class="callout-title">Break it on purpose</span>
+            <p>
+              Mistakes are normal, and the computer tells you where they are. In the editor,
+              delete the <code>)</code> right after <code>keyboard.left</code> in the first <code>if</code> line and press
+              <strong>Run</strong>. A friendly red message points at the line. Put the bracket back
+              (or press <strong>↺ Reset</strong>) and the game wakes up again.
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-dt" data-answer="b">
+          <p>Why does the code multiply the speed by <code>dt</code>?</p>
+          <button data-choice="a">To make the bear faster</button>
+          <button data-choice="b">So the bear covers the same distance every second, however many frames the computer manages</button>
+          <button data-choice="c">Because <code>dt</code> is the direction the bear is facing</button>
+          <div class="explain" data-for="b">
+            Yes. <code>dt</code> is the time a frame takes, so <code>speed × dt</code> is the
+            distance covered in that frame: the same bear on a fast or slow computer.
+          </div>
+          <div class="explain" data-for="wrong">Try the numbers: 460 pixels a second, with 60 frames a second. How many pixels is each frame's step?</div>
+        </div>
+
+        <div class="quiz" data-id="q-clamp" data-answer="c">
+          <p>What is <code>clamp(700, 60, 660)</code>?</p>
+          <button data-choice="a"><code>700</code></button>
+          <button data-choice="b"><code>60</code></button>
+          <button data-choice="c"><code>660</code></button>
+          <div class="explain" data-for="c">700 is above the biggest allowed number (660), so clamp hands back 660.</div>
+          <div class="explain" data-for="wrong"><code>clamp(value, min, max)</code> returns the value, unless it's too small (then <code>min</code>) or too big (then <code>max</code>).</div>
+        </div>
+
+        <div class="challenge" data-id="turbo" data-success="Turbo bear! Hold on to your hat.">
+          <p><strong>Make a speedy bear</strong>: a top speed of at least 700 pixels a second.</p>
+          <p class="hint">Use the slider, or change the number in <code>const CHEF_SPEED</code>.</p>
+          <pre class="answer">const CHEF_SPEED = 700;</pre>
+        </div>
+
+        <div class="challenge" data-id="wasd" data-success="A and D work! Players everywhere thank you.">
+          <p>Lots of players like <kbd>A</kbd> and <kbd>D</kbd> better than the arrows. <strong>Make both keys slide the bear too.</strong></p>
+          <p class="hint"><code>keyboard.a</code> and <code>keyboard.d</code> exist, the same way <code>keyboard.left</code> does.</p>
+          <p class="hint"><code>||</code> means "or": <code>if (keyboard.left || keyboard.a)</code> is true when either key is down.</p>
+          <pre class="answer">if (keyboard.left || keyboard.a) chef.x -= CHEF_SPEED * dt;
+if (keyboard.right || keyboard.d) chef.x += CHEF_SPEED * dt;</pre>
+        </div>
+        <p class="muted">Keys are great on a computer, but a phone has no arrow keys. Next: pointers.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Follow the pointer">
+        <span class="step-kicker"></span>
+        <h2>Follow the pointer</h2>
+        <p>
+          Phones and tablets have no arrow keys, but everyone has a mouse or a finger. So let's
+          make the bear <strong>chase the pointer</strong>. Move your mouse over the game (or drag
+          a finger across it), and the bear slides after it. The arrow keys still work too!
+        </p>
+        <div class="cell" data-step="04-follow" data-watch="targetX, chef.x"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="let targetX">let targetX = WIDTH / 2;</code> is a
+            <span class="term" tabindex="0" data-tip="A named box whose value can change. Made with let.">variable</span>
+            (made with <code>let</code>, because it will change) for <em>where the bear is
+            heading</em>. The bear's real position, <code>chef.x</code>, chases it.
+          </li>
+          <li>
+            <code class="ref" data-match="function onMouseMove">onMouseMove(pos)</code> is a
+            <span class="term" tabindex="0" data-tip="A function with a special name that the game calls for you when something happens: a key press, a click, a pointer move.">hook</span>:
+            the game calls it every time the pointer moves, and passes the spot as
+            <code>pos</code>, a list of two numbers. <code class="ref" data-match="pos[0]">pos[0]</code>
+            is the first one: x. (Lists count from <strong>0</strong>, so <code>pos[0]</code> is the first and
+            <code>pos[1]</code> the second, y.) Fingers and pens count as pointers too.
+          </li>
+          <li>
+            <code class="ref" data-match="function onMouseDown">onMouseDown</code> runs when you
+            press. <code class="ref" data-match="button !== mouse.LEFT">if (button !== mouse.LEFT) return;</code>
+            says "if it wasn't the left button, stop here". (<code>!==</code> means "is not the same as".
+            The scroll wheel counts as a button too, and we don't want it steering the bear.)
+          </li>
+          <li>
+            The keys now move the <em>target</em> instead of the bear, and
+            <code class="ref" data-match="targetX = clamp">clamp</code> keeps the target inside the
+            edges.
+          </li>
+          <li>
+            <code class="ref" data-match="const maxStep">const maxStep = CHEF_SPEED * dt;</code> is
+            the furthest the bear may travel this frame. It's a <code>const</code> made inside the function, so it's a
+            brand new box every frame. Then
+            <code class="ref" data-match="chef.x += clamp">chef.x += clamp(targetX - chef.x, -maxStep, maxStep);</code>
+            moves it towards the target by <em>the distance left, but never more than
+            maxStep</em>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🎯</span>
+          <div>
+            <span class="callout-title">Big idea: chase a target</span>
+            <p>
+              Instead of jumping to where you want, step towards it. <code>targetX - chef.x</code>
+              is how far there is to go. <code>clamp</code> limits it to a small step each frame, so
+              the bear glides at its top speed, and when it's closer than one step it arrives
+              <em>exactly</em> with no wobbling back and forth.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="chase-lab">
+          <div class="widget-title">🚩 Chase lab</div>
+          <div class="widget-sub">
+            Drag the flag (the <code>targetX</code>) anywhere along the grass and watch the bear
+            chase it, one frame at a time.
+          </div>
+          <canvas class="sky" aria-label="Drag the flag; the bear chases it at a limited speed"></canvas>
+          <div class="control-row">
+            <label>Speed <input type="range" min="60" max="900" step="10" value="460" data-control="speed" /> <output data-out="speed">460</output></label>
+            <label><input type="checkbox" data-control="teleport" /> Teleport instead of gliding</label>
+          </div>
+          <div class="readout" aria-live="polite"></div>
+        </div>
+
+        <div class="quiz" data-id="q-chase" data-answer="a">
+          <p>
+            The bear is 3 pixels from its target, and <code>maxStep</code> is 7.7. What does
+            <code>clamp(3, -7.7, 7.7)</code> give?
+          </p>
+          <button data-choice="a"><code>3</code>: the bear arrives exactly on the target</button>
+          <button data-choice="b"><code>7.7</code>: the bear overshoots a little, then comes back</button>
+          <button data-choice="c"><code>-7.7</code>: the bear moves the wrong way</button>
+          <div class="explain" data-for="a">
+            3 is already between −7.7 and 7.7, so clamp leaves it alone and the bear moves the
+            last 3 pixels. Close enough means <em>exactly there</em>.
+          </div>
+          <div class="explain" data-for="wrong">
+            <code>clamp</code> only changes a number that's outside the range. Is 3 outside −7.7 to 7.7?
+          </div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">⌨️</span>
+          <div>
+            <span class="callout-title">Keys have a hook too</span>
+            <p>
+              <code>keyboard.left</code> is <code>true</code> all the time a key is held, which is
+              perfect inside <code>update</code>. For a one-off press there's
+              <code>onKeyDown(key)</code>: the game calls it once each time a key goes down, and
+              <code>key</code> says which one. <code>keys.SPACE</code> is the <em>name</em> of the Space
+              key, so <code>key === keys.SPACE</code> asks "was that the Space key?". (<code>===</code>
+              means "is exactly the same as", the opposite of <code>!==</code>.)
+            </p>
+          </div>
+        </div>
+
+        <div class="challenge" data-id="space-home" data-success="Home sweet home! Space sends the bear back to the middle.">
+          <p>
+            <strong>Press <kbd>Space</kbd> to send the bear home</strong>: set the target back to the middle of the screen.
+          </p>
+          <p class="hint">Add a new hook: <code>function onKeyDown(key) { … }</code>, on its own after the <code>}</code> that closes <code>onMouseDown</code> (not inside another function).</p>
+          <p class="hint">Inside it, ask <code>if (key === keys.SPACE)</code>, and set <code>targetX = WIDTH / 2</code> in the <code>if</code>.</p>
+          <pre class="answer">function onKeyDown(key) {
+  if (key === keys.SPACE) targetX = WIDTH / 2;
+}</pre>
+        </div>
+        <p class="muted">The bear can go anywhere. Now let's give it something to chase.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Pancakes from the sky">
+        <span class="step-kicker"></span>
+        <h2>Pancakes from the sky</h2>
+        <p>
+          Here's the main event: a pancake, falling from the sky. When it falls off the bottom of
+          the screen, another one starts again from the top. Slide the bear around and watch it fall past.
+        </p>
+        <div class="cell" data-step="05-falling" data-watch="pancake.y"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="function makePancake">makePancake()</code> is a function
+            that <em>builds</em> something. It makes a new Actor, up above the screen at
+            <code class="ref" data-match="-30">y = -30</code> (negative y is above the top edge), and
+            at a random x:
+            <code class="ref" data-match="randomInt(EDGE">randomInt(EDGE, WIDTH - EDGE)</code>
+            picks a whole number between the two, both included.
+          </li>
+          <li>
+            <code class="ref" data-match="return newPancake">return newPancake;</code> hands the finished pancake back to whoever
+            called the function, like a baker handing you your order.
+          </li>
+          <li>
+            <code class="ref" data-match="let pancake">let pancake = makePancake();</code> keeps
+            the current pancake in a variable. It's <code>let</code> because we'll swap in a fresh
+            pancake later.
+          </li>
+          <li>
+            <code class="ref" data-match="pancake.y += PANCAKE_SPEED * dt">pancake.y += PANCAKE_SPEED * dt;</code>
+            is the bear's trick again: speed × <code>dt</code>. But we <em>add</em> to y, because
+            y grows as you go down.
+          </li>
+          <li>
+            <code class="ref" data-match="HEIGHT + 30">if (pancake.y &gt; HEIGHT + 30)</code> asks
+            "has it fallen past the bottom of the screen?", and if so, a brand new pancake takes
+            its place.
+          </li>
+          <li>
+            The bear's moving code now has its own name,
+            <code class="ref" data-match="function moveChef">moveChef(dt)</code>, and
+            <code class="ref" data-match="function update">update(dt)</code> calls it, then looks
+            after the pancake. As the game grows, <code>update</code> becomes a list of jobs.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🧺</span>
+          <div>
+            <span class="callout-title">Big idea: functions can make things</span>
+            <p>
+              A function can <code>return</code> a value, so the line that called it gets something
+              back: <code>makePancake()</code> <em>becomes</em> a pancake. When the same job is
+              needed in lots of places (and soon it will be), put it in a function and give it a
+              good name.
+            </p>
+          </div>
+        </div>
+
+        <div class="tweak" data-name="PANCAKE_SPEED" data-min="30" data-max="500" data-step="5" data-label="Falling speed" data-unit=" px/s" data-icon="🥞"></div>
+
+        <div class="quiz" data-id="q-fall" data-answer="b">
+          <p>A pancake falls at <code>PANCAKE_SPEED = 140</code> pixels a second. How far does it fall in 2 seconds?</p>
+          <button data-choice="a">70 pixels</button>
+          <button data-choice="b">280 pixels</button>
+          <button data-choice="c">142 pixels</button>
+          <div class="explain" data-for="b">Distance = speed × time: <code>140 × 2 = 280</code>. Every frame adds a thin slice of that, <code>140 × dt</code>.</div>
+          <div class="explain" data-for="wrong">Multiply the speed (pixels per second) by the number of seconds.</div>
+        </div>
+
+        <div class="challenge" data-id="fast-fall" data-success="Whoosh! Those pancakes are in a hurry.">
+          <p><strong>Make the pancakes fall fast</strong>: at least 300 pixels a second.</p>
+          <p class="hint">Use the slider, or change the number in <code>const PANCAKE_SPEED</code>.</p>
+          <pre class="answer">const PANCAKE_SPEED = 320;</pre>
+        </div>
+        <p class="muted">Pancakes fall right through the bear. We need some rules.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Catch it!">
+        <span class="step-kicker"></span>
+        <h2>Catch it!</h2>
+        <p>
+          Time for the rule that makes this a game. When a pancake falls down to the height of the
+          plate, the code looks at where the bear is: if the plate is underneath, the pancake is
+          caught, and if not, it sails on by. Slide under the pancakes and watch the score climb.
+          Click the game first so it can hear your keys.
+        </p>
+        <div class="cell" data-step="06-catch" data-watch="score, pancake.state"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="function stackTop">stackTop()</code> answers "how high
+            is the top of the plate?". <code class="ref" data-match="chef.top">chef.top</code> is
+            the y of the top of the bear's picture (every Actor knows its <code>top</code>,
+            <code>bottom</code>, <code>left</code> and <code>right</code> edges), and the plate's surface is
+            <code class="ref" data-match="const PLATE_DEPTH">PLATE_DEPTH</code> pixels below that.
+          </li>
+          <li>
+            <code class="ref" data-match="pancake.bottom >= stackTop()">pancake.bottom &gt;= stackTop()</code>
+            is true once the pancake's bottom edge has reached the plate. (<code>&gt;=</code> means "greater
+            than or equal to": y gets bigger going down, so a bigger y means it has fallen <em>further</em>.)
+            We only check while the pancake's
+            <code class="ref" data-match='pancake.state === "falling"'>state</code> is
+            <code>"falling"</code>. <code>state</code> isn't something Actors come with: we stuck our own label on each pancake
+            (<code>newPancake.state = "falling"</code>), so it can remember what's happening to it. <code>===</code> asks "is it exactly
+            the same as…?", and <code>&amp;&amp;</code> means <strong>and</strong>: both sides must be true.
+          </li>
+          <li>
+            <code class="ref" data-match="Math.abs(pancake.x - chef.x)">Math.abs(pancake.x - chef.x)</code>
+            is how far apart they are sideways. (<code>Math</code> is a built-in toolbox of number helpers.) <code>Math.abs</code> drops any minus sign
+            (<code>Math.abs(-50)</code> is <code>50</code>), so it doesn't matter which side the pancake
+            is on. If that is <code class="ref" data-match="< CATCH_RANGE">less than CATCH_RANGE</code>, it's caught!
+          </li>
+          <li>
+            A catch adds one point with <code class="ref" data-match="score += 1">score += 1</code> and starts a new pancake.
+            Everything after an <code>if</code> that you want to run together goes inside <code>{ … }</code>
+            curly brackets. (With only one line to run, the brackets can be left out, as we did in the last step.)
+          </li>
+          <li>
+            Otherwise, the <code class="ref" data-match="} else {">else</code> part runs and the pancake's
+            state becomes <code>"missed"</code>. That way it's not checked again as it falls, and
+            nobody gets credit for catching it halfway down the bear!
+          </li>
+          <li>
+            <code class="ref" data-match="function write">write(text, x, y, size, color)</code> is
+            our own helper for drawing words. The five names in its brackets are slots that get filled in
+            order by whoever calls it: <code>write("Hi", 110, 34, 28, "white")</code> means text <code>"Hi"</code>, centred at x 110,
+            y 34, size 28, in white. Inside it,
+            <code class="ref" data-match="screen.draw.text">screen.draw.text(text, { … })</code> does the work, and its options say
+            where the middle of the words goes (<code>center</code>), how big they are (<code>size</code>), their
+            colour, the round font (<code>fontname</code>) and a dark <code>outline</code> so they stay readable. (<code>size: size</code> means "the option called <code>size</code> gets
+            whatever is in our slot called <code>size</code>".) <code class="ref" data-match="`Score: ${score}`">`Score: ${score}`</code>
+            is a <span class="term" tabindex="0" data-tip="Text in `backticks` where ${…} is filled in with a value.">template string</span>:
+            the <code>${score}</code> becomes the score's number. (The backtick <code>`</code> key is usually top-left of the
+            keyboard, next to <kbd>1</kbd>, or directly above <kbd>Tab</kbd>.)
+          </li>
+        </ul>
+
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <div>
+            <span class="callout-title">One equals sign or three?</span>
+            <p>
+              A single <code>=</code> <em>sets</em> a value: <code>score = 5</code> puts 5 in the box.
+              Three, <code>===</code>, <em>asks a question</em>: is it exactly the same? Mixing them up is one of
+              the most common mistakes in all of programming. If a game does something odd after an
+              <code>if</code>, check the equals signs first.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">📏</span>
+          <div>
+            <span class="callout-title">Big idea: "close enough" is a distance</span>
+            <p>
+              Games decide whether things touch by measuring how far apart they are, then comparing with a
+              limit. Here it's only the sideways distance: <code>Math.abs(a - b) &lt; limit</code>.
+              Try the widget: drag the pancake over the plate, and change the limit.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="catch-zone">
+          <div class="widget-title">🎯 Catch zone</div>
+          <div class="widget-sub">
+            Drag the pancake sideways, then press <strong>Drop it</strong>. Inside the green zone it lands on the plate;
+            outside, it falls past.
+          </div>
+          <canvas class="sky" aria-label="Drag the pancake sideways, then drop it onto the plate"></canvas>
+          <div class="control-row">
+            <button class="btn btn-primary btn-small" type="button" data-action="drop">Drop it ▼</button>
+            <label>CATCH_RANGE <input type="range" min="10" max="120" step="1" value="40" data-control="range" /> <output data-out="range">40</output></label>
+          </div>
+          <div class="readout" aria-live="polite"></div>
+        </div>
+
+        <div class="tweak" data-name="CATCH_RANGE" data-min="5" data-max="150" data-label="Catch range" data-unit=" px" data-icon="🥅"></div>
+
+        <div class="quiz" data-id="q-catch" data-answer="b">
+          <p>
+            <code>pancake.x</code> is 300, <code>chef.x</code> is 360 and <code>CATCH_RANGE</code> is 40. Is the pancake caught?
+          </p>
+          <button data-choice="a">Yes: 300 is less than 360</button>
+          <button data-choice="b">No: the distance is 60, which is not less than 40</button>
+          <button data-choice="c">Yes: 300 is less than 40 × 8</button>
+          <div class="explain" data-for="b"><code>Math.abs(300 - 360)</code> is <code>60</code>, and <code>60 &lt; 40</code> is false, so the pancake is missed.</div>
+          <div class="explain" data-for="wrong">Work out <code>Math.abs(300 - 360)</code> first, then compare <em>that</em> with <code>CATCH_RANGE</code>.</div>
+        </div>
+
+        <div class="challenge" data-id="generous" data-success="A big, forgiving plate. Hungry pancakes will find it.">
+          <p><strong>Make the bear's plate more forgiving</strong>: a catch range of at least 80 pixels.</p>
+          <p class="hint">Use the slider, or change <code>const CATCH_RANGE</code>.</p>
+          <pre class="answer">const CATCH_RANGE = 90;</pre>
+        </div>
+
+        <div class="challenge" data-id="catch-three" data-kicker="Play time" data-success="Three pancakes! You're a natural.">
+          <p>Catch <strong>three pancakes</strong>. Click the game, then slide under them.</p>
+          <p class="hint">Keep an eye on the falling pancake and slide until your bear's middle is under it. The mouse is the quickest way.</p>
+          <pre class="answer" data-label="The idea:">Point the mouse at the pancake as it falls.</pre>
+        </div>
+        <p class="muted">One pancake at a time is slow. Let's make it rain.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="A rain of pancakes">
+        <span class="step-kicker"></span>
+        <h2>A rain of pancakes</h2>
+        <p>
+          One pancake at a time is a slow breakfast. We want a whole <strong>rain</strong> of
+          them: a new one every second or so, with several in the air at once. That needs two
+          new tools. A <strong>countdown timer</strong> that says "time for the next pancake!",
+          and a <strong>list</strong> that keeps track of all the pancakes that are falling.
+        </p>
+        <div class="cell" data-step="07-rain" data-watch="falling.length, spawnTimer, score"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="let falling">let falling = [];</code> makes an empty
+            <span class="term" tabindex="0" data-tip="An ordered list of values, written inside [square brackets]. You get one by its position: list[0] is the first.">list</span>
+            (programmers say <em>array</em>). It will hold every pancake that's in the air, and <code>falling.length</code> says how many
+            that is right now (the <strong>Live values</strong> panel shows it).
+            <code class="ref" data-match="falling.push">.push(…)</code> adds something to the end of
+            a list.
+          </li>
+          <li>
+            <code class="ref" data-match="const PANCAKE_PICTURES">PANCAKE_PICTURES</code> is a
+            list of three picture names. <code class="ref" data-match="randomChoice">randomChoice(…)</code>
+            picks one at random, so the pancakes come in plain, blueberry and chocolate-chip flavours.
+          </li>
+          <li>
+            <code class="ref" data-match="spawnTimer -= dt">spawnTimer -= dt;</code> makes
+            <code>spawnTimer</code> a <strong>countdown</strong>: each frame, a little time
+            drains out of it. <code class="ref" data-match="spawnTimer <= 0">if (spawnTimer &lt;= 0)</code>
+            says "is it less than or equal to zero? Then time's up!". Then a new pancake goes into the list, and
+            <code class="ref" data-match="spawnTimer = SPAWN_GAP">spawnTimer = SPAWN_GAP</code>
+            winds the timer up again.
+          </li>
+          <li>
+            <code class="ref" data-match="for (const pancake of falling)">for (const pancake of falling)</code>
+            is a <span class="term" tabindex="0" data-tip="Code that repeats. This kind visits each item of a list, one at a time, calling it by the name you give.">loop</span>:
+            it runs the code inside once for <em>each</em> pancake in the list, with
+            <code>pancake</code> standing for the one it's on. (A name made inside a function or a loop
+            belongs only to it, so it's fine that other functions use <code>pancake</code> for their own pancake.)
+            Every pancake falls, and every pancake gets the catch-or-miss decision from last step.
+          </li>
+          <li>
+            The decision has moved into two small functions with a
+            <span class="term" tabindex="0" data-tip="A name in the brackets of a function, filled in by whoever calls it. landPancake(pancake) is told which pancake landed.">parameter</span>:
+            <code class="ref" data-match="function landPancake">landPancake(pancake)</code> and
+            <code class="ref" data-match="function missPancake">missPancake(pancake)</code>. The
+            pancake you hand in is the one the function works on. Later steps add more to each.
+          </li>
+          <li>
+            <code class="ref" data-match="const stillFalling">const stillFalling = [];</code>:
+            a fresh, empty list for the pancakes that are <em>still in the air</em>. Inside the
+            loop, a pancake only goes into it with
+            <code class="ref" data-match="stillFalling.push">stillFalling.push(pancake)</code> if it
+            hasn't landed (<code class="ref" data-match='pancake.state !== "landed"'>!==</code> means "is not") <em>and</em> hasn't
+            fallen off the bottom. At the end,
+            <code class="ref" data-match="falling = stillFalling">falling = stillFalling</code> swaps
+            the lists over, and the landed and lost pancakes are gone.
+          </li>
+          <li>
+            Drawing is a loop too: <code class="ref" data-match="pancake.draw()">for (const pancake of falling) pancake.draw();</code>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🧺</span>
+          <div>
+            <span class="callout-title">Big idea: lists and loops</span>
+            <p>
+              A list holds many things; a loop does something with each one. Together they let you
+              write the code for one pancake <em>once</em> and have it work for ten, or a hundred.
+              And a <strong>timer</strong> that counts down to zero and starts over is how games
+              make things happen on a schedule.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="rain-lab">
+          <div class="widget-title">🌧️ Rain lab</div>
+          <div class="widget-sub">
+            The same timer and the same two lists as the code. Watch <code>spawnTimer</code> drain,
+            a pancake join <code>falling</code>, and the list shrink when one drops off the bottom.
+          </div>
+          <div class="rain-layout">
+            <div>
+              <canvas class="sky is-plain" aria-label="Pancakes falling, one per timer ring"></canvas>
+              <div class="control-row">
+                <label>SPAWN_GAP <input type="range" min="0.3" max="3" step="0.1" value="1.4" data-control="gap" /> <output data-out="gap">1.4</output></label>
+                <label>Speed <input type="range" min="40" max="400" step="10" value="140" data-control="speed" /> <output data-out="speed">140</output></label>
+              </div>
+            </div>
+            <div>
+              <div class="readout" data-readout="timer" aria-live="off"></div>
+              <div class="timer-bar" aria-hidden="true"><span></span></div>
+              <pre class="rain-list" aria-live="off"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="tweak-row">
+          <div class="tweak" data-name="SPAWN_GAP" data-min="0.2" data-max="4" data-step="0.1" data-label="Seconds between pancakes" data-unit=" s" data-icon="⏲️"></div>
+          <div class="tweak" data-name="PANCAKE_SPEED" data-min="30" data-max="500" data-step="5" data-label="Falling speed" data-unit=" px/s" data-icon="🥞"></div>
+        </div>
+
+        <div class="quiz" data-id="q-timer" data-answer="a">
+          <p>
+            <code>spawnTimer</code> starts at <code>0</code>. What does that do at the start of the game?
+          </p>
+          <button data-choice="a">The first pancake appears straight away, because 0 is already "time's up"</button>
+          <button data-choice="b">Nothing falls until you click the game</button>
+          <button data-choice="c">The game shows an error, because a timer can't be 0</button>
+          <div class="explain" data-for="a">
+            <code>0 - dt</code> is less than or equal to 0 on the very first frame, so a pancake
+            is made and the timer is set to <code>SPAWN_GAP</code>. Starting at 0 means "now".
+          </div>
+          <div class="explain" data-for="wrong">Check the <code>if</code>: is a timer of 0 (or less) the same as time being up?</div>
+        </div>
+
+        <div class="quiz" data-id="q-list" data-answer="b">
+          <p>Why does <code>movePancakes</code> build a new list, <code>stillFalling</code>, instead of removing pancakes from <code>falling</code> as it loops?</p>
+          <button data-choice="a">Lists can never be changed once they're made</button>
+          <button data-choice="b">Removing items from a list while you're looping over it shifts everything along, so the loop can skip a pancake</button>
+          <button data-choice="c">It makes the game run faster</button>
+          <div class="explain" data-for="b">
+            Exactly. If you pull item 2 out of a list, item 3 slides into its place, and the loop
+            moves on to what is now item 3, skipping the one that slid down. Building a second
+            list of <em>keepers</em> sidesteps the problem.
+          </div>
+          <div class="explain" data-for="wrong">Picture the loop standing at item 2 of the list, and you remove item 2. What's now where it was standing?</div>
+        </div>
+
+        <div class="challenge" data-id="all-berry" data-success="Blueberry season! Every pancake has berries.">
+          <p><strong>Make every pancake a blueberry pancake.</strong> Only <code>"pancake_berry"</code> should fall.</p>
+          <p class="hint">The pictures come from <code>PANCAKE_PICTURES</code>. What should be in that list?</p>
+          <pre class="answer">const PANCAKE_PICTURES = ["pancake_berry"];</pre>
+        </div>
+
+        <div class="challenge" data-id="click-spawn" data-success="Click, click, pancake! You can make it rain on demand.">
+          <p><strong>Make a pancake appear every time you click.</strong> It's the same line that makes the timer's pancakes.</p>
+          <p class="hint">Look inside <code>function onMouseDown</code>. You need one line that does what <code>spawnPancakes</code> does when its timer runs out.</p>
+          <p class="hint">Add <code>falling.push(makePancake());</code> after the line that sets <code>targetX</code>.</p>
+          <pre class="answer">function onMouseDown(pos, button) {
+  if (button !== mouse.LEFT) return;
+  targetX = pos[0];
+  falling.push(makePancake());
+}</pre>
+        </div>
+        <p class="muted">Pancakes that land disappear. Next, we'll keep them.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Build the tower">
+        <span class="step-kicker"></span>
+        <h2>Build the tower</h2>
+        <p>
+          A caught pancake shouldn't vanish. It should <strong>stay on the plate</strong>, and the
+          next one should land on top of it. Catch a few and watch the tower grow. There's a little
+          tune hiding in it, too. Tower of ten? It's served to a customer, and you get a fresh plate.
+        </p>
+        <div class="cell" data-step="08-tower" data-watch="stack.length, score"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="let stack">let stack = [];</code> is a second list: the
+            pancakes on the plate, from the bottom up. When a pancake lands,
+            <code class="ref" data-match="stack.push(pancake)">stack.push(pancake)</code> moves it
+            from the air into the tower.
+          </li>
+          <li>
+            The tower's top is higher with every pancake. <code class="ref" data-match="stack.length * PANCAKE_HEIGHT">stack.length * PANCAKE_HEIGHT</code>
+            is how tall it is, and <code>stackTop()</code> subtracts that from the plate's y. We
+            <em>subtract</em> because up is smaller y. So the landing spot moves up as the tower grows, and
+            each new pancake has a shorter way to fall.
+          </li>
+          <li>
+            <code class="ref" data-match="function placeStack">placeStack()</code> puts every pancake of the tower in its place,
+            every frame. <code class="ref" data-match="for (let i = 0">for (let i = 0; i &lt; stack.length; i++)</code>
+            is a <strong>counting loop</strong>: <code>i</code> starts at 0 and goes up by one
+            (<code>i++</code>) for as long as <code>i &lt; stack.length</code>. So <code>i</code> is the
+            pancake's <em>position</em> in the list, and <code class="ref" data-match="stack[i]">stack[i]</code>
+            is the pancake itself.
+          </li>
+          <li>
+            <code class="ref" data-match="i * PANCAKE_HEIGHT">chef.top + PLATE_DEPTH - i * PANCAKE_HEIGHT</code>
+            is the y where pancake number <code>i</code> sits: pancake 0 on the plate, pancake 1 one
+            pancake-height higher, and so on. And <code class="ref" data-match="pancake.x = chef.x">pancake.x = chef.x</code>
+            keeps the whole tower on the bear's plate as it slides.
+          </li>
+          <li>
+            <code class="ref" data-match="const note">const note = NOTES[(stack.length - 1) % NOTES.length];</code>
+            picks a note: the first pancake plays <code>NOTES[0]</code>, the second
+            <code>NOTES[1]</code>, climbing a scale. <code>%</code> is the <strong>remainder</strong>
+            after dividing: <code>12 % 10</code> is <code>2</code>, as 12 is one 10 and 2 left over. So if the tower ever
+            grows taller than the list, the notes wrap back to the start instead of running out.
+          </li>
+          <li>
+            <code class="ref" data-match="tone.play">tone.play(note, 0.25, { … })</code> plays the note: its name, how many
+            seconds it lasts, and some options: the <code>waveform</code> (the kind of sound) and the
+            <code>volume</code>, from 0 to 1. The sound only starts after you've clicked or pressed a key in the game:
+            browsers don't allow sound before that.
+          </li>
+          <li>
+            <code class="ref" data-match=">= STACK_LIMIT">if (stack.length &gt;= STACK_LIMIT) serveStack();</code>
+            ends a full tower: <code class="ref" data-match="function serveStack">serveStack()</code> gives the bonus points and empties
+            the plate with <code class="ref" data-match="stack = []">stack = []</code>.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">0️⃣</span>
+          <div>
+            <span class="callout-title">Big idea: lists count from zero</span>
+            <p>
+              The first thing in a list is number <strong>0</strong>, the second is number 1, and so on.
+              So a tower of 4 pancakes has pancakes 0, 1, 2 and 3, and the top one is
+              <code>stack[stack.length - 1]</code>. It feels odd for a day or two, then it's second nature.
+              Here's where each pancake of a tower sits when the plate's surface is at y = 350:
+            </p>
+            <pre class="code-block">pancake 0:  350
+pancake 1:  350 - 1 * 13 = 337
+pancake 2:  350 - 2 * 13 = 324
+pancake 3:  350 - 3 * 13 = 311</pre>
+          </div>
+        </div>
+
+        <div class="tweak-row">
+          <div class="tweak" data-name="PANCAKE_HEIGHT" data-min="4" data-max="30" data-label="Pancake thickness" data-unit=" px" data-icon="📏"></div>
+          <div class="tweak" data-name="SERVE_BONUS" data-min="0" data-max="100" data-label="Serving bonus" data-unit=" pts" data-icon="🎁"></div>
+        </div>
+
+        <div class="quiz" data-id="q-index" data-answer="c">
+          <p>A tower has 4 pancakes. What is the position (index) of the top one in <code>stack</code>?</p>
+          <button data-choice="a"><code>4</code></button>
+          <button data-choice="b"><code>1</code></button>
+          <button data-choice="c"><code>3</code></button>
+          <div class="explain" data-for="c">Counting from 0 gives 0, 1, 2, 3: the top one is <code>stack[3]</code>, which is <code>stack[stack.length - 1]</code>.</div>
+          <div class="explain" data-for="a"><code>stack.length</code> is 4, but the positions only go up to 3. <code>stack[4]</code> doesn't exist yet.</div>
+          <div class="explain" data-for="b">Position 1 is the second pancake from the bottom. The top of four is the <em>last</em> position.</div>
+        </div>
+
+        <div class="challenge" data-id="stack-five" data-kicker="Play time" data-success="Five high! The tower's getting tall.">
+          <p><strong>Build a tower five pancakes high</strong> on your plate. Click the game and slide under the pancakes.</p>
+          <p class="hint">Point the mouse at each pancake as it falls. If you miss one, nothing bad happens (yet): keep going.</p>
+          <p class="hint">A tower of ten is served and the plate empties, so don't get ahead of yourself: you only need five.</p>
+          <pre class="answer" data-label="The idea:">Catch five pancakes onto the plate, using the mouse.</pre>
+        </div>
+        <div class="challenge" data-id="short-order" data-success="Short stacks! Order up, order up!">
+          <p><strong>Serve a tower after only 5 pancakes</strong>, instead of 10. (Do this one second, so the plate in the last challenge still grows past five.)</p>
+          <p class="hint">The size of a full tower is a constant near the top.</p>
+          <pre class="answer">const STACK_LIMIT = 5;</pre>
+        </div>
+
+        <p class="muted">The tower is tidy, perfectly straight and a bit boring. Let's make it wobble.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="A wobbly tower">
+        <span class="step-kicker"></span>
+        <h2>A wobbly tower</h2>
+        <p>
+          A real stack of pancakes doesn't stand still: it sways, and the higher you go, the more
+          it sways. Let's do that. Catch a few pancakes and watch the top of the tower. It moves,
+          so you have to <strong>aim for where the top is</strong>, not where the bear is.
+        </p>
+        <div class="cell" data-step="09-wobble" data-watch="time, stack.length"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="function sway">sway(index)</code> is a new function: tell it a pancake's position in
+            the tower (<code>0</code> for the bottom one) and it hands back how far that pancake is leaning, sideways, right now.
+            <code>placeStack</code> asks it about each pancake, and <code>topX</code> asks about the <em>next</em> slot.
+            The pieces inside it come next.
+          </li>
+          <li>
+            <code class="ref" data-match="let time">let time = 0;</code> is a clock for the whole
+            game, and <code class="ref" data-match="time += dt">time += dt;</code> in
+            <code>update</code> adds each frame's slice, so it always says how many seconds have
+            passed since the game began.
+          </li>
+          <li>
+            <code class="ref" data-match="Math.sin">Math.sin(time * WOBBLE_SPEED)</code> is the
+            magic. As its input grows, <code>Math.sin</code> swings smoothly back and forth between
+            −1 and +1 and back again, forever: a <strong>sine wave</strong>. Multiplying
+            <code>time</code> by <code class="ref" data-match="const WOBBLE_SPEED">WOBBLE_SPEED</code>
+            makes the swing faster or slower.
+          </li>
+          <li>
+            Multiplying the swing by <code class="ref" data-match="* WOBBLE *">WOBBLE * index * index</code>
+            says <em>how far</em>: the sideways distance in pixels. <code>index</code> is how high
+            the pancake is, and using it <em>twice</em> means the top of a tall tower swings far more
+            than the bottom, as a real one does. The bottom pancake (index 0) never sways: it only moves with the bear.
+          </li>
+          <li>
+            <code class="ref" data-match="pancake.x = chef.x + sway(i)">pancake.x = chef.x + sway(i);</code>
+            puts each pancake at the bear's x, <em>plus its own sway</em>.
+          </li>
+          <li>
+            <code class="ref" data-match="function topX">topX()</code> is "the x where the next
+            pancake would land": the bear's x plus the sway of the next slot, <code class="ref" data-match="sway(stack.length)">sway(stack.length)</code>.
+            A tower of 4 fills slots 0 to 3, so the next pancake will go in slot 4, which is <code>stack.length</code>.
+            And now <code class="ref" data-match="Math.abs(pancake.x - topX())">Math.abs(pancake.x - topX())</code>
+            is the catch test, so a pancake only counts if it lands on the swaying top. The plate hasn't moved, but the
+            target has.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🌊</span>
+          <div>
+            <span class="callout-title">Big idea: sine waves make smooth swings</span>
+            <p>
+              Anything that goes smoothly back and forth (swaying, bobbing, pulsing, blinking) is
+              a job for <code>Math.sin</code>. Feed it a number that keeps growing, like
+              <code>time</code>, and you get a number that cycles from −1 to 1. Multiply it by a
+              size, and you have motion with exactly the size and speed you want.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="wobble-lab">
+          <div class="widget-title">🌊 Wobble lab</div>
+          <div class="widget-sub">
+            The same <code>sway</code> function, drawn. Add pancakes and watch the top swing further than the bottom. The
+            wave on the right shows <code>Math.sin(time * WOBBLE_SPEED)</code>.
+          </div>
+          <canvas class="sky is-plain" aria-label="A tower of pancakes swaying, and the sine wave that drives it"></canvas>
+          <div class="control-row">
+            <label>Pancakes <input type="range" min="1" max="10" step="1" value="8" data-control="count" /> <output data-out="count">8</output></label>
+            <label>WOBBLE <input type="range" min="0" max="1.5" step="0.05" value="0.6" data-control="wobble" /> <output data-out="wobble">0.6</output></label>
+            <label>WOBBLE_SPEED <input type="range" min="0" max="8" step="0.25" value="3" data-control="speed" /> <output data-out="speed">3</output></label>
+          </div>
+          <div class="readout" aria-live="off"></div>
+        </div>
+
+        <div class="tweak-row">
+          <div class="tweak" data-name="WOBBLE" data-min="0" data-max="2" data-step="0.05" data-label="Wobbliness" data-icon="🌊"></div>
+          <div class="tweak" data-name="WOBBLE_SPEED" data-min="0" data-max="10" data-step="0.25" data-label="Wobble speed" data-icon="⚡"></div>
+        </div>
+
+        <div class="quiz" data-id="q-sway" data-answer="b">
+          <p>
+            With <code>WOBBLE = 0.6</code>, how far can the spot where the 10th pancake will land (index 9) swing from the bear's middle? (<code>sin</code> is at
+            most 1.)
+          </p>
+          <button data-choice="a">About 5 pixels (<code>0.6 × 9</code>)</button>
+          <button data-choice="b">About 49 pixels (<code>0.6 × 9 × 9</code>)</button>
+          <button data-choice="c">1 pixel</button>
+          <div class="explain" data-for="b">
+            <code>0.6 × 9 × 9 = 48.6</code>. The index counts twice, which is why the top of a tall
+            tower swings so much more than a pancake near the bottom (number 2 only swings 2.4 pixels).
+          </div>
+          <div class="explain" data-for="wrong">Look at <code>sway</code>: <code>sin × WOBBLE × index × index</code>, and <code>sin</code> can be as big as 1.</div>
+        </div>
+
+        <div class="challenge" data-id="earthquake" data-success="Earthquake! Hold on to your pancakes.">
+          <p><strong>Shake the tower three times faster</strong>: a wobble speed of at least 9.</p>
+          <p class="hint">Use the slider, or change <code>const WOBBLE_SPEED</code>.</p>
+          <pre class="answer">const WOBBLE_SPEED = 9;</pre>
+        </div>
+
+        <div class="challenge" data-id="snake" data-success="A snaking, swirling tower! Each pancake follows the one below.">
+          <p>
+            <strong>Make the tower wave like a snake</strong>: each pancake should swing a little
+            <em>out of step</em> with the one below it, so a wave runs up the tower.
+          </p>
+          <p class="hint">Inside <code>Math.sin(…)</code>, you can add or subtract a number that depends on <code>index</code> to shift the wave. (Inside <code>sway</code>, the pancake's position is called <code>index</code>.)</p>
+          <p class="hint">Try <code>Math.sin(time * WOBBLE_SPEED - index * 0.4)</code>.</p>
+          <pre class="answer">return Math.sin(time * WOBBLE_SPEED - index * 0.4) * WOBBLE * index * index;</pre>
+        </div>
+        <p class="muted">A wobbly tower and nothing to lose. We need some rules about losing.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Three strikes">
+        <span class="step-kicker"></span>
+        <h2>Three strikes</h2>
+        <p>
+          So far, missing a pancake costs you nothing. A game needs something to lose. We'll give
+          you <strong>three lives</strong>: miss a third pancake and it's game over, with a
+          chance to play again. That means the game needs to know <em>what's happening right
+          now</em>, playing or lost, which is called its <strong>state</strong>. Let a few
+          pancakes drop past the plate and see what happens.
+        </p>
+        <div class="cell" data-step="10-strikes" data-watch="state, misses, score"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="let misses">misses</code> counts the pancakes you've
+            lost, and <code class="ref" data-match="const MAX_MISSES">MAX_MISSES</code> is how many you can afford.
+            <code class="ref" data-match="misses += 1">misses += 1;</code> goes in
+            <code>missPancake</code>, and <code class="ref" data-match="misses >= MAX_MISSES">if (misses &gt;= MAX_MISSES) endGame();</code>
+            ends the game. (<code>&gt;=</code> means "greater than or equal to".)
+          </li>
+          <li>
+            <code class="ref" data-match="let state">let state = "playing";</code> is the game's
+            <span class="term" tabindex="0" data-tip="A variable that says which situation the game is in, like &quot;title&quot;, &quot;playing&quot; or &quot;lost&quot;.">state</span>:
+            a word in a variable. (You've met this idea already: each pancake has its own <code>state</code>,
+            <code>"falling"</code>, <code>"landed"</code> or <code>"missed"</code>. Now the whole game gets one.)
+            <code class="ref" data-match="function endGame">endGame()</code> changes it to <code>"lost"</code>
+            and clears the pancakes still in the air. <code class="ref" data-match="function startGame">startGame()</code> puts everything
+            back to the beginning and sets the state to <code>"playing"</code>.
+          </li>
+          <li>
+            <code class="ref" data-match='state !== "playing"'>if (state !== "playing") return;</code>
+            is the heart of a state: the part of <code>update</code> below it, spawning and moving pancakes, <em>only runs
+            while playing</em>. <code>return</code> leaves the function early. Notice the bear's moving
+            and the tower's swaying are <em>above</em> it, so they carry on in every state.
+          </li>
+          <li>
+            In <code class="ref" data-match="function startIfWaiting">startIfWaiting()</code>, a press restarts the game when it's
+            <code>"lost"</code>. A <strong>click</strong> (see <code>onMouseDown</code>) or the
+            <code class="ref" data-match="function onKeyDown">Space or Enter key</code> calls it (<code>keys.RETURN</code> is the Enter key).
+            <code>||</code> means "or".
+          </li>
+          <li>
+            The hearts: <code class="ref" data-match="for (let i = 0; i < MAX_MISSES">a counting loop</code> draws one heart per
+            life. <code class="ref" data-match='? "heart" : "heart_empty"'>cond ? a : b</code> picks one of two values: a full
+            <code>"heart"</code> while <code>i</code> is below the lives we have left, an
+            <code>"heart_empty"</code> after that.
+            <code class="ref" data-match="screen.blit">screen.blit(picture, [x, y])</code> paints a picture with its top-left corner at x, y.
+            The x is worked out from the number of lives, so the hearts line up along the right edge however
+            many lives there are.
+          </li>
+          <li>
+            <code class="ref" data-match="function drawMessages">drawMessages()</code> writes the "Oh crumbs!" screen
+            when the state is <code>"lost"</code>, with a see-through dark rectangle over the game. The colour comes from
+            <code class="ref" data-match="rgb(42, 33, 64, 120)">rgb(42, 33, 64, 120)</code>, which mixes red, green and blue
+            (each from 0 to 255) plus a fourth number for how <em>solid</em> it is: 255 is solid, 0 is invisible.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">🚦</span>
+          <div>
+            <span class="callout-title">Big idea: game states</span>
+            <p>
+              A game is always in exactly one <strong>state</strong>, and each state decides what
+              the code does: what <code>update</code> does, what gets drawn, what a click means.
+              Adding a screen later (a title, a pause) means adding one more word and a few
+              <code>if</code>s. That's how nearly every game you've played is built.
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-id="q-state" data-answer="b">
+          <p>
+            In the <code>"lost"</code> state, pancakes stop falling, but the tower keeps swaying. Why?
+          </p>
+          <button data-choice="a">It's a bug: the game should freeze completely</button>
+          <button data-choice="b">The sway comes from <code>time</code> and <code>placeStack()</code>, which run <em>before</em> the early <code>return</code></button>
+          <button data-choice="c">The state <code>"lost"</code> makes everything wobble</button>
+          <div class="explain" data-for="b">
+            The early <code>return</code> only skips the lines below it. Anything above it always runs:
+            a nice way to leave the world moving while the game is over.
+          </div>
+          <div class="explain" data-for="wrong">Look at the order of the lines in <code>update</code>: which ones come before <code>if (state !== "playing") return;</code>?</div>
+        </div>
+
+        <div class="tweak" data-name="MAX_MISSES" data-min="1" data-max="8" data-label="Lives" data-icon="❤️"></div>
+
+        <div class="challenge" data-id="five-lives" data-success="Five lives! A hardy, hopeful bear.">
+          <p><strong>Give the bear five lives.</strong> All five hearts should fit on the screen.</p>
+          <p class="hint">The number of lives is a constant. The heart row is worked out from it, so it should adjust itself.</p>
+          <pre class="answer">const MAX_MISSES = 5;</pre>
+        </div>
+
+        <div class="challenge" data-id="lose-on-purpose" data-kicker="Play time" data-success="Oh crumbs! Now you've seen the game-over screen. Press Space to play again.">
+          <p><strong>Lose on purpose.</strong> Park the bear in a corner and let the pancakes fall past until your hearts run out, then admire your game-over screen.</p>
+          <p class="hint">Slide the bear to the far left and keep it there. A pancake that isn't over the plate is a miss.</p>
+          <pre class="answer" data-label="The idea:">Stand in a corner and wait for three misses.</pre>
+        </div>
+        <p class="muted">The game is complete, but it's never any harder. Time for a rush.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="The lunch rush">
+        <span class="step-kicker"></span>
+        <h2>The lunch rush</h2>
+        <p>
+          Right now pancake number one hundred falls exactly like pancake number one. Real kitchens
+          get <em>busier</em>: breakfast is gentle, lunch is frantic. We could write
+          <code>if</code> after <code>if</code> for each stage, but there's a neater way: put the
+          numbers in a <strong>table</strong>, and let the code look things up in it.
+        </p>
+        <div class="cell" data-step="11-rush" data-watch="activeRush.name, score, spawnTimer"></div>
+        <ul>
+          <li>
+            <code class="ref" data-match="const RUSHES">RUSHES</code> is a list of
+            <span class="term" tabindex="0" data-tip="A bundle of named values in { curly brackets }, like { name: &quot;Brunch&quot;, from: 25 }.">objects</span>.
+            Each object is a row of the table: a <code>name</code>, the score it
+            starts <code>from</code>, how fast pancakes fall (<code>speed</code>) and how long
+            to wait between them (<code>gap</code>). As with <code>chef.x</code>, a dot reads one part of a row:
+            <code>rush.speed</code>.
+          </li>
+          <li>
+            <code class="ref" data-match="function currentRush">currentRush()</code> answers
+            "which row are we on?". It starts with the first row, then loops down the list, calling each row
+            <code>candidate</code> in turn. Whenever the score has reached a candidate's <code>from</code>
+            (<code class="ref" data-match="score >= candidate.from">score &gt;= candidate.from</code>), that row becomes the answer. The
+            last row the score reaches wins.
+          </li>
+          <li>
+            <code class="ref" data-match="let activeRush">activeRush</code> remembers the rush we're in right now. After every
+            catch, <code class="ref" data-match="updateRush();">updateRush()</code> compares it with
+            <code class="ref" data-match="currentRush() !== activeRush">currentRush()</code>.
+            When they differ, a busier rush has begun, and the game
+            <code class="ref" data-match="announce(`">announces</code> it with a banner that counts down on
+            <code class="ref" data-match="bannerTimer -= dt">bannerTimer</code>.
+          </li>
+          <li>
+            The score bar shows <code class="ref" data-match="write(activeRush.name">activeRush.name</code> in the middle of the top of the screen.
+          </li>
+          <li>
+            The old constants <code>PANCAKE_SPEED</code> and <code>SPAWN_GAP</code> are gone:
+            <code class="ref" data-match="activeRush.gap">activeRush.gap</code> sets the timer, and each new pancake
+            is born with <code class="ref" data-match="newPancake.speed">its own speed</code>, which
+            <code class="ref" data-match="pancake.speed * dt">movePancakes</code> then uses.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">📋</span>
+          <div>
+            <span class="callout-title">Big idea: levels as data</span>
+            <p>
+              When the rules of a level are <em>data</em> (rows in a table) rather than
+              <em>code</em>, a new level costs nothing but a new row. You can tune the difficulty
+              without touching a single <code>if</code>, and a friend who can't program can still
+              edit the table. Pick any score below to see which row the code finds.
+            </p>
+          </div>
+        </div>
+
+        <div class="widget" id="rush-explorer">
+          <div class="widget-title">📋 Rush explorer</div>
+          <div class="widget-sub">
+            Slide the score and watch <code>currentRush()</code> walk down the table. Rows it has
+            reached are blue, and the last one it reached is orange.
+          </div>
+          <div class="control-row">
+            <label>score <input type="range" min="0" max="220" step="1" value="30" data-control="score" /> <output data-out="score">30</output></label>
+          </div>
+          <table class="rush-table" aria-label="The rush table, highlighted for the chosen score">
+            <thead><tr><th>name</th><th>from</th><th>speed</th><th>gap</th><th>score &gt;= from?</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="rush-bars"></div>
+          <div class="readout" aria-live="polite"></div>
+        </div>
+
+        <div class="quiz" data-id="q-rush" data-answer="b">
+          <p>
+            The score is 70. Which rush does <code>currentRush()</code> return, with the table in the code above?
+          </p>
+          <button data-choice="a">Brunch, because 70 is nearest to 65</button>
+          <button data-choice="b">Lunch rush: the last row whose <code>from</code> is 70 or less</button>
+          <button data-choice="c">Dinner rush: it's the one with the biggest numbers</button>
+          <div class="explain" data-for="b">
+            Breakfast (0), Brunch (25) and Lunch rush (65) are all reached, but Dinner rush starts
+            at 105, so it's not. The last one reached wins.
+          </div>
+          <div class="explain" data-for="wrong">Go row by row: is the score 70 at least as big as each row's <code>from</code>? The last "yes" is the answer.</div>
+        </div>
+
+        <div class="challenge" data-id="new-rush" data-success="A sixth rush! The kitchen has never been busier.">
+          <p>
+            <strong>Add a sixth rush</strong> at the end of the table: faster and more frequent than
+            the last one, starting at a higher score. You only need to add a row.
+          </p>
+          <p class="hint">Copy the last row (the one for the midnight snack) and give it a new name, a bigger <code>from</code>, a bigger <code>speed</code> and a smaller <code>gap</code>.</p>
+          <p class="hint">Remember the comma at the end of each row.</p>
+          <pre class="answer" data-label="Add this line after the Midnight snack row:">  { name: "Pancake panic", from: 240, speed: 310, gap: 0.8 },</pre>
+        </div>
+
+        <div class="challenge" data-id="quick-brunch" data-kicker="Play time" data-success="Brunch is served early! Notice how the banner popped up.">
+          <p>
+            <strong>Make brunch start after only 5 points</strong>, then play until the banner says
+            "Brunch!".
+          </p>
+          <p class="hint">It's one number in the second row of <code>RUSHES</code>.</p>
+          <p class="hint">Then catch five pancakes (a click or key first, if you need to wake the game up).</p>
+          <pre class="answer">{ name: "Brunch", from: 5, speed: 165, gap: 1.5 },</pre>
+        </div>
+        <p class="muted">The game works, and it gets harder. One more step: make it feel finished.</p>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="step" data-title="Polish: the finished game">
+        <span class="step-kicker"></span>
+        <h2>Polish: the finished game</h2>
+        <p>
+          Everything that makes the game <em>work</em> is done. This last step is everything that makes
+          it <em>feel</em> finished, and it's the whole game: this is the complete
+          <code>main.js</code>, ready to play and ready for you to change. Press Run, then click the game to start.
+        </p>
+        <div class="cell" data-step="final" data-watch="state, score, best"></div>
+        <p>Here's what's new, in the order you'll spot it:</p>
+        <ul>
+          <li>
+            <strong>A title screen.</strong> <code class="ref" data-match='let state = "title"'>state</code> now starts as
+            <code>"title"</code>, <code class="ref" data-match='state === "title"'>drawMessages</code> writes the welcome, and
+            <code class="ref" data-match='state === "title" ||'>startIfWaiting()</code> starts a game from it.
+          </li>
+          <li>
+            <strong>Faces.</strong> The bear swaps pictures: <code class="ref" data-match='chef.image = "bear_happy"'>chef.image = "bear_happy"</code> after
+            a catch and <code class="ref" data-match='chef.image = "bear_ouch"'>"bear_ouch"</code> after a miss. A countdown,
+            <code class="ref" data-match="faceTimer -= dt">faceTimer</code>, turns it back to the calm face a moment later. It's the same
+            timer idea you used for spawning.
+          </li>
+          <li>
+            <strong>Squash and slide.</strong> A pancake lands off-centre by
+            <code class="ref" data-match="pancake.offset = ">offset</code>, then
+            <code class="ref" data-match="animate(pancake, { scale">animate(pancake, { scale: 1, offset: 0, … })</code> glides two numbers
+            to their targets at once: the pancake starts too big (<code>scale = 1.3</code>) and shrinks
+            back with a bounce, while its <code>offset</code> slides to nothing. <code class="ref" data-match="+ pancake.offset">placeStack</code>
+            adds the offset in.
+          </li>
+          <li>
+            <strong>Serving.</strong> A served tower floats up and fades: <code class="ref" data-match="y: pancake.y - 160">animate</code> changes <code>y</code> and
+            <code>opacity</code> over 0.9 seconds with the <code>"easeIn"</code> style. The pancakes move to a
+            <code class="ref" data-match="leaving">leaving</code> list so they're still drawn, and
+            <code class="ref" data-match="clock.schedule">clock.schedule(…, 1)</code> tidies the list away one second later. The
+            <code class="ref" data-match="=> {">() =&gt; { … }</code> it runs is an
+            <span class="term" tabindex="0" data-tip="A function with no name, written right where it's used: () => { … }. Handy for small jobs you hand to something else.">arrow function</span>:
+            a tiny recipe handed over to be followed later. The <span class="term" tabindex="0" data-tip="The style of a motion: linear is steady, easeIn starts slowly and speeds up, bounceEnd bounces to a stop, spring overshoots and settles.">tween</span> is the style of the motion.
+          </li>
+          <li>
+            <strong>Clouds.</strong> A loop at the top makes four <code class="ref" data-match="const clouds">clouds</code> and gives each a
+            random place, size and speed. <code class="ref" data-match="function driftClouds">driftClouds</code> moves them, and
+            <code class="ref" data-match="cloud.right = 0">cloud.right = 0</code> wraps one round to the left side once it has
+            drifted off the right.
+          </li>
+          <li>
+            <strong>Remembering.</strong> <code class="ref" data-match='storage.get("best"'>storage.get("best", 0)</code> reads your best score from the
+            browser's memory (or <code>0</code> if there isn't one yet), and
+            <code class="ref" data-match='storage.set("best"'>storage.set("best", best)</code> saves a new one. Close the page,
+            come back tomorrow, and it's still there.
+          </li>
+          <li>
+            <strong>Finishing touches.</strong> <code class="ref" data-match="newBest = score > best">newBest = score &gt; best</code> stores
+            <code>true</code> or <code>false</code> (is this a new record?) so the game-over screen can cheer. And
+            <code class="ref" data-match='if (state !== "title") drawHud'>if (state !== "title") drawHud();</code> keeps the score and hearts
+            off the title screen.
+          </li>
+          <li>
+            <strong>More keys.</strong> <code class="ref" data-match="keyboard.left || keyboard.a">keyboard.left || keyboard.a</code> lets
+            <kbd>A</kbd> and <kbd>D</kbd> slide the bear as well.
+          </li>
+        </ul>
+
+        <div class="callout big-idea">
+          <span class="callout-icon">✨</span>
+          <div>
+            <span class="callout-title">Big idea: juice</span>
+            <p>
+              None of these changes alter the rules, but together they decide whether a game feels
+              dull or delightful. A squash on landing, a face that reacts, a bell when you serve:
+              small touches that say "that was <em>good</em>". Game designers call it
+              <strong>juice</strong>, and it's usually only a few lines each.
+            </p>
+          </div>
+        </div>
+
+        <div class="tweak-row">
+          <div class="tweak" data-cell="cell-final" data-name="WOBBLE" data-min="0" data-max="2" data-step="0.05" data-label="Wobbliness" data-icon="🌊"></div>
+          <div class="tweak" data-cell="cell-final" data-name="STACK_LIMIT" data-min="3" data-max="14" data-label="Tower height to serve" data-icon="🥞"></div>
+          <div class="tweak" data-cell="cell-final" data-name="CHEF_SPEED" data-min="100" data-max="900" data-step="10" data-label="Bear's speed" data-unit=" px/s" data-icon="💨"></div>
+        </div>
+
+        <div class="quiz" data-id="q-storage" data-answer="a">
+          <p>What does <code>storage.get("best", 0)</code> give you the very first time anyone plays?</p>
+          <button data-choice="a"><code>0</code>, the fallback we passed in</button>
+          <button data-choice="b">An error, because nothing is saved yet</button>
+          <button data-choice="c">A random score</button>
+          <div class="explain" data-for="a">The second number is the <em>fallback</em>: what you get when nothing has been saved under that name. After the first game over, <code>storage.set</code> saves a real score.</div>
+          <div class="explain" data-for="wrong">Look at the two things in the brackets: a name to look up, and what to use if it isn't there.</div>
+        </div>
+
+        <div class="challenge" data-id="springy" data-success="Boing! The pancakes have springs in them now.">
+          <p>
+            <strong>Change how a pancake bounces into place.</strong> The tween is the style of motion:
+            try <code>"spring"</code> instead of <code>"bounceEnd"</code>.
+          </p>
+          <p class="hint">Find the <code>animate(pancake, { scale: 1, … })</code> line in <code>landPancake</code>.</p>
+          <pre class="answer">animate(pancake, { scale: 1, offset: 0, duration: 0.35, tween: "spring" });</pre>
+        </div>
+
+        <div class="challenge" data-id="more-clouds" data-success="A cloudy day! Plenty of cover for the pancakes to hide in.">
+          <p><strong>Fill the sky with at least eight clouds.</strong></p>
+          <p class="hint">Look at the loop under <code>// Four sleepy clouds</code>. How many times does it run?</p>
+          <pre class="answer">for (let i = 0; i &lt; 8; i++) {</pre>
+        </div>
+      </section>
+
+      <!-- ================================================================ -->
+      <section class="finale">
+        <h2>You made Pancake Stack! 🥞🎉</h2>
+        <p>
+          Look at everything you used: <strong>coordinates and painting order</strong>, the
+          <strong>game loop</strong> and <code>dt</code>, <strong>hooks</strong> for keys and
+          pointers, a bear that <strong>chases a target</strong>, <strong>countdown timers</strong>,
+          <strong>lists and loops</strong>, a tower of indexed pancakes,
+          <strong>sine waves</strong> for the wobble, <strong>game states</strong>, a
+          <strong>data table</strong> that raises the difficulty, and <code>animate</code> and
+          <code>storage</code> for the finishing touches. That's the toolkit behind a huge number
+          of real arcade games.
+        </p>
+        <h3>Ideas to make it your own</h3>
+        <div class="idea-grid">
+          <div class="idea"><b>⭐ Golden pancakes</b>A rare pancake worth five points. Give each pancake a <code>points</code> field when it's made, and add that instead of 1.</div>
+          <div class="idea"><b>🔥 Burnt pancakes</b>A dark pancake you must <em>not</em> catch: catching it costs a heart. Use a new picture and a <code>burnt</code> field, and check it in <code>landPancake</code>.</div>
+          <div class="idea"><b>🌬️ Gusts of wind</b>Every few seconds a gust of wind adds extra swing to <code>sway()</code> for a moment. Use a countdown timer, like the pancake spawner, to start each gust.</div>
+          <div class="idea"><b>👯 Two chefs</b>A second bear, steered with <kbd>A</kbd> and <kbd>D</kbd> while the first uses the arrows. Take <code>|| keyboard.a</code> out of <code>moveChef</code> first, then make a second Actor and a second target.</div>
+          <div class="idea"><b>🧾 Customer orders</b>Each customer wants a tower of a different height. Make a list of orders, and serve when <code>stack.length</code> matches.</div>
+          <div class="idea"><b>🍯 Syrup</b>A bottle of syrup that falls too. Catch it for a few seconds of super-sticky pancakes: change <code>const WOBBLE</code> to <code>let WOBBLE</code> so it can drop, then bring it back up when a timer runs out.</div>
+        </div>
+        <div class="finale-actions">
+          <button class="btn btn-primary" type="button" id="download-final">⬇ Download your game (.zip)</button>
+          <a class="btn btn-soft" href="firefly-flash.html">Firefly Flash ✨</a>
+          <a class="btn btn-soft" href="index.html">All tutorials</a>
+        </div>
+        <p class="muted" style="margin-top: 18px">
+          The zip has your <code>main.js</code>, the art and the font, including any changes you made in the last step. Open it in
+          the js-game-zero sandbox, or run it with <code>jgz test pancake_stack</code>.
+        </p>
+
+        <h3>Words you learned</h3>
+        <dl class="glossary">
+          <div><dt>Pixel</dt><dd>One of the tiny dots a screen is made of. This game is 720 pixels wide and 480 tall.</dd></div>
+          <div><dt>Coordinates</dt><dd>Two numbers, x (across from the left) and y (down from the top), that name a spot on the screen.</dd></div>
+          <div><dt>String</dt><dd>A piece of text, written inside quote marks, like <code>"Pancake Stack"</code>.</dd></div>
+          <div><dt>Comment</dt><dd>A note for people, starting with <code>//</code>. The computer skips it.</dd></div>
+          <div><dt>Function</dt><dd>A named recipe. <code>draw</code> and <code>update</code> are called by the game; you can write your own, like <code>makePancake()</code>, and some give a value back with <code>return</code>.</dd></div>
+          <div><dt>Variable &amp; constant</dt><dd>A named box for a value. A <code>let</code> box can be refilled, like <code>score</code>; a <code>const</code> box keeps what you first put in, like <code>WOBBLE</code>.</dd></div>
+          <div><dt>Actor</dt><dd>A picture with a position that you can move, scale, fade, swap and draw.</dd></div>
+          <div><dt>Game loop &amp; dt</dt><dd>Update, draw, repeat, about 60 times a second. <code>dt</code> is the seconds since the last frame: multiply speeds by it.</dd></div>
+          <div><dt>Parameter</dt><dd>A name in a function's brackets that is filled in by whoever calls it, like <code>pancake</code> in <code>landPancake(pancake)</code>.</dd></div>
+          <div><dt>if statement</dt><dd>Runs the code after it only when the question in its brackets is true. <code>else</code> says what to do when it isn't.</dd></div>
+          <div><dt>Hook</dt><dd>A function with a special name, like <code>onMouseMove</code>, that the game calls when something happens.</dd></div>
+          <div><dt>Clamp</dt><dd><code>clamp(value, min, max)</code> squeezes a number into a range. It keeps things on screen and limits each step of a chase.</dd></div>
+          <div><dt>Timer</dt><dd>A variable you subtract <code>dt</code> from each frame. When it reaches zero, something happens and the timer starts again.</dd></div>
+          <div><dt>Array (list)</dt><dd>An ordered list of values in <code>[ ]</code>. <code>push</code> adds to the end, <code>length</code> counts, and positions count from 0.</dd></div>
+          <div><dt>Loop</dt><dd>Code that repeats. <code>for (const x of list)</code> visits every item; <code>for (let i = 0; …)</code> counts.</dd></div>
+          <div><dt>Template string</dt><dd>Text in `backticks` where <code>${…}</code> is replaced by a value, like <code>`Pancakes: ${score}`</code>.</dd></div>
+          <div><dt>Arrow function</dt><dd>A small function with no name, written where it's needed: <code>() =&gt; { … }</code>.</dd></div>
+          <div><dt>Object</dt><dd>A bundle of named values in <code>{ }</code>, like <code>{ name: "Brunch", from: 25 }</code>.</dd></div>
+          <div><dt>State</dt><dd>A variable saying which situation the game is in: <code>"title"</code>, <code>"playing"</code> or <code>"lost"</code>.</dd></div>
+          <div><dt>Sine wave</dt><dd><code>Math.sin</code> turns a growing number into a smooth swing between −1 and 1. It's the heart of every sway, bob and pulse.</dd></div>
+          <div><dt>Data table</dt><dd>Rows of numbers (here, <code>RUSHES</code>) that the code looks things up in, so changing the game means editing a table, not rewriting code.</dd></div>
+          <div><dt>animate &amp; tween</dt><dd><code>animate</code> glides numbers on an object to new values over time. The tween is the style of the motion.</dd></div>
+          <div><dt>storage</dt><dd>js-game-zero's memory that survives closing the page, for scores and progress.</dd></div>
+        </dl>
+      </section>
+
+      <footer class="page-footer">
+        Made with <a href="https://github.com/taharafiq/js-game-zero">js-game-zero</a>. Art drawn for this tutorial; the font is Fredoka
+        (SIL Open Font License).
+        <br />
+        <button type="button" data-reset-progress>Start this tutorial over</button>
+      </footer>
+    </main>
+
+    <script src="lib/jgz.js"></script>
+    <script src="lib/tutorial.js"></script>
+    <script src="lib/data/pancake_stack.js"></script>
+    <script>
+      (() => {
+        "use strict";
+        const GAME = JGZT.games.pancake_stack;
+        const art = (name) => GAME.assets[`images/${name}.svg`];
+        const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+
+        // Small pictures in the prose (<img data-art="heart">).
+        for (const img of document.querySelectorAll("img[data-art]")) img.src = art(img.dataset.art);
+
+        // Loaded <img> elements for drawing into widget canvases.
+        const pictures = {};
+        for (const name of ["bear_idle", "bear_happy", "bear_ouch", "pancake_plain", "pancake_berry", "pancake_choc"]) {
+          pictures[name] = new Image();
+          pictures[name].src = art(name);
+        }
+        const whenLoaded = Promise.all(Object.values(pictures).map((img) => img.decode().catch(() => {})));
+        const flavours = ["pancake_plain", "pancake_berry", "pancake_choc"];
+
+        /** Runs tick(dt) every frame, but only while `element` is on screen. */
+        function whileVisible(element, tick) {
+          let visible = false;
+          let raf = 0;
+          let last = 0;
+          const loop = (now) => {
+            if (!visible) return;
+            const dt = Math.min(0.05, (now - last) / 1000 || 0);
+            last = now;
+            tick(dt);
+            raf = requestAnimationFrame(loop);
+          };
+          new IntersectionObserver(([entry]) => {
+            visible = entry.isIntersecting;
+            cancelAnimationFrame(raf);
+            if (visible) {
+              last = performance.now();
+              raf = requestAnimationFrame(loop);
+            }
+          }).observe(element);
+        }
+
+        /** Draws a pancake picture with its bottom-middle at (x, bottom). */
+        function pancakeAt(ctx, name, x, bottom, scale = 1) {
+          const img = pictures[name];
+          if (img.complete) ctx.drawImage(img, x - 36 * scale, bottom - 26 * scale, 72 * scale, 26 * scale);
+        }
+
+        /* ---------------------------------------------------------------
+         * Coordinate readout: hover the first cells' games to see x and y.
+         * ------------------------------------------------------------- */
+        function coordinateReadout(stepKey) {
+          const cell = JGZT.cell(stepKey);
+          const stage = cell.stage;
+          const label = document.createElement("div");
+          label.className = "coord-label";
+          const vertical = document.createElement("div");
+          vertical.className = "coord-line v";
+          const horizontal = document.createElement("div");
+          horizontal.className = "coord-line h";
+          stage.append(vertical, horizontal, label);
+          stage.addEventListener("mousemove", (event) => {
+            const canvas = stage.querySelector("canvas");
+            if (!canvas) return;
+            const box = canvas.getBoundingClientRect();
+            const stageBox = stage.getBoundingClientRect();
+            const x = Math.round(((event.clientX - box.left) / box.width) * 720);
+            const y = Math.round(((event.clientY - box.top) / box.height) * 480);
+            if (x < 0 || y < 0 || x > 720 || y > 480) return;
+            const left = event.clientX - stageBox.left;
+            const top = event.clientY - stageBox.top;
+            label.textContent = `x ${x}, y ${y}`;
+            label.style.left = `${Math.min(left, stageBox.width - 110)}px`;
+            label.style.top = `${Math.min(top, stageBox.height - 34)}px`;
+            vertical.style.left = `${left}px`;
+            horizontal.style.top = `${top}px`;
+            stage.classList.add("show-coords");
+          });
+          stage.addEventListener("mouseleave", () => stage.classList.remove("show-coords"));
+        }
+
+        /* ---------------------------------------------------------------
+         * Widget 1: chase lab (step 4)
+         * ------------------------------------------------------------- */
+        (() => {
+          const root = document.getElementById("chase-lab");
+          const canvas = root.querySelector("canvas");
+          const W = 720;
+          const H = 190;
+          const ctx = JGZT.setupCanvas(canvas, W, H);
+          const readout = root.querySelector(".readout");
+          const speedInput = root.querySelector('[data-control="speed"]');
+          const speedOut = root.querySelector('[data-out="speed"]');
+          const teleport = root.querySelector('[data-control="teleport"]');
+          const EDGE = 60;
+          const GROUND = 150;
+          let target = 590;
+          let bear = 120;
+          let trail = [];
+          let sinceTrail = 0;
+          let frames = 0;
+
+          JGZT.onDrag(canvas, W, H, ([x]) => {
+            target = clamp(x, EDGE, W - EDGE);
+          });
+          speedInput.addEventListener("input", () => (speedOut.textContent = speedInput.value));
+
+          function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = "#8cc65a";
+            ctx.fillRect(0, GROUND - 26, W, 60);
+            ctx.fillStyle = "#78ad42";
+            ctx.fillRect(0, GROUND, W, 30);
+            ctx.strokeStyle = "rgba(42, 33, 64, 0.35)";
+            ctx.setLineDash([5, 6]);
+            ctx.lineWidth = 1.5;
+            for (const x of [EDGE, W - EDGE]) {
+              ctx.beginPath();
+              ctx.moveTo(x, 10);
+              ctx.lineTo(x, GROUND + 4);
+              ctx.stroke();
+            }
+            ctx.setLineDash([]);
+            ctx.fillStyle = "rgba(42, 33, 64, 0.55)";
+            ctx.font = "600 12px Fredoka, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("EDGE", EDGE, 24);
+            ctx.fillText("WIDTH - EDGE", W - EDGE, 24);
+            // The ghosts show where the bear was, every tenth of a second.
+            trail.forEach((x, i) => {
+              ctx.globalAlpha = 0.08 + (0.3 * (i + 1)) / trail.length;
+              if (pictures.bear_idle.complete) ctx.drawImage(pictures.bear_idle, x - 30, GROUND - 64, 60, 67);
+            });
+            ctx.globalAlpha = 1;
+            if (pictures.bear_idle.complete) ctx.drawImage(pictures.bear_idle, bear - 30, GROUND - 64, 60, 67);
+            // The flag: targetX.
+            ctx.strokeStyle = "#2a2140";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(target, GROUND + 6);
+            ctx.lineTo(target, GROUND - 74);
+            ctx.stroke();
+            ctx.fillStyle = JGZT.themeColor("--accent");
+            ctx.beginPath();
+            ctx.moveTo(target, GROUND - 74);
+            ctx.lineTo(target + 34, GROUND - 62);
+            ctx.lineTo(target, GROUND - 50);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#2a2140";
+            ctx.fillText("targetX", target, GROUND + 22);
+          }
+
+          whenLoaded.then(draw);
+          whileVisible(canvas, (dt) => {
+            const speed = Number(speedInput.value);
+            const maxStep = speed * dt;
+            const distance = target - bear;
+            const step = teleport.checked ? distance : clamp(distance, -maxStep, maxStep);
+            bear += step;
+            sinceTrail += dt;
+            if (sinceTrail > 0.1) {
+              sinceTrail = 0;
+              trail.push(bear);
+              if (trail.length > 8) trail.shift();
+            }
+            draw();
+            frames += 1;
+            if (frames % 4) return;
+            const f = (n) => n.toFixed(1);
+            readout.innerHTML = teleport.checked
+              ? `<code>chef.x = targetX</code> → the bear jumps all <b>${f(distance)}</b> pixels in one frame. That's a teleport, not a slide!`
+              : `targetX − chef.x = <b>${f(distance)}</b><br>` +
+                `maxStep = ${speed} × dt = ${speed} × ${dt.toFixed(4)} = <b>${f(maxStep)}</b><br>` +
+                `clamp(${f(distance)}, ${f(-maxStep)}, ${f(maxStep)}) = <b>${f(step)}</b> ` +
+                (Math.abs(distance) < 0.05 ? "→ arrived!" : Math.abs(distance) <= maxStep ? "→ the last little bit: it arrives exactly." : "→ a full-speed step.");
+          });
+        })();
+
+        /* ---------------------------------------------------------------
+         * Widget 2: catch zone (step 6)
+         * ------------------------------------------------------------- */
+        (() => {
+          const root = document.getElementById("catch-zone");
+          const canvas = root.querySelector("canvas");
+          const W = 720;
+          const H = 270;
+          const ctx = JGZT.setupCanvas(canvas, W, H);
+          const readout = root.querySelector(".readout");
+          const rangeInput = root.querySelector('[data-control="range"]');
+          const rangeOut = root.querySelector('[data-out="range"]');
+          const dropButton = root.querySelector('[data-action="drop"]');
+          const BEAR_X = 360;
+          const BEAR_BOTTOM = 262;
+          const PLATE = BEAR_BOTTOM - 112 + 7; // chef.top + PLATE_DEPTH
+          const START_Y = 44;
+          let px = 250;
+          let y = START_Y; // the pancake's bottom edge
+          let phase = "ready"; // "ready", "falling", "landed", "missed"
+          let timer = 0;
+          let range = 40;
+          let flavour = "pancake_berry";
+
+          function verdict() {
+            const distance = Math.abs(px - BEAR_X);
+            const caught = distance < range;
+            return { distance, caught };
+          }
+
+          function describe() {
+            const { distance, caught } = verdict();
+            const side = px < BEAR_X ? `${Math.round(px)} - ${BEAR_X}` : `${Math.round(px)} - ${BEAR_X}`;
+            readout.innerHTML =
+              `Math.abs(pancake.x − chef.x) = Math.abs(${side}) = <b>${Math.round(distance)}</b><br>` +
+              `${Math.round(distance)} &lt; CATCH_RANGE (${range}) is <span class="verdict ${caught ? "is-true" : "is-false"}">${caught}</span>` +
+              ` → ${caught ? "it will be caught." : "it will be missed."}`;
+          }
+
+          function draw() {
+            ctx.clearRect(0, 0, W, H);
+            const { caught } = verdict();
+            ctx.fillStyle = "#8cc65a";
+            ctx.fillRect(0, BEAR_BOTTOM - 8, W, 40);
+            // The catch zone.
+            ctx.fillStyle = "rgba(54, 194, 130, 0.22)";
+            ctx.fillRect(BEAR_X - range, 8, range * 2, BEAR_BOTTOM - 8);
+            ctx.strokeStyle = "rgba(31, 157, 107, 0.8)";
+            ctx.setLineDash([6, 5]);
+            ctx.lineWidth = 2;
+            ctx.strokeRect(BEAR_X - range, 8, range * 2, BEAR_BOTTOM - 8);
+            ctx.setLineDash([]);
+            ctx.fillStyle = "rgba(31, 100, 70, 0.9)";
+            ctx.font = "600 12px Fredoka, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(`chef.x ± ${range}`, BEAR_X, 24);
+            // The bear, happy or ouch after a drop.
+            const face = phase === "landed" ? "bear_happy" : phase === "missed" ? "bear_ouch" : "bear_idle";
+            if (pictures[face].complete) ctx.drawImage(pictures[face], BEAR_X - 50, BEAR_BOTTOM - 112, 100, 112);
+            // The pancake: sits on the plate if landed, falls on if missed.
+            ctx.globalAlpha = phase === "missed" ? clamp(1 - (y - PLATE) / 140, 0, 1) : 1;
+            const bottom = phase === "landed" ? PLATE : y;
+            pancakeAt(ctx, flavour, phase === "landed" ? BEAR_X : px, bottom);
+            ctx.globalAlpha = 1;
+            if (phase === "ready") {
+              // A line down from the pancake to the ground, and its distance from the middle.
+              ctx.strokeStyle = caught ? "rgba(31, 157, 107, 0.9)" : "rgba(214, 61, 99, 0.9)";
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.moveTo(px, bottom + 4);
+              ctx.lineTo(px, BEAR_BOTTOM - 6);
+              ctx.moveTo(px, 100);
+              ctx.lineTo(BEAR_X, 100);
+              ctx.stroke();
+              ctx.fillStyle = caught ? "#1f9d6b" : "#d63d63";
+              ctx.fillText(`${Math.round(Math.abs(px - BEAR_X))} px apart`, (px + BEAR_X) / 2, 90);
+            }
+          }
+
+          function reset() {
+            phase = "ready";
+            y = START_Y;
+            flavour = flavours[Math.floor(Math.random() * flavours.length)];
+            dropButton.disabled = false;
+            describe();
+            draw();
+          }
+
+          JGZT.onDrag(canvas, W, H, ([x]) => {
+            if (phase !== "ready") return false;
+            px = clamp(x, 40, W - 40);
+            describe();
+            draw();
+          });
+          rangeInput.addEventListener("input", () => {
+            range = Number(rangeInput.value);
+            rangeOut.textContent = range;
+            if (phase === "ready") describe();
+            draw();
+          });
+          dropButton.addEventListener("click", () => {
+            if (phase !== "ready") return;
+            phase = "falling";
+            dropButton.disabled = true;
+          });
+          whileVisible(canvas, (dt) => {
+            if (phase === "falling") {
+              y += 300 * dt;
+              if (y >= PLATE) {
+                // The same decision as the game's code.
+                if (verdict().caught) {
+                  phase = "landed";
+                  JGZT.sfx?.success?.();
+                } else phase = "missed";
+                timer = 0;
+              }
+            } else if (phase === "missed") {
+              y += 300 * dt;
+              timer += dt;
+              if (timer > 0.9) reset();
+            } else if (phase === "landed") {
+              timer += dt;
+              if (timer > 1.1) reset();
+            }
+            draw();
+          });
+          whenLoaded.then(reset);
+        })();
+
+        /* ---------------------------------------------------------------
+         * Widget 3: rain lab (step 7)
+         * ------------------------------------------------------------- */
+        (() => {
+          const root = document.getElementById("rain-lab");
+          const canvas = root.querySelector("canvas");
+          const W = 520;
+          const H = 300;
+          const ctx = JGZT.setupCanvas(canvas, W, H);
+          const gapInput = root.querySelector('[data-control="gap"]');
+          const gapOut = root.querySelector('[data-out="gap"]');
+          const speedInput = root.querySelector('[data-control="speed"]');
+          const speedOut = root.querySelector('[data-out="speed"]');
+          const timerReadout = root.querySelector('[data-readout="timer"]');
+          const bar = root.querySelector(".timer-bar > span");
+          const listBox = root.querySelector(".rain-list");
+          const GROUND = 262;
+          let falling = [];
+          let spawnTimer = 0;
+          let gap = 1.4;
+          let flash = 0;
+          let dropped = 0;
+          let frames = 0;
+          gapInput.addEventListener("input", () => {
+            gap = Number(gapInput.value);
+            gapOut.textContent = gap;
+          });
+          speedInput.addEventListener("input", () => (speedOut.textContent = speedInput.value));
+
+          function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = "#8cc65a";
+            ctx.fillRect(0, GROUND, W, H - GROUND);
+            ctx.fillStyle = "#78ad42";
+            ctx.fillRect(0, GROUND + 22, W, H);
+            for (const p of falling) pancakeAt(ctx, p.picture, p.x, p.y + 13);
+            // A ring around the sky shows the timer.
+            const done = 1 - clamp(spawnTimer / gap, 0, 1);
+            ctx.strokeStyle = JGZT.themeColor("--accent");
+            ctx.lineWidth = 5;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.arc(34, 34, 18, -Math.PI / 2, -Math.PI / 2 + done * Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = "rgba(42, 33, 64, 0.7)";
+            ctx.font = "600 11px Fredoka, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("timer", 34, 66);
+          }
+
+          function describe() {
+            timerReadout.innerHTML = `spawnTimer = <b>${Math.max(0, spawnTimer).toFixed(2)}</b> s &nbsp; falling.length = <b>${falling.length}</b>`;
+            bar.style.transform = `scaleX(${clamp(spawnTimer / gap, 0, 1)})`;
+            const lines = falling.map((p, i) => {
+              const isNew = i === falling.length - 1 && flash > 0;
+              return `  { y: ${Math.round(p.y)}, picture: "${p.picture.replace("pancake_", "")}" },${isNew ? "  ← push!" : ""}`;
+            });
+            listBox.textContent = `falling = [\n${lines.join("\n")}${lines.length ? "\n" : ""}]${dropped ? `\n\n// ${dropped} fell off the bottom, and were left out of stillFalling.` : ""}`;
+          }
+
+          whileVisible(canvas, (dt) => {
+            const speed = Number(speedInput.value);
+            // The same timer as spawnPancakes()...
+            spawnTimer -= dt;
+            if (spawnTimer <= 0) {
+              falling.push({ x: 50 + Math.random() * (W - 100), y: -20, picture: flavours[Math.floor(Math.random() * flavours.length)] });
+              spawnTimer = gap;
+              flash = 0.5;
+            }
+            // ...and the same keep-the-ones-still-falling loop as movePancakes().
+            const stillFalling = [];
+            for (const p of falling) {
+              p.y += speed * dt;
+              if (p.y < GROUND + 30) stillFalling.push(p);
+              else dropped += 1;
+            }
+            falling = stillFalling;
+            flash = Math.max(0, flash - dt);
+            draw();
+            frames += 1;
+            if (frames % 3 === 0) describe();
+          });
+          whenLoaded.then(draw);
+        })();
+
+        /* ---------------------------------------------------------------
+         * Widget 4: wobble lab (step 9)
+         * ------------------------------------------------------------- */
+        (() => {
+          const root = document.getElementById("wobble-lab");
+          const canvas = root.querySelector("canvas");
+          const W = 720;
+          const H = 340;
+          const ctx = JGZT.setupCanvas(canvas, W, H);
+          const readout = root.querySelector(".readout");
+          const inputs = {};
+          for (const name of ["count", "wobble", "speed"]) {
+            inputs[name] = root.querySelector(`[data-control="${name}"]`);
+            inputs[name].addEventListener("input", () => (root.querySelector(`[data-out="${name}"]`).textContent = inputs[name].value));
+          }
+          const CX = 210;
+          const FEET = 330;
+          const PLATE = FEET - 112 + 7;
+          const GRAPH = { left: 440, right: 700, mid: 170, height: 80 };
+          let time = 0;
+          let frames = 0;
+
+          function draw(count, wobble, speed) {
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = "#8cc65a";
+            ctx.fillRect(0, FEET - 10, W, 30);
+            // The bear and the tower.
+            if (pictures.bear_idle.complete) ctx.drawImage(pictures.bear_idle, CX - 50, FEET - 112, 100, 112);
+            ctx.strokeStyle = "rgba(42, 33, 64, 0.35)";
+            ctx.setLineDash([5, 6]);
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(CX, 20);
+            ctx.lineTo(CX, FEET - 112);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            const swing = Math.sin(time * speed);
+            for (let i = 0; i < count; i++) {
+              pancakeAt(ctx, flavours[i % 3], CX + swing * wobble * i * i, PLATE - i * 13);
+            }
+            // The wave: the last 3 seconds of sin(time × speed).
+            ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+            ctx.fillRect(GRAPH.left - 10, 28, GRAPH.right - GRAPH.left + 20, 2 * GRAPH.height + 80);
+            ctx.strokeStyle = "rgba(42, 33, 64, 0.3)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(GRAPH.left, GRAPH.mid);
+            ctx.lineTo(GRAPH.right, GRAPH.mid);
+            ctx.stroke();
+            ctx.strokeStyle = JGZT.themeColor("--accent-2");
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let x = 0; x <= GRAPH.right - GRAPH.left; x += 3) {
+              const t = time - (GRAPH.right - GRAPH.left - x) / 80;
+              const yy = GRAPH.mid - Math.sin(t * speed) * GRAPH.height;
+              if (x === 0) ctx.moveTo(GRAPH.left + x, yy);
+              else ctx.lineTo(GRAPH.left + x, yy);
+            }
+            ctx.stroke();
+            ctx.fillStyle = JGZT.themeColor("--accent");
+            ctx.beginPath();
+            ctx.arc(GRAPH.right, GRAPH.mid - swing * GRAPH.height, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "rgba(42, 33, 64, 0.8)";
+            ctx.font = "600 15px Fredoka, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText("+1", GRAPH.left, GRAPH.mid - GRAPH.height - 6);
+            ctx.fillText("−1", GRAPH.left, GRAPH.mid + GRAPH.height + 20);
+            ctx.textAlign = "center";
+            ctx.fillText("Math.sin(time * WOBBLE_SPEED)", (GRAPH.left + GRAPH.right) / 2, 20);
+          }
+
+          whileVisible(canvas, (dt) => {
+            time += dt;
+            const count = Number(inputs.count.value);
+            const wobble = Number(inputs.wobble.value);
+            const speed = Number(inputs.speed.value);
+            draw(count, wobble, speed);
+            frames += 1;
+            if (frames % 4) return;
+            const top = count - 1;
+            const swing = Math.sin(time * speed);
+            readout.innerHTML =
+              `top pancake: index <b>${top}</b><br>` +
+              `sway(${top}) = sin(${time.toFixed(1)} × ${speed}) × ${wobble} × ${top} × ${top} = ` +
+              `${swing.toFixed(2)} × ${wobble} × ${top * top} = <b>${(swing * wobble * top * top).toFixed(1)}</b> px` +
+              `<br>bottom pancake: index 0, sway = <b>0</b>: it never sways.`;
+          });
+          whenLoaded.then(() => draw(8, 0.6, 3));
+        })();
+
+        /* ---------------------------------------------------------------
+         * Widget 5: rush explorer (step 11), reading the same RUSHES table
+         * ------------------------------------------------------------- */
+        (() => {
+          const root = document.getElementById("rush-explorer");
+          const source = GAME.steps["11-rush"].match(/const RUSHES = (\[[\s\S]*?\n\]);/)[1];
+          const rushes = new Function(`return ${source}`)();
+          const scoreInput = root.querySelector('[data-control="score"]');
+          const scoreOut = root.querySelector('[data-out="score"]');
+          const body = root.querySelector("tbody");
+          const bars = root.querySelector(".rush-bars");
+          const readout = root.querySelector(".readout");
+          const maxSpeed = Math.max(...rushes.map((r) => r.speed));
+          const maxRate = Math.max(...rushes.map((r) => 60 / r.gap));
+
+          function render() {
+            const score = Number(scoreInput.value);
+            scoreOut.textContent = score;
+            let current = rushes[0];
+            for (const candidate of rushes) if (score >= candidate.from) current = candidate;
+            body.innerHTML = "";
+            for (const rush of rushes) {
+              const reached = score >= rush.from;
+              const row = document.createElement("tr");
+              row.className = rush === current ? "is-current" : reached ? "is-passed" : "";
+              row.innerHTML =
+                `<td>${rush.name}</td><td>${rush.from}</td><td>${rush.speed}</td><td>${rush.gap}</td>` +
+                `<td class="check"><span class="long">${score} &gt;= ${rush.from}: </span><span class="verdict ${reached ? "is-true" : "is-false"}">${reached}</span>${rush === current ? '<span class="long"> ← the answer</span>' : ""}</td>`;
+              body.append(row);
+            }
+            const rate = 60 / current.gap;
+            bars.innerHTML =
+              `<div class="rush-bar"><span>falling speed</span><div class="track"><span style="width:${(current.speed / maxSpeed) * 100}%"></span></div><b>${current.speed} px/s</b></div>` +
+              `<div class="rush-bar"><span>pancakes a minute</span><div class="track"><span style="width:${(rate / maxRate) * 100}%"></span></div><b>${rate.toFixed(0)} a minute</b></div>`;
+            readout.innerHTML = `currentRush() → <b>${current.name}</b>: pancakes fall at ${current.speed} px/s, and a new one comes every ${current.gap} s.`;
+          }
+          scoreInput.addEventListener("input", render);
+          render();
+        })();
+
+        /* ---------------------------------------------------------------
+         * Challenge checks: each one reads the live game.
+         * ------------------------------------------------------------- */
+
+        // Any CSS colour (a name, #hex or rgb) as [red, green, blue].
+        const swatch = document.createElement("canvas").getContext("2d");
+        function rgbOf(color) {
+          if (Array.isArray(color)) return color.slice(0, 3);
+          swatch.fillStyle = "#000000";
+          swatch.fillStyle = String(color);
+          const hex = swatch.fillStyle;
+          if (/^#[0-9a-f]{6}$/i.test(hex)) return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+          const parts = hex.match(/[\d.]+/g);
+          return parts ? parts.slice(0, 3).map(Number) : [0, 0, 0];
+        }
+        const brightness = (color) => {
+          const [r, g, b] = rgbOf(color);
+          return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        };
+
+        JGZT.challenge("night-sky", (game) => {
+          const fill = game.drawn().find((d) => d.kind === "fill");
+          if (!fill) return false;
+          return brightness(fill.color) < 0.3 && brightness(fill.to ?? fill.color) < 0.3;
+        });
+
+        JGZT.challenge("cloud", (game) => {
+          const drawn = game.drawn();
+          const sky = drawn.findIndex((d) => d.kind === "fill");
+          const puffs = drawn.filter(
+            (d, i) =>
+              d.kind === "circle" &&
+              d.filled !== false &&
+              i > sky &&
+              d.radius >= 12 &&
+              d.radius <= 50 &&
+              d.y < 300 &&
+              Math.min(...rgbOf(d.color)) >= 215,
+          );
+          if (puffs.length >= 3) return true;
+          if (puffs.length > 0) return "A cloud needs three puffs, close enough to overlap.";
+          return false;
+        });
+
+        JGZT.challenge("bear-left", (game) => game.read("chef.x") < 250);
+
+        JGZT.challenge("turbo", (game) => game.read("CHEF_SPEED") >= 700);
+
+        JGZT.challenge("wasd", (game) => {
+          const hasA = /keyboard\.a\b/.test(game.code);
+          const hasD = /keyboard\.d\b/.test(game.code);
+          if (hasA && !hasD) return "A works! Now D, for sliding right.";
+          if (hasD && !hasA) return "D works! Now A, for sliding left.";
+          return hasA && hasD && game.running;
+        });
+
+        JGZT.challenge("space-home", (game) => {
+          const home = "(?:WIDTH\\s*\\/\\s*2|360)";
+          const viaHook =
+            game.has("onKeyDown") &&
+            new RegExp(`function\\s+onKeyDown\\s*\\([^)]*\\)\\s*\\{[\\s\\S]*?keys\\.SPACE[\\s\\S]*?targetX\\s*=\\s*${home}`).test(game.code);
+          const whileHeld = new RegExp(`if\\s*\\(\\s*keyboard\\.space\\s*\\)\\s*\\{?\\s*targetX\\s*=\\s*${home}`).test(game.code);
+          if (viaHook || whileHeld) return game.running;
+          if (/onKeyDown/.test(game.code)) return "Nearly: put function onKeyDown on its own (not inside another function), and when the key is keys.SPACE, set targetX to WIDTH / 2.";
+          return false;
+        });
+
+        JGZT.challenge("fast-fall", (game) => game.read("PANCAKE_SPEED") >= 300);
+
+        JGZT.challenge("generous", (game) => game.read("CATCH_RANGE") >= 80);
+
+        JGZT.challenge("catch-three", (game) => game.read("score") >= 3);
+
+        JGZT.challenge("all-berry", (game) => {
+          const list = game.read("PANCAKE_PICTURES");
+          if (!Array.isArray(list) || !list.length) return false;
+          if (list.some((name) => name !== "pancake_berry")) return false;
+          const falling = game.read("falling") || [];
+          return falling.length >= 2 || "Right list! Run it and wait for a couple of pancakes to fall.";
+        });
+
+        JGZT.challenge("click-spawn", (game) => {
+          const hook = /function\s+onMouseDown\s*\([^)]*\)\s*\{[^}]*falling\.push\(\s*makePancake\(\)\s*\)/.test(game.code);
+          return hook && game.running;
+        });
+
+        JGZT.challenge("short-order", (game) => {
+          const limit = game.read("STACK_LIMIT");
+          return typeof limit === "number" && limit >= 1 && limit <= 5;
+        });
+
+        JGZT.challenge("stack-five", (game) => game.read("stack.length") >= 5);
+
+        JGZT.challenge("earthquake", (game) => game.read("WOBBLE_SPEED") >= 9);
+
+        // The text between the brackets of the first Math.sin( inside sway().
+        function sinArgument(code) {
+          const body = code.match(/function\s+sway\s*\([^)]*\)\s*\{([\s\S]*?)\n\}/);
+          const start = body ? body[1].indexOf("Math.sin(") : -1;
+          if (start < 0) return "";
+          let depth = 0;
+          for (let i = start + 8; i < body[1].length; i++) {
+            if (body[1][i] === "(") depth += 1;
+            if (body[1][i] === ")") depth -= 1;
+            if (depth === 0) return body[1].slice(start + 9, i);
+          }
+          return "";
+        }
+
+        JGZT.challenge("snake", (game) => {
+          const wave = sinArgument(game.code);
+          if (/time/.test(wave) && !/index/.test(wave)) return false;
+          return /time/.test(wave) && /index/.test(wave) && game.running;
+        });
+
+        JGZT.challenge("five-lives", (game) => {
+          if (game.read("MAX_MISSES") < 5) return false;
+          const hearts = game.drawn().filter((d) => d.kind === "image" && /^heart/.test(d.image));
+          if (hearts.length < 5) return "Five lives, but where are all the hearts? Run the game again.";
+          return hearts.every((heart) => heart.x >= 0 && heart.x + 32 <= 720) || "Some hearts fell off the screen!";
+        });
+
+        JGZT.challenge("lose-on-purpose", (game) => game.read("state") === "lost");
+
+        JGZT.challenge("new-rush", (game) => {
+          const rushes = game.read("RUSHES");
+          if (!Array.isArray(rushes) || rushes.length < 6) return false;
+          const last = rushes[rushes.length - 1];
+          const before = rushes[rushes.length - 2];
+          if (typeof last.name !== "string" || !last.name) return "Give the new rush a name.";
+          if (!(last.from > before.from)) return "It should start at a higher score than the rush before it.";
+          if (!(last.speed > before.speed)) return "Make it fall faster than the rush before it.";
+          if (!(last.gap > 0 && last.gap < before.gap)) return "Pancakes should come more often: a smaller gap, but above 0.";
+          return true;
+        });
+
+        JGZT.challenge("quick-brunch", (game) => {
+          const rushes = game.read("RUSHES");
+          if (!Array.isArray(rushes) || !rushes[1] || rushes[1].from > 5) return false;
+          return game.read("activeRush.name") === rushes[1].name || "Brunch now starts at 5 points: catch five pancakes!";
+        });
+
+        JGZT.challenge("springy", (game) => {
+          const call = game.code.match(/animate\(\s*pancake\s*,\s*\{\s*scale[^}]*\}/);
+          if (!call) return false;
+          const tween = call[0].match(/tween:\s*"(\w+)"/);
+          return Boolean(tween) && tween[1] !== "bounceEnd" && tween[1] !== "bounce" && game.running;
+        });
+
+        JGZT.challenge("more-clouds", (game) => game.read("clouds.length") >= 8);
+
+        document.getElementById("download-final").addEventListener("click", () => {
+          const editable = JGZT.cell("cell-final");
+          JGZT.downloadProject(editable ? editable.code : GAME.steps.final);
+        });
+
+        JGZT.start();
+
+        // The cells exist once the framework has started.
+        coordinateReadout("01-sunny-morning");
+        coordinateReadout("02-bear");
+      })();
+    </script>
+  </body>
+</html>

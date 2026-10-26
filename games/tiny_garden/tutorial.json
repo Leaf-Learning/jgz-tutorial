@@ -1,0 +1,27 @@
+{
+  "title": "Tiny Garden",
+  "page": "tiny-garden.html",
+  "order": 6,
+  "after": [],
+  "theme": "theme-tiny-garden",
+  "tagline": "Plant it, water it, pick it, sell it. A cosy garden with no way to lose.",
+  "help": "Click an empty plot to plant a seed, click a thirsty plant to water it, and click a glowing flower to pick it. Click the stall to sell your basket, then spend the coins on rarer seeds from the shelf.",
+  "topics": [
+    "🎨 Drawing",
+    "⏱️ Timers",
+    "🧺 Lists & loops",
+    "🚦 States",
+    "📋 Data tables",
+    "🪙 Coins & saving"
+  ],
+  "card": {
+    "background": "radial-gradient(circle at 286px 34px, #ffd34d 0 20px, rgba(255, 236, 160, 0.55) 20px 36px, transparent 37px), linear-gradient(#aee6ff 0 60%, #9bd160 60%)",
+    "sprites": [
+      ["images/soil_wet.svg", 18, 100, 96],
+      ["images/daisy.svg", 26, 68, 80],
+      ["images/soil_dry.svg", 112, 100, 96],
+      ["images/sunflower.svg", 120, 68, 80],
+      ["images/stall.svg", 214, 44, 120]
+    ]
+  }
+}

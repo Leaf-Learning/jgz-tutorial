@@ -133,5 +133,182 @@ window.JGZT_GAMES = [
         ]
       ]
     }
+  },
+  {
+    "id": "pancake_stack",
+    "title": "Pancake Stack",
+    "page": "pancake-stack.html",
+    "order": 4,
+    "after": [],
+    "theme": "theme-pancake-stack",
+    "tagline": "Catch falling pancakes in a tower that gets wobblier every time.",
+    "help": "Arrow keys or A and D (or move the mouse, or drag a finger) to slide the bear under the pancakes. A tower of ten is served for bonus points. Miss three pancakes and it's over!",
+    "topics": [
+      "🎨 Drawing",
+      "⌨️ Keys & pointers",
+      "⏲️ Timers",
+      "🧺 Lists & loops",
+      "🌊 Sine waves",
+      "📋 Data tables"
+    ],
+    "card": {
+      "background": "radial-gradient(circle at 288px 44px, #ffd34d 0 20px, #ffeaa0 21px 33px, transparent 34px), linear-gradient(transparent 0 150px, #8cc65a 150px 170px, #78ad42 170px), linear-gradient(#8fd3ff, #ffe9c7)",
+      "sprites": [
+        [
+          "images/cloud.svg",
+          22,
+          36,
+          92
+        ],
+        [
+          "images/cloud.svg",
+          226,
+          84,
+          66
+        ],
+        [
+          "images/bear_happy.svg",
+          126,
+          78,
+          100
+        ],
+        [
+          "images/pancake_plain.svg",
+          140,
+          59,
+          72
+        ],
+        [
+          "images/pancake_berry.svg",
+          144,
+          46,
+          72
+        ],
+        [
+          "images/pancake_choc.svg",
+          138,
+          33,
+          72
+        ],
+        [
+          "images/pancake_berry.svg",
+          143,
+          20,
+          72
+        ],
+        [
+          "images/pancake_plain.svg",
+          236,
+          12,
+          60
+        ]
+      ]
+    }
+  },
+  {
+    "id": "octo_pop",
+    "title": "Octo Pop",
+    "page": "octo-pop.html",
+    "order": 5,
+    "after": [],
+    "theme": "theme-octo-pop",
+    "tagline": "Type the word, pop the bubble, before it floats away.",
+    "help": "Type the word inside a bubble to pop it before it reaches the surface. Letters you've typed turn pink, Backspace erases one, and a wrong letter makes Octo wince. Lose all three hearts and the level is lost. Enter or Space starts and continues. Needs a keyboard.",
+    "topics": [
+      "🔤 Strings",
+      "⌨️ Typing & keys",
+      "🔎 Matching words",
+      "✂️ Slice & split",
+      "🫧 Lists & loops",
+      "❤️ States & levels"
+    ],
+    "card": {
+      "background": "linear-gradient(#4fc3e8, #123a6b)",
+      "sprites": [
+        [
+          "images/bubble.svg",
+          226,
+          14,
+          92
+        ],
+        [
+          "images/bubble.svg",
+          38,
+          24,
+          58
+        ],
+        [
+          "images/fish_1.svg",
+          26,
+          100,
+          54
+        ],
+        [
+          "images/seabed.svg",
+          -10,
+          128,
+          372
+        ],
+        [
+          "images/octopus_happy.svg",
+          108,
+          74,
+          132
+        ]
+      ]
+    }
+  },
+  {
+    "id": "tiny_garden",
+    "title": "Tiny Garden",
+    "page": "tiny-garden.html",
+    "order": 6,
+    "after": [],
+    "theme": "theme-tiny-garden",
+    "tagline": "Plant it, water it, pick it, sell it. A cosy garden with no way to lose.",
+    "help": "Click an empty plot to plant a seed, click a thirsty plant to water it, and click a glowing flower to pick it. Click the stall to sell your basket, then spend the coins on rarer seeds from the shelf.",
+    "topics": [
+      "🎨 Drawing",
+      "⏱️ Timers",
+      "🧺 Lists & loops",
+      "🚦 States",
+      "📋 Data tables",
+      "🪙 Coins & saving"
+    ],
+    "card": {
+      "background": "radial-gradient(circle at 286px 34px, #ffd34d 0 20px, rgba(255, 236, 160, 0.55) 20px 36px, transparent 37px), linear-gradient(#aee6ff 0 60%, #9bd160 60%)",
+      "sprites": [
+        [
+          "images/soil_wet.svg",
+          18,
+          100,
+          96
+        ],
+        [
+          "images/daisy.svg",
+          26,
+          68,
+          80
+        ],
+        [
+          "images/soil_dry.svg",
+          112,
+          100,
+          96
+        ],
+        [
+          "images/sunflower.svg",
+          120,
+          68,
+          80
+        ],
+        [
+          "images/stall.svg",
+          214,
+          44,
+          120
+        ]
+      ]
+    }
   }
 ];

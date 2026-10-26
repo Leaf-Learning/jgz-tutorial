@@ -14,7 +14,7 @@ must be:
 - **Tests and model solutions** that prove the game works and every challenge can be solved.
 - **A hub card**, so the game shows on `tutorials/index.html` and plays in `play.html`.
 
-The three existing tutorials are the quality bar. Match them in tone, pacing and polish,
+The first three tutorials are the quality bar. Match them in tone, pacing and polish,
 not just in structure. Read the one closest to the new game before writing anything:
 `firefly-flash.html` (first-timers, clicks), `penguin-slide.html` (grids, keys),
 `planet-putt.html` (physics, dragging).

@@ -1,0 +1,27 @@
+{
+  "title": "Octo Pop",
+  "page": "octo-pop.html",
+  "order": 5,
+  "after": [],
+  "theme": "theme-octo-pop",
+  "tagline": "Type the word, pop the bubble, before it floats away.",
+  "help": "Type the word inside a bubble to pop it before it reaches the surface. Letters you've typed turn pink, Backspace erases one, and a wrong letter makes Octo wince. Lose all three hearts and the level is lost. Enter or Space starts and continues. Needs a keyboard.",
+  "topics": [
+    "🔤 Strings",
+    "⌨️ Typing & keys",
+    "🔎 Matching words",
+    "✂️ Slice & split",
+    "🫧 Lists & loops",
+    "❤️ States & levels"
+  ],
+  "card": {
+    "background": "linear-gradient(#4fc3e8, #123a6b)",
+    "sprites": [
+      ["images/bubble.svg", 226, 14, 92],
+      ["images/bubble.svg", 38, 24, 58],
+      ["images/fish_1.svg", 26, 100, 54],
+      ["images/seabed.svg", -10, 128, 372],
+      ["images/octopus_happy.svg", 108, 74, 132]
+    ]
+  }
+}

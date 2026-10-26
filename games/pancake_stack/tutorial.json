@@ -1,0 +1,30 @@
+{
+  "title": "Pancake Stack",
+  "page": "pancake-stack.html",
+  "order": 4,
+  "after": [],
+  "theme": "theme-pancake-stack",
+  "tagline": "Catch falling pancakes in a tower that gets wobblier every time.",
+  "help": "Arrow keys or A and D (or move the mouse, or drag a finger) to slide the bear under the pancakes. A tower of ten is served for bonus points. Miss three pancakes and it's over!",
+  "topics": [
+    "🎨 Drawing",
+    "⌨️ Keys & pointers",
+    "⏲️ Timers",
+    "🧺 Lists & loops",
+    "🌊 Sine waves",
+    "📋 Data tables"
+  ],
+  "card": {
+    "background": "radial-gradient(circle at 288px 44px, #ffd34d 0 20px, #ffeaa0 21px 33px, transparent 34px), linear-gradient(transparent 0 150px, #8cc65a 150px 170px, #78ad42 170px), linear-gradient(#8fd3ff, #ffe9c7)",
+    "sprites": [
+      ["images/cloud.svg", 22, 36, 92],
+      ["images/cloud.svg", 226, 84, 66],
+      ["images/bear_happy.svg", 126, 78, 100],
+      ["images/pancake_plain.svg", 140, 59, 72],
+      ["images/pancake_berry.svg", 144, 46, 72],
+      ["images/pancake_choc.svg", 138, 33, 72],
+      ["images/pancake_berry.svg", 143, 20, 72],
+      ["images/pancake_plain.svg", 236, 12, 60]
+    ]
+  }
+}
