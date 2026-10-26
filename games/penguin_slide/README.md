@@ -1,6 +1,6 @@
 # Penguin Slide
 
-A sliding-ice puzzle game made with [js-game-zero](https://github.com/taharafiq/js-game-zero).
+A sliding-ice puzzle game made with [js-game-zero](https://github.com/Leaf-Learning/js-game-zero).
 Press an arrow and the penguin slides until something stops it. Eat every fish
 to clear the level, in as few moves as you can.
 

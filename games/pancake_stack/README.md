@@ -1,6 +1,6 @@
 # Pancake Stack
 
-A catch-and-stack arcade game made with [js-game-zero](https://github.com/taharafiq/js-game-zero).
+A catch-and-stack arcade game made with [js-game-zero](https://github.com/Leaf-Learning/js-game-zero).
 A bear chef slides left and right under a sky that rains pancakes. Every pancake
 you catch lands on top of the stack, and the stack gets taller and wobblier with
 each one. Miss three pancakes and the game is over.
