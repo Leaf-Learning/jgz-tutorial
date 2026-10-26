@@ -14,9 +14,9 @@
     "format": "prettier --write games tutorials/steps scripts tests"
   },
   "devDependencies": {
-    "@js-game-zero/browser-runtime": "0.2.2",
-    "@js-game-zero/cli": "0.2.2",
-    "@js-game-zero/core": "0.2.2",
+    "@js-game-zero/browser-runtime": "0.2.3",
+    "@js-game-zero/cli": "0.2.3",
+    "@js-game-zero/core": "0.2.3",
     "playwright": "1.61.1",
     "prettier": "3.9.1"
   }

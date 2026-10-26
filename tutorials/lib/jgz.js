@@ -1,5 +1,5 @@
 /*!
- * @js-game-zero/browser-runtime 0.2.2
+ * @js-game-zero/browser-runtime 0.2.3
  * https://github.com/Leaf-Learning/js-game-zero
  *
  * MIT License
@@ -6861,10 +6861,10 @@
     });
     let factory;
     try {
-      factory = new Function("scope", wrapSource(source, String(sourceResultFields), [
+      factory = compileSource(source, String(sourceResultFields), [
         ...bindingNames,
         ...callableNames
-      ]));
+      ]);
     } catch (error) {
       if (!(error instanceof SyntaxError))
         throw error;
@@ -6944,15 +6944,18 @@
       };
     })();`;
   }
+  function compileSource(source, resultFields, bindingNames) {
+    return new Function("scope", wrapSource(source, resultFields, bindingNames));
+  }
   var calibration;
-  var FRAME_RE = /([^\s()]+):(\d+):(\d+)\)?\s*$/;
+  var FRAME_RE = /^\s*(?:at (?:.*? \()?|[^@]*@)(.+):(\d+):(\d+)\)?\s*$/;
   function frames(stack) {
     const out = [];
     for (const raw of stack.split(`
 `)) {
       const match = FRAME_RE.exec(raw);
       if (match)
-        out.push({ file: match[1], line: Number(match[2]) });
+        out.push({ place: match[1], line: Number(match[2]) });
     }
     return out;
   }
@@ -6979,8 +6982,7 @@
   }
   function calibrateFrames() {
     try {
-      const factory = new Function("scope", wrapSource('throw new Error("calibrate");', "", []));
-      factory({});
+      compileSource('throw new Error("calibrate");', "", [])({});
     } catch (error) {
       return readCalibration(error);
     }
@@ -6991,7 +6993,7 @@
       return;
     let line;
     if (calibration2.kind === "stack") {
-      const frame = frames(error.stack).find((candidate) => candidate.file === calibration2.marker);
+      const frame = frames(error.stack).find((candidate) => candidate.place === calibration2.marker);
       line = frame && frame.line - calibration2.offset;
     } else {
       const own = ownLine(error);

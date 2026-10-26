@@ -5,20 +5,20 @@
     "": {
       "name": "jgz-tutorial",
       "devDependencies": {
-        "@js-game-zero/browser-runtime": "0.2.2",
-        "@js-game-zero/cli": "0.2.2",
-        "@js-game-zero/core": "0.2.2",
+        "@js-game-zero/browser-runtime": "0.2.3",
+        "@js-game-zero/cli": "0.2.3",
+        "@js-game-zero/core": "0.2.3",
         "playwright": "1.61.1",
         "prettier": "3.9.1",
       },
     },
   },
   "packages": {
-    "@js-game-zero/browser-runtime": ["@js-game-zero/browser-runtime@0.2.2", "", { "dependencies": { "@js-game-zero/core": "0.2.2" } }, "sha512-+qtRJ1itf+UbJzUhrR32zSomKdiYaTAv0ICn488x/ABNUB0MfXQOmrysDY5d4b0bIsvPA1u8cNd1Jj3kaQHyMQ=="],
+    "@js-game-zero/browser-runtime": ["@js-game-zero/browser-runtime@0.2.3", "", { "dependencies": { "@js-game-zero/core": "0.2.3" } }, "sha512-iC98JKy+ssYE1K1s7apxJIVrgF/SzgRlHB4lzAAkvtHAY9bVMfnpJLgGyQ+Lx3Rm+cH+eTKcVBQSvOsaF4jC3Q=="],
 
-    "@js-game-zero/cli": ["@js-game-zero/cli@0.2.2", "", { "peerDependencies": { "playwright": "^1.57.0" }, "bin": { "jgz": "dist/cli.js" } }, "sha512-9dtagFK8INBymQkRKKmjAkP5xgCXeqPoYva3VsXDGkAYRqhRL7YiLGKDEeBjkuiSso3JeNT2iWRMx0GOGW/TCA=="],
+    "@js-game-zero/cli": ["@js-game-zero/cli@0.2.3", "", { "peerDependencies": { "playwright": "^1.57.0" }, "bin": { "jgz": "dist/cli.js" } }, "sha512-nnLtK9SeRfAthT6GAVlXSEKmFPngjdES1nkZVeQD40ftHcaLkBEOjGXU+h+HRcE5dLg8o7yE7pVY+7zgByKEhw=="],
 
-    "@js-game-zero/core": ["@js-game-zero/core@0.2.2", "", {}, "sha512-oBs0EDEpJhO034240stLFG52Tpy7YSlwe5zPj58ZSNpD6IiJ+G1+OL7c2MgJN+Ocsf8zFtbrSilowXJiysHO2g=="],
+    "@js-game-zero/core": ["@js-game-zero/core@0.2.3", "", {}, "sha512-t0IQ9A7fCw32S/h7ZNoTLHJPegY3y7Dnti6avlVJ/sxuv1LuhrVRyN95SIpjbgz9nLR2AcFX6AqSs61zY8UOzQ=="],
 
     "fsevents": ["fsevents@2.3.2", "", { "os": "darwin" }, "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA=="],
 
