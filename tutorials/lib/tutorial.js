@@ -1186,7 +1186,7 @@
     const header = h(
       "header",
       { class: "topbar" },
-      h("a", { class: "topbar-home", href: "index.html", title: "All tutorials" }, h("span", { class: "topbar-logo", "aria-hidden": "true" }, "🕹"), h("span", {}, "jgz tutorials")),
+      h("a", { class: "topbar-home", href: "index.html", title: "All tutorials" }, h("img", { class: "topbar-logo", src: "lib/jgz-logo.svg", alt: "" }), h("span", {}, "jgz tutorials")),
       h("div", { class: "topbar-title" }, title),
       h(
         "div",

@@ -333,7 +333,9 @@ strong {
 }
 
 .topbar-logo {
-  font-size: 1.3rem;
+  display: block;
+  width: 26px;
+  height: 26px;
 }
 
 .topbar-title {
@@ -579,6 +581,14 @@ strong {
   font: 600 0.9rem/1 var(--font-display);
   letter-spacing: 0.04em;
   margin-bottom: 18px;
+}
+
+/* A logo in place of a kicker's emoji, a little taller than the text
+   without making the pill any taller. */
+.hero-kicker img {
+  width: 1.5em;
+  height: 1.5em;
+  margin: -0.25em 0;
 }
 
 .hero h1 {
