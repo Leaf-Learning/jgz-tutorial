@@ -13,8 +13,8 @@ walks a complete beginner through making this game from an empty screen.
 # headless check with the jgz CLI (from the repo root)
 bun run jgz -- test games/{{ID}}
 
-# or open it in the js-game-zero sandbox: make a blank project, paste
-# main.js, and upload images/ and fonts/ through the Assets panel
+# or open it in the js-game-zero sandbox: make a blank game, paste
+# main.js, and add images/ and fonts/ from the Images and Fonts panels
 ```
 
 ## What's inside

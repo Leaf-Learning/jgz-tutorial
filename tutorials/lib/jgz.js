@@ -1,5 +1,5 @@
 /*!
- * @js-game-zero/browser-runtime 0.2.1
+ * @js-game-zero/browser-runtime 0.2.2
  * https://github.com/Leaf-Learning/js-game-zero
  *
  * MIT License
@@ -770,7 +770,7 @@
       const asset = await this.loader.load(name);
       if (generation !== this.operationGeneration)
         return;
-      const element = this.createElement(asset.url);
+      const element = this.createElement(musicPlaybackUrl(asset));
       if (generation !== this.operationGeneration)
         return;
       element.volume = this.volumeValue;
@@ -895,6 +895,20 @@
       return 1;
     return Math.min(1, Math.max(0, volume));
   }
+  var musicPlaybackUrls = new WeakMap;
+  function musicPlaybackUrl(asset) {
+    if (!asset.bytes || typeof Blob !== "function" || typeof URL.createObjectURL !== "function") {
+      return asset.url;
+    }
+    let url = musicPlaybackUrls.get(asset);
+    if (url === undefined) {
+      const extension = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(asset.url)?.[1]?.toLowerCase();
+      const type = extension === undefined ? "" : extension === "mp3" ? "audio/mpeg" : `audio/${extension}`;
+      url = URL.createObjectURL(new Blob([asset.bytes], { type }));
+      musicPlaybackUrls.set(asset, url);
+    }
+    return url;
+  }
   function createHtmlAudioElement(url) {
     if (typeof globalThis.Audio !== "function") {
       throw new Error("HTML audio is not available in this environment.");
@@ -978,7 +992,16 @@
     if (typeof globalThis.fetch !== "function") {
       throw new Error("fetch is not available");
     }
-    const response = await globalThis.fetch(url);
+    let response;
+    try {
+      response = await globalThis.fetch(url);
+    } catch (error) {
+      const page = globalThis.location?.href;
+      if (page && new URL(url, page).protocol === "file:") {
+        throw Object.assign(new Error("A page opened from your disk can't load sounds, music or fonts: open it from a web server instead.", { cause: error }), { fromDiskPage: true });
+      }
+      throw error;
+    }
     if (!response.ok)
       throw new Error(`HTTP ${response.status}`);
     return response.arrayBuffer();
@@ -1416,7 +1439,7 @@
     constructor(kind, name, options = {}) {
       const attemptedUrls = [...options.attemptedUrls ?? []];
       const attemptedMessage = attemptedUrls.length === 0 ? "" : ` (tried ${attemptedUrls.join(", ")})`;
-      super(`Missing ${kind} asset: ${name}${attemptedMessage}`, options.cause === undefined ? undefined : { cause: options.cause });
+      super(options.why === undefined ? `Missing ${kind} asset: ${name}${attemptedMessage}` : `Couldn't load ${kind} asset ${name}${attemptedMessage}. ${options.why}`, options.cause === undefined ? undefined : { cause: options.cause });
       this.name = "MissingAssetError";
       this.kind = kind;
       this.assetName = name;
@@ -1868,9 +1891,11 @@
       }
     }
     const cause = causes.length === 1 ? causes[0] : new AggregateError(causes, `Every candidate for ${options.kind} asset ${context.requested} failed.`);
+    const fromDiskPage = causes.find((failure) => failure?.fromDiskPage === true);
     throw new MissingAssetError(options.kind, context.requested, {
       attemptedUrls,
-      cause
+      cause,
+      ...fromDiskPage ? { why: fromDiskPage.message } : {}
     });
   }
   function candidateNames(name, extensions) {
@@ -2168,6 +2193,10 @@
             return target.isPressed(key);
           if (isSafeUnknownKeyboardProperty(property))
             return;
+          const meant = closestName(property.toLowerCase(), keyCodesByAttribute.keys());
+          if (meant !== undefined) {
+            throw new Error(`keyboard.${property} doesn't exist. Did you mean keyboard.${meant}?`);
+          }
           throw new Error(`The key "${property}" does not exist`);
         },
         has(target, property) {
@@ -2398,10 +2427,11 @@
       this.mouseState = mouseState;
     }
     handleKeyDown(event) {
-      const mapped = mapBrowserKeyEvent(event);
-      if (!mapped)
+      const browserMapped = mapBrowserKeyEvent(event);
+      if (!browserMapped)
         return false;
-      this.physicalKeys.add(mapped.key);
+      this.physicalKeys.add(browserMapped.key);
+      const mapped = withHeldSides(browserMapped, this.physicalKeys);
       this.keyboard.press(mapped.key);
       if (![...this.virtualKeys.values()].includes(mapped.key) || mapped.repeat) {
         dispatchHook(this.hooks.onKeyDown, mapped, HOOK_PARAMETERS.onKeyDown);
@@ -2409,10 +2439,11 @@
       return true;
     }
     handleKeyUp(event) {
-      const mapped = mapBrowserKeyEvent(event);
-      if (!mapped)
+      const browserMapped = mapBrowserKeyEvent(event);
+      if (!browserMapped)
         return false;
-      this.physicalKeys.delete(mapped.key);
+      this.physicalKeys.delete(browserMapped.key);
+      const mapped = withHeldSides(browserMapped, this.physicalKeys);
       if ([...this.virtualKeys.values()].includes(mapped.key))
         return true;
       this.keyboard.release(mapped.key);
@@ -2464,7 +2495,11 @@
       return true;
     }
     handleMouseMove(event, target) {
-      const mapped = mapBrowserMouseEvent(event, target, this.lastMousePos);
+      const browserMapped = mapBrowserMouseEvent(event, target, this.lastMousePos);
+      const mapped = {
+        ...browserMapped,
+        button: [...browserMapped.buttons][0] ?? null
+      };
       this.trackMouse(mapped);
       dispatchHook(this.hooks.onMouseMove, mapped, HOOK_PARAMETERS.onMouseMove);
       return true;
@@ -2579,6 +2614,23 @@
   function unicodeFromKeyboardEvent(event) {
     return event.key && event.key.length === 1 ? event.key : "";
   }
+  var modifierSides = [
+    [keymods.SHIFT, keys.LSHIFT, keymods.LSHIFT, keys.RSHIFT, keymods.RSHIFT],
+    [keymods.CTRL, keys.LCTRL, keymods.LCTRL, keys.RCTRL, keymods.RCTRL],
+    [keymods.ALT, keys.LALT, keymods.LALT, keys.RALT, keymods.RALT],
+    [keymods.META, keys.LMETA, keymods.LMETA, keys.RMETA, keymods.RMETA]
+  ];
+  function withHeldSides(mapped, held) {
+    let mod = mapped.mod;
+    for (const [both, leftKey, left, rightKey, right] of modifierSides) {
+      if ((mod & both) !== both)
+        continue;
+      const sides = (held.has(leftKey) ? left : 0) | (held.has(rightKey) ? right : 0);
+      if (sides !== 0)
+        mod = mod & ~both | sides;
+    }
+    return mod === mapped.mod ? mapped : { ...mapped, mod };
+  }
   function modifiersFromKeyboardEvent(event) {
     let mod = 0;
     if (event.shiftKey)
@@ -2590,21 +2642,21 @@
     if (event.metaKey)
       mod |= keymods.META;
     if (event.code === "ShiftLeft")
-      mod |= keymods.LSHIFT | keymods.SHIFT;
+      mod |= keymods.LSHIFT;
     if (event.code === "ShiftRight")
-      mod |= keymods.RSHIFT | keymods.SHIFT;
+      mod |= keymods.RSHIFT;
     if (event.code === "ControlLeft")
-      mod |= keymods.LCTRL | keymods.CTRL;
+      mod |= keymods.LCTRL;
     if (event.code === "ControlRight")
-      mod |= keymods.RCTRL | keymods.CTRL;
+      mod |= keymods.RCTRL;
     if (event.code === "AltLeft")
-      mod |= keymods.LALT | keymods.ALT;
+      mod |= keymods.LALT;
     if (event.code === "AltRight")
-      mod |= keymods.RALT | keymods.ALT;
+      mod |= keymods.RALT;
     if (event.code === "MetaLeft")
-      mod |= keymods.LMETA | keymods.META;
+      mod |= keymods.LMETA;
     if (event.code === "MetaRight")
-      mod |= keymods.RMETA | keymods.META;
+      mod |= keymods.RMETA;
     if (event.getModifierState?.("CapsLock"))
       mod |= keymods.CAPS;
     if (event.getModifierState?.("NumLock"))
@@ -3024,7 +3076,7 @@
   var identifierStart = /[\p{ID_Start}$_]/u;
   var identifierPart = /[\p{ID_Continue}$\u200C\u200D]/u;
   var numberPart = /[0-9A-Za-z_.]/;
-  function tokenizeSource(source) {
+  function tokenizeSource(source, { allowUnclosed = false } = {}) {
     const tokens = [];
     const templateDepths = [];
     let depth = 0;
@@ -3226,7 +3278,7 @@
       push("punctuator", char);
       index += 1;
     }
-    if (templateDepths.length > 0 || depth !== 0 || parens !== 0 || brackets !== 0)
+    if (!allowUnclosed && (templateDepths.length > 0 || depth !== 0 || parens !== 0 || brackets !== 0))
       return null;
     return tokens;
   }
@@ -3378,7 +3430,7 @@
     diagnoseGameModule(moduleOrSource, options, emit, "import");
     return diagnostics;
   }
-  function diagnoseGameModule(module, options, emit, mode) {
+  function diagnoseGameModule(module, options, emit, mode, drawArityIsFatal = false) {
     const keys2 = Object.keys(module);
     const defined = new Set(keys2);
     for (const key of keys2)
@@ -3394,7 +3446,8 @@
       }
     }
     warnHookParameters(module, emit);
-    warnHookArity("draw", module.draw, 0, emit);
+    if (!drawArityIsFatal)
+      warnHookArity("draw", module.draw, 0, emit);
     warnHookArity("update", module.update, 1, emit);
     if (module.WIDTH !== undefined && !isValidRuntimeDimension(module.WIDTH)) {
       emit({
@@ -3421,11 +3474,15 @@
         ...scan.topLevelAssignments
       ]);
       const functions = new Set(scan.topLevelFunctions);
+      const emitWithLine = (diagnostic) => {
+        const line = diagnostic.name === undefined ? undefined : declarationLine(source, diagnostic.name);
+        emit(line === undefined ? diagnostic : { ...diagnostic, line });
+      };
       for (const name of functions)
-        diagnoseIdentifier(name, "function", defined, emit);
+        diagnoseIdentifier(name, "function", defined, emitWithLine);
       for (const name of scan.topLevelAssignments) {
         if (!functions.has(name))
-          diagnoseIdentifier(name, "assignment", defined, emit);
+          diagnoseIdentifier(name, "assignment", defined, emitWithLine);
       }
     }
     for (const match of source.matchAll(/["'`]([^"'`]+)["'`]/g)) {
@@ -3433,6 +3490,13 @@
       if (name)
         diagnoseAssetName(name, emit);
     }
+  }
+  function declarationLine(source, name) {
+    const escaped = name.replace(/[$]/g, "\\$&");
+    const declaration = new RegExp(`^\\s*(?:(?:async\\s+)?function\\s*\\*?\\s*${escaped}\\s*\\(|(?:(?:let|const|var)\\s+)?${escaped}\\s*=(?!=))`);
+    const index = source.split(`
+`).findIndex((line) => declaration.test(line));
+    return index === -1 ? undefined : index + 1;
   }
   function createDiagnosticEmitter(diagnostics, callback) {
     return (diagnostic) => {
@@ -5499,6 +5563,7 @@
     adapter;
     values = new Map;
     listeners = new Set;
+    pendingLoad = null;
     [savedText] = "{}";
     constructor(options = {}) {
       this.adapter = options.adapter ?? createLocalStorageAdapter({
@@ -5564,13 +5629,22 @@
       this[savedText] = text;
     }
     async load() {
-      const text = await this.adapter.load();
+      const pending = this.pendingLoad;
+      this.pendingLoad = null;
+      const text = await (pending ?? this.adapter.load());
       this.applyLoadedText(text);
     }
     loadSync() {
-      if (!this.adapter.loadSync)
+      if (this.adapter.loadSync) {
+        this.applyLoadedText(this.adapter.loadSync());
+        return true;
+      }
+      const result = this.adapter.load();
+      if (isPromiseLike(result)) {
+        this.pendingLoad = result;
         return false;
-      this.applyLoadedText(this.adapter.loadSync());
+      }
+      this.applyLoadedText(result);
       return true;
     }
     applyLoadedText(text) {
@@ -5747,8 +5821,10 @@
 
   // packages/core/src/runtime-persistence.ts
   var AUTOSAVE_DEBOUNCE_MS = 250;
+  var AUTOSAVE_MAX_WAIT_MS = 1000;
   function attachAutosave(storage2, emit) {
     let timer = null;
+    let pendingSince = null;
     let dirty = false;
     let writing = null;
     const reportSaveFailure = (error) => {
@@ -5759,6 +5835,7 @@
         clearTimeout(timer);
         timer = null;
       }
+      pendingSince = null;
       if (writing)
         return writing;
       writing = (async () => {
@@ -5774,12 +5851,15 @@
     };
     const unsubscribe = storage2.onChange(() => {
       dirty = true;
+      const now = Date.now();
+      pendingSince ??= now;
       if (timer !== null)
         clearTimeout(timer);
+      const delay = Math.max(0, Math.min(AUTOSAVE_DEBOUNCE_MS, pendingSince + AUTOSAVE_MAX_WAIT_MS - now));
       timer = setTimeout(() => {
         timer = null;
         flush().catch(reportSaveFailure);
-      }, AUTOSAVE_DEBOUNCE_MS);
+      }, delay);
     });
     const hasWindow = typeof window !== "undefined" && typeof window.addEventListener === "function";
     const pagehideHandler = hasWindow ? () => void flush().catch(reportSaveFailure) : undefined;
@@ -5881,8 +5961,11 @@
     create(noteOrFrequency, duration = 1, options = {}) {
       return new CreatedTone(this, this.createSpec(noteOrFrequency, duration, options));
     }
-    async play(noteOrFrequency, duration = 1, options = {}) {
+    play(noteOrFrequency, duration = 1, options = {}) {
       const spec = this.createSpec(noteOrFrequency, duration, options);
+      return this.start(spec);
+    }
+    async start(spec) {
       const context = this.getContext();
       await this.unlock();
       const startAt = context.currentTime;
@@ -6483,12 +6566,18 @@
 
   // packages/core/src/helpers.ts
   function randomInt(min, max) {
-    return pickInt(min, max, "randomInt");
+    return pickInt(random, min, max, "randomInt");
   }
   function randomChoice(items) {
-    return pickFrom(items, "randomChoice");
+    return pickFrom(random, items, "randomChoice");
   }
-  function pickInt(min, max, name) {
+  function randomHelpersFor(source) {
+    return {
+      randomInt: (min, max) => pickInt(source, min, max, "randomInt"),
+      randomChoice: (items) => pickFrom(source, items, "randomChoice")
+    };
+  }
+  function pickInt(random2, min, max, name) {
     requireNumber(min, name, "min");
     requireNumber(max, name, "max");
     const low = Math.ceil(min);
@@ -6496,16 +6585,16 @@
     if (low > high) {
       throw new RangeError(`${name}(${min}, ${max}) has no whole numbers to pick from: put the smaller number first.`);
     }
-    return low + Math.floor(random() * (high - low + 1));
+    return low + Math.floor(random2() * (high - low + 1));
   }
-  function pickFrom(items, name) {
+  function pickFrom(random2, items, name) {
     if (!Array.isArray(items)) {
       throw new TypeError(`${name} needs a list, like ${name}([1, 2, 3]).`);
     }
     if (items.length === 0) {
       throw new RangeError(`${name} needs a list with at least one item.`);
     }
-    return items[Math.floor(random() * items.length)];
+    return items[Math.floor(random2() * items.length)];
   }
   function clamp2(value, min, max) {
     requireNumber(value, "clamp", "value");
@@ -6632,6 +6721,13 @@
       }
     });
   }
+  function needsNew(cls, className, example) {
+    return new Proxy(cls, {
+      apply() {
+        throw new TypeError(`${className} needs new in front of it: new ${className}(${example}).`);
+      }
+    });
+  }
   var screenInternals = [
     "drawSurface",
     "drawLine",
@@ -6683,11 +6779,11 @@
     const globals = {
       ...animationsOn(context.clock),
       Clock: pointToService(Clock, "Clock", "clock", context.clock),
-      Rect,
-      ZRect,
+      Rect: needsNew(Rect, "Rect", "x, y, width, height"),
+      ZRect: needsNew(ZRect, "ZRect", "x, y, width, height"),
       Screen: pointToService(Screen, "Screen", "screen", context.screen),
       Storage: pointToService(Storage, "Storage", "storage", context.storage),
-      Actor: RuntimeActor,
+      Actor: needsNew(RuntimeActor, "Actor", '"alien"'),
       screen: friendlyService(context.screen, "screen", {
         hidden: screenInternals,
         nested: ["draw"],
@@ -6706,8 +6802,7 @@
       music: friendlyService(context.music, "music"),
       storage: context.storage,
       tone: friendlyService(context.tone, "tone"),
-      randomInt,
-      randomChoice,
+      ...context.random ? randomHelpersFor(context.random) : { randomInt, randomChoice },
       clamp: clamp2,
       rgb,
       exit: () => context.stop?.(),
@@ -6771,12 +6866,9 @@
         ...callableNames
       ]));
     } catch (error) {
-      if (error instanceof SyntaxError && sourceLineOf(error) === undefined) {
-        const line = syntaxErrorLine(source, error.message);
-        if (line !== undefined)
-          syntaxLines.set(error, line);
-      }
-      throw error;
+      if (!(error instanceof SyntaxError))
+        throw error;
+      throw gameSyntaxError(source, error);
     }
     topLevel = true;
     sizeScreen();
@@ -6934,6 +7026,54 @@
     }
     return atEnd && compiles < lines.length ? compiles + 1 : undefined;
   }
+  function gameSyntaxError(source, wrapped) {
+    const closers = missingClosers(source);
+    if (closers && compileProblem(`${source}
+${closers}`) === undefined) {
+      const error2 = new SyntaxError("Something isn't closed: a {, ( or [ is missing its }, ) or ].");
+      const line = lineLeftOpen(source);
+      if (line !== undefined)
+        syntaxLines.set(error2, line);
+      return error2;
+    }
+    const own = compileProblem(source) ?? wrapped.message;
+    const error = own === wrapped.message ? wrapped : new SyntaxError(own);
+    if (error !== wrapped || sourceLineOf(error) === undefined) {
+      const line = syntaxErrorLine(source, own);
+      if (line !== undefined)
+        syntaxLines.set(error, line);
+    }
+    return error;
+  }
+  function missingClosers(source) {
+    const pairs = { "{": "}", "(": ")", "[": "]" };
+    const open = [];
+    for (const token of tokenizeSource(source, { allowUnclosed: true }) ?? []) {
+      if (token.type !== "punctuator")
+        continue;
+      const closer = pairs[token.value];
+      if (closer)
+        open.push(closer);
+      else if (token.value === open.at(-1))
+        open.pop();
+    }
+    return open.reverse().join("");
+  }
+  function lineLeftOpen(source) {
+    const lines = source.split(`
+`);
+    let compiles = 0;
+    for (let k = 1;k <= lines.length; k += 1) {
+      if (compileProblem(lines.slice(0, k).join(`
+`)) === undefined) {
+        compiles = k;
+      }
+    }
+    return compiles < lines.length ? compiles + 1 : undefined;
+  }
+  function noteSourceLine(error, line) {
+    syntaxLines.set(error, line);
+  }
   function sourceLineOf(error) {
     const known = typeof error === "object" && error ? syntaxLines.get(error) : undefined;
     if (known !== undefined)
@@ -6959,7 +7099,7 @@
   }
   function run(moduleOrSource, options = {}) {
     const diagnostics = [];
-    const emit = createDiagnosticEmitter(diagnostics, options.diagnostics);
+    const emit = createDiagnosticEmitter(diagnostics, options.diagnostics ?? reportToConsole);
     const mode = typeof moduleOrSource === "string" ? "global" : "import";
     let module;
     let inspector = null;
@@ -6979,23 +7119,27 @@
         module = moduleOrSource;
         context = createRuntimeContext(options, diagnostics, emit, module);
       }
-      diagnoseGameModule(module, options, emit, mode);
+      diagnoseGameModule(module, options, emit, mode, true);
       game = mergeModuleOptions(module, options);
-      requireDrawArity(game.draw);
+      requireDrawArity(game.draw, mode === "global" ? String(moduleOrSource) : undefined);
       applyCanvasConfiguration(context, game, emit);
       configureDocumentTitle(game);
       applyFavicon(context, game.ICON, emit);
       touchControls = normalizeTouchControls(game.TOUCH_CONTROLS);
     } catch (error) {
       const line = sourceLineOf(error);
-      emit({
+      const failure2 = {
         code: "runtime-error",
         severity: "error",
         phase: "startup",
         recoverable: false,
         message: `startup failed: ${describeRuntimeError(error)}`,
         ...line !== undefined ? { line } : {}
-      });
+      };
+      if (options.diagnostics)
+        emit(failure2);
+      else
+        diagnostics.push(failure2);
       cleanupFailedStartup(context, emit);
       throw error;
     }
@@ -7036,8 +7180,7 @@
       if (state !== "failed")
         gameInspectors.delete(handle);
       removeActiveHandle();
-      if (context.ownsCanvas)
-        context.canvas.remove?.();
+      context.removeCanvas();
       cleanupPromise = Promise.resolve(context.autosave.flush()).catch((error) => {
         emit({
           code: "runtime-error",
@@ -7180,8 +7323,9 @@
   }
   function createRuntimeContext(options, diagnostics, emit, module) {
     const random2 = options.seed === undefined ? null : createSeededRandom(options.seed);
-    const ownsCanvas = options.canvas === undefined;
-    const canvas = options.canvas ?? createCanvas(options.container);
+    const ownCanvas = options.canvas === undefined ? createCanvas(options.container) : null;
+    const canvas = options.canvas ?? ownCanvas.canvas;
+    const removeCanvas = () => ownCanvas?.remove();
     const adoptsDefaultLoaders = activeHandles.length === 0;
     try {
       const scheduler = options.scheduler ?? createDefaultScheduler();
@@ -7233,7 +7377,8 @@
       const scopedTone = createToneGenerator();
       return {
         canvas,
-        ownsCanvas,
+        canvasMounted: ownCanvas?.mounted ?? null,
+        removeCanvas,
         screen: screen2,
         clock: clock2,
         clockFailure,
@@ -7256,8 +7401,7 @@
         stop: null
       };
     } catch (error) {
-      if (ownsCanvas)
-        canvas.remove?.();
+      removeCanvas();
       throw error;
     }
   }
@@ -7283,8 +7427,7 @@
     context.clock.clear();
     context.music.stop();
     stopSoundsIfUnused(context.loaders.sounds);
-    if (context.ownsCanvas)
-      context.canvas.remove?.();
+    context.removeCanvas();
     setScreen(activeHandles.at(-1)?.screen ?? null);
     context.autosave.flush().catch((flushError) => {
       emit({
@@ -7482,11 +7625,15 @@
         context.audioAssetGate = null;
     });
   }
-  function requireDrawArity(hook) {
+  function requireDrawArity(hook, source) {
     if (!hook)
       return;
     if (getParameterNames(hook).length > 0) {
-      throw new TypeError("draw() must not take any arguments.");
+      const error = new TypeError("draw() must not take any arguments.");
+      const line = source === undefined ? undefined : declarationLine(source, "draw");
+      if (line !== undefined)
+        noteSourceLine(error, line);
+      throw error;
     }
   }
   function applyFavicon(context, icon, emit) {
@@ -7570,13 +7717,22 @@
       },
       ...typeof canvas.getBoundingClientRect === "function" ? { getBoundingClientRect: () => canvas.getBoundingClientRect() } : {}
     };
-    const keyDown = (event) => invoke(() => void dispatcher.handleKeyDown(event));
+    const keyDown = (event) => {
+      keepKeyFromPage(event);
+      invoke(() => void dispatcher.handleKeyDown(event));
+    };
     const keyUp = (event) => invoke(() => void dispatcher.handleKeyUp(event));
     const mouseDown = (event) => invoke(() => void dispatcher.handleMouseDown(event, pointer));
     const mouseUp = (event) => invoke(() => void dispatcher.handleMouseUp(event, pointer));
     const mouseMove = (event) => invoke(() => void dispatcher.handleMouseMove(event, pointer));
     const wheel = (event) => invoke(() => void dispatcher.handleWheel(event, pointer));
-    const controls = mountTouchControls(canvas, touchControls, dispatcher, invoke, pointer);
+    const mountControls = () => mountTouchControls(canvas, touchControls, dispatcher, invoke, pointer);
+    let controls = mountControls();
+    let detached = false;
+    context.canvasMounted?.then(() => {
+      if (!detached)
+        controls = mountControls();
+    });
     const touchPointer = attachTouchPointer(canvas, dispatcher, invoke, pointer);
     const clearKeyboard = () => {
       controls.reset();
@@ -7615,6 +7771,7 @@
       document.addEventListener("visibilitychange", visibilityChange);
     }
     return () => {
+      detached = true;
       controls.detach();
       touchPointer.detach();
       keyboardTarget.removeEventListener("keydown", keyDown);
@@ -7633,6 +7790,28 @@
         document.removeEventListener("visibilitychange", visibilityChange);
       }
     };
+  }
+  var pageScrollKeys = new Set([
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "Space",
+    "PageUp",
+    "PageDown",
+    "Home",
+    "End"
+  ]);
+  function keepKeyFromPage(event) {
+    if (!pageScrollKeys.has(event.code))
+      return;
+    if (event.ctrlKey || event.altKey || event.metaKey)
+      return;
+    const target = event.target;
+    if (target?.isContentEditable === true || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? "")) {
+      return;
+    }
+    event.preventDefault?.();
   }
   function withRuntimeContext(context, callback) {
     const previousAssets = setActiveAssetLoaders(context.loaders);
@@ -7721,8 +7900,41 @@
     }
     const canvas = document.createElement("canvas");
     canvas.tabIndex = 0;
-    (container ?? document.body).append(canvas);
-    return canvas;
+    const parent = container ?? document.body;
+    if (parent) {
+      parent.append(canvas);
+      return { canvas, mounted: null, remove: () => canvas.remove?.() };
+    }
+    if (document.readyState !== "loading") {
+      throw new Error("run() has nowhere to put the game: the page has no <body>. Pass it a canvas or a container.");
+    }
+    let removed = false;
+    const mounted = new Promise((resolve) => {
+      document.addEventListener("DOMContentLoaded", () => {
+        if (removed || !document.body)
+          return;
+        document.body.append(canvas);
+        resolve();
+      }, { once: true });
+    });
+    return {
+      canvas,
+      mounted,
+      remove() {
+        removed = true;
+        canvas.remove?.();
+      }
+    };
+  }
+  function reportToConsole(diagnostic) {
+    if (typeof console === "undefined")
+      return;
+    const where = diagnostic.line === undefined ? "" : ` (line ${diagnostic.line})`;
+    const text = `js-game-zero: ${diagnostic.message}${where}`;
+    if (diagnostic.severity === "error")
+      console.error(text);
+    else
+      console.warn(text);
   }
   function createDefaultScheduler() {
     return {

@@ -37,9 +37,9 @@ game through the `jgz` CLI.
 bun run jgz -- test games/penguin_slide          # from the jgz-tutorial folder
 ```
 
-Or make a blank project in the js-game-zero sandbox, paste `main.js` into the
-editor, and upload `images/*.svg` and `fonts/fredoka.ttf` through the Assets
-panel.
+Or make a blank game in the js-game-zero sandbox, paste `main.js` into the
+editor, and add `images/*.svg` and `fonts/fredoka.ttf` from the Images and
+Fonts panels on the left.
 
 The tutorial that builds this game step by step is
 [`tutorials/penguin-slide.html`](../../tutorials/penguin-slide.html).

@@ -1438,7 +1438,7 @@
     for (const [path, url] of Object.entries(pageGame.assets)) files.push({ name: `${name}/${path}`, data: dataUrlBytes(url) });
     files.push({
       name: `${name}/README.txt`,
-      data: `${document.body.dataset.tutorial || name} — a js-game-zero game\n\nmain.js is the game. The images/ folder holds its art.\n\nTo play or keep building it:\n\n  * In the js-game-zero sandbox: make a new blank project, paste main.js\n    into the editor, and upload everything in images/ through the Assets panel.\n\n  * With the jgz command-line tool. It needs Bun (https://bun.sh), and\n    installs once with:\n\n      bun add --global @js-game-zero/cli\n      jgz install-chromium\n\n    Then, in this folder:  jgz test .\n\nHave fun!\n`,
+      data: `${document.body.dataset.tutorial || name} — a js-game-zero game\n\nmain.js is the game. The images/ folder holds its art.\n\nTo play or keep building it:\n\n  * In the js-game-zero sandbox: make a new blank game, paste main.js\n    into the editor, and add everything in images/ from the Images panel\n    on the left.\n\n  * With the jgz command-line tool. It needs Bun (https://bun.sh), and\n    installs once with:\n\n      bun add --global @js-game-zero/cli\n      jgz install-chromium\n\n    Then, in this folder:  jgz test .\n\nHave fun!\n`,
     });
     const link = h("a", { href: URL.createObjectURL(makeZip(files)), download: `${name}.zip` });
     document.body.append(link);
