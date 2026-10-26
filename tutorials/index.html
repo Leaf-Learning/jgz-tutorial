@@ -440,60 +440,59 @@
         color: #b9b2e3;
         font: 0.8rem/1.4 var(--font-code);
       }
-      .hub-editor-bar span:last-child {
-        padding: 4px 10px;
-        border-radius: 8px;
-        background: rgba(124, 240, 197, 0.14);
-        color: var(--new-mark);
-        font: 700 0.8rem/1.4 var(--font-body);
-      }
-      .hub-code {
-        margin: 0;
-        padding: 10px 0 12px;
-        overflow-x: auto;
-        color: var(--ed-ink);
-        font: 0.78rem/22px var(--font-code);
-        white-space: pre;
-      }
-      .hub-code .ln {
+      .hub-editor {
         display: flex;
-        min-height: 22px;
+        flex-direction: column;
       }
-      .hub-code .ln.is-new {
-        background: var(--new-line);
-        box-shadow: inset 3px 0 0 var(--new-mark);
+      .hub-editor-actions {
+        display: inline-flex;
+        gap: 6px;
       }
-      .hub-code .ln.is-yours {
-        background: rgba(255, 211, 77, 0.2);
-        box-shadow: inset 3px 0 0 #ffd34d;
+      .hub-mini {
+        white-space: nowrap;
+        min-height: 34px;
+        padding: 0 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #d6d0f5;
+        font: 700 0.8rem/1 var(--font-body);
+        cursor: pointer;
       }
-      .hub-code .n {
-        flex: 0 0 38px;
-        padding-right: 12px;
-        color: var(--ed-gutter);
-        text-align: right;
-        user-select: none;
+      .hub-mini:hover {
+        background: rgba(255, 255, 255, 0.12);
       }
-      .hub-code .t {
-        padding-right: 16px;
+      .hub-mini-run {
+        border: 0;
+        background: #ffd34d;
+        color: #2a1f00;
       }
-      .hub-code .com {
-        color: var(--t-com);
+      .hub-mini-run:hover {
+        background: #ffe27a;
       }
-      .hub-code .str {
-        color: var(--t-str);
+      /* The tutorials' own editor, from tutorial.js and tutorial.css. */
+      .hub-editor-body {
+        display: flex;
+        flex: 1;
       }
-      .hub-code .num {
-        color: var(--t-num);
+      .hub-editor-body .ed {
+        max-height: none;
+        font-size: 12.5px;
       }
-      .hub-code .kw {
-        color: var(--t-kw);
+      .hub-editor-body .ed-hl .l.is-ref {
+        background: rgba(255, 211, 77, 0.18);
       }
-      .hub-code .eng {
-        color: var(--t-eng);
+      .hub-editor-msg {
+        margin: 0;
+        padding: 8px 14px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        color: #b9b2e3;
+        font-size: 0.85rem;
+        line-height: 1.45;
       }
-      .hub-code .hook {
-        color: var(--t-hook);
+      .hub-editor-msg.is-error {
+        background: rgba(243, 139, 168, 0.14);
+        color: #ffc4d3;
       }
       .hub-side {
         flex: 1 1 260px;
@@ -886,8 +885,15 @@
         <div class="hub-how-row">
           <div class="hub-demo">
             <div class="hub-editor">
-              <div class="hub-editor-bar"><span>Firefly Flash · Step 2</span><span>New lines glow</span></div>
-              <pre class="hub-code" data-demo-code></pre>
+              <div class="hub-editor-bar">
+                <span>Firefly Flash · Step 2</span>
+                <span class="hub-editor-actions">
+                  <button class="hub-mini" type="button" data-demo-reset>↺ Reset</button>
+                  <button class="hub-mini hub-mini-run" type="button" data-demo-run title="Run (Ctrl or ⌘ + Enter)">▶ Run</button>
+                </span>
+              </div>
+              <div class="hub-editor-body" data-demo-editor></div>
+              <p class="hub-editor-msg" data-demo-msg aria-live="polite">Edit the code: the game reruns as you type.</p>
             </div>
             <div class="hub-side">
               <div class="hub-stage" data-demo-stage role="img" aria-label="The game so far: a night sky with a moon, stars and two dark hills"></div>
@@ -1033,6 +1039,8 @@ bunx playwright install chromium</pre>
     </footer>
 
     <script src="lib/jgz.js"></script>
+    <!-- For its editor, highlighter and celebrations; the hub draws its own cards. -->
+    <script src="lib/tutorial.js"></script>
     <script src="lib/data/games.js"></script>
     <script>
       function h(tag, attrs = {}, ...children) {
@@ -1140,119 +1148,185 @@ bunx playwright install chromium</pre>
         return { id, path, img, pal };
       });
 
-      window.JGZT = {
-        register(id, data) {
-          for (const pal of pals) if (pal.id === id && data.assets[pal.path]) pal.img.src = data.assets[pal.path];
-          const game = games.find((entry) => entry.id === id);
-          const art = document.querySelector(`.card[data-game="${id}"] .card-art`);
-          if (!game || !art) return;
-          for (const [path, x, y, width] of game.card?.sprites || []) {
-            if (!data.assets[path]) continue;
-            const img = h("img", { src: data.assets[path], alt: "" });
-            Object.assign(img.style, { left: `${x}px`, top: `${y}px`, width: `${width}px` });
-            art.append(img);
-          }
-        },
+      // tutorial.js's own register decodes every image for its cells; the hub
+      // only needs the pictures for its cards and cast.
+      JGZT.register = (id, data) => {
+        for (const pal of pals) if (pal.id === id && data.assets[pal.path]) pal.img.src = data.assets[pal.path];
+        const game = games.find((entry) => entry.id === id);
+        const art = document.querySelector(`.card[data-game="${id}"] .card-art`);
+        if (!game || !art) return;
+        for (const [path, x, y, width] of game.card?.sprites || []) {
+          if (!data.assets[path]) continue;
+          const img = h("img", { src: data.assets[path], alt: "" });
+          Object.assign(img.style, { left: `${x}px`, top: `${y}px`, width: `${width}px` });
+          art.append(img);
+        }
       };
       // Hide anyone whose game didn't load, rather than leave a gap.
       window.addEventListener("load", () => {
         for (const pal of pals) if (!pal.img.getAttribute("src")) pal.pal.hidden = true;
       });
 
-      // How a tutorial works: a real step from Firefly Flash, run on the engine.
+      // How a tutorial works: a real step from Firefly Flash in the tutorials'
+      // own editor, run on the engine as you type. The challenge reads what
+      // the game drew, the way the tutorial pages check theirs.
       const STEP = [
-        ["WIDTH = 640;"],
-        ["HEIGHT = 400;"],
-        [""],
-        ["function draw() {"],
-        ['  screen.fill("#0d0a24", "#3a2b6e");'],
-        ['  screen.circle(446, 74, 40, "#fff4cf");'],
-        [""],
-        ["  // A few stars.", "is-new"],
-        ['  screen.circle(80, 60, 2, "white");', "is-new"],
-        ['  screen.circle(200, 110, 1.5, "white");', "is-new"],
-        ['  screen.circle(330, 40, 2, "white");', "is-new"],
-        [""],
-        ["  // Hills, and the ground in front."],
-        ['  screen.circle(120, 470, 160, "#231d57");'],
-        ['  screen.circle(520, 480, 190, "#231d57");'],
-        ['  screen.rect(0, 350, WIDTH, 50, "#1b1846");'],
-        ["}"],
-      ];
-      const STAR = ['  screen.circle(590, 170, 1.5, "white");', "is-yours"];
-      const TOKENS = /(\/\/.*$)|("[^"]*")|\b(function)\b|\b(screen|WIDTH|HEIGHT)\b|\b(draw)\b(?=\()|(\b\d+(?:\.\d+)?\b)/g;
-      const KINDS = ["com", "str", "kw", "eng", "hook", "num"];
-      function highlight(line) {
-        const out = [];
-        let last = 0;
-        for (const match of line.matchAll(TOKENS)) {
-          if (match.index > last) out.push(line.slice(last, match.index));
-          const kind = KINDS[match.slice(1).findIndex(Boolean)];
-          out.push(h("span", { class: kind }, match[0]));
-          last = match.index + match[0].length;
-        }
-        if (last < line.length) out.push(line.slice(last));
-        return out;
-      }
+        "WIDTH = 640;",
+        "HEIGHT = 400;",
+        "",
+        "function draw() {",
+        '  screen.fill("#0d0a24", "#3a2b6e");',
+        '  screen.circle(446, 74, 40, "#fff4cf");',
+        "",
+        "  // A few stars.",
+        '  screen.circle(80, 60, 2, "white");',
+        '  screen.circle(200, 110, 1.5, "white");',
+        '  screen.circle(330, 40, 2, "white");',
+        "",
+        "  // Hills, and the ground in front.",
+        '  screen.circle(120, 470, 160, "#231d57");',
+        '  screen.circle(520, 480, 190, "#231d57");',
+        '  screen.rect(0, 350, WIDTH, 50, "#1b1846");',
+        "}",
+      ].join("\n");
+      const STAR = '  screen.circle(590, 170, 1.5, "white");';
+      const STEP_LINES = STEP.split("\n");
+      const NEW_LINES = new Set(STEP_LINES.slice(7, 11));
 
-      const demoCode = document.querySelector("[data-demo-code]");
       const demoStage = document.querySelector("[data-demo-stage]");
+      const demoMsg = document.querySelector("[data-demo-msg]");
       const demoChallenge = document.querySelector("[data-demo-challenge]");
       const demoSolve = document.querySelector("[data-demo-solve]");
       const demoHint = document.querySelector("[data-demo-hint]");
       const demoHintToggle = document.querySelector("[data-demo-hint-toggle]");
-      let solved = false;
+      const editor = new JGZT.Editor(document.querySelector("[data-demo-editor]"), STEP, {
+        label: "Firefly Flash, step 2: the game's code",
+        onChange: () => {
+          markLines();
+          clearTimeout(demoTimer);
+          demoTimer = setTimeout(runDemo, 450);
+        },
+        onRun: () => runDemo(),
+      });
+      let demoTimer = 0;
       let demoHandle = null;
+      let solved = false;
+      let demoOnScreen = true;
 
-      function showDemo() {
-        const lines = solved ? [...STEP.slice(0, 11), STAR, ...STEP.slice(11)] : STEP;
-        demoCode.replaceChildren(
-          ...lines.map(([text, kind], i) =>
-            h("div", { class: `ln ${kind || ""}` }, h("span", { class: "n", "aria-hidden": "true" }, String(i + 1)), h("span", { class: "t" }, ...highlight(text))),
-          ),
-        );
+      // The step's new lines glow green, and lines you wrote glow yellow.
+      function markLines() {
+        const lines = editor.value.split("\n");
+        const original = new Set(STEP_LINES.filter((line) => line.trim()));
+        editor.marks.new = new Set(lines.flatMap((line, i) => (NEW_LINES.has(line) ? [i] : [])));
+        editor.marks.ref = new Set(lines.flatMap((line, i) => (line.trim() && !original.has(line) ? [i] : [])));
+        editor.render();
+      }
+
+      function say(text, error = false) {
+        demoMsg.textContent = text;
+        demoMsg.classList.toggle("is-error", error);
+      }
+
+      function showChallenge() {
         demoChallenge.classList.toggle("is-done", solved);
         document.querySelector("[data-demo-title]").textContent = solved ? "You did it! A fourth star." : "Challenge: add a fourth star";
         document.querySelector("[data-demo-text]").textContent = solved
-          ? "Your line glows yellow. Try other numbers to move the star."
-          : "Copy a star line and change its numbers. In a tutorial, the page watches your game and cheers when it spots the new star.";
-        demoSolve.textContent = solved ? "Reset" : "Show me";
-        runDemo(lines.map(([text]) => text).join("\n"));
+          ? "Your line glows yellow. Try other numbers to move the star, or add a whole sky of them."
+          : "Copy a star line and change its numbers. The page watches your game and cheers when it spots the new star.";
+        demoSolve.textContent = solved ? "Start again" : "Show me";
       }
 
-      // The scene doesn't move, so one drawn frame is the whole game.
-      async function runDemo(source) {
-        if (!window.JGZ) return;
+      // Stars are the small white circles the last frame drew.
+      function countStars(handle) {
+        const drawn = JGZ.getGameInspector(handle)?.read("$drawn") || [];
+        return drawn.filter((d) => d.kind === "circle" && d.radius <= 4 && /^(white|#fff(fff)?)$/i.test(String(d.color))).length;
+      }
+
+      async function runDemo() {
+        clearTimeout(demoTimer);
         demoHandle?.stop();
         const canvas = h("canvas");
         demoStage.replaceChildren(canvas);
+        editor.setMarks("err", []);
+        const problems = [];
         const title = document.title;
+        let handle;
         try {
-          const handle = JGZ.run(source, {
+          handle = JGZ.run(editor.value, {
             canvas,
-            autostart: false,
             projectId: "jgzt-hub",
-            keyboardTarget: h("div"),
-            diagnostics: () => {},
+            keyboardTarget: demoStage,
+            diagnostics: (d) => problems.push(d),
           });
-          demoHandle = handle;
-          await handle.ready;
-          if (demoHandle === handle) handle.step(0);
-        } catch {
-          /* a broken demo leaves the sky behind it */
+        } catch (error) {
+          handle = null;
+          if (!problems.length) problems.push({ severity: "error", message: String(error?.message || error) });
         }
         document.title = title;
+        demoHandle = handle;
+        const report = () => {
+          const problem = problems.find((d) => d.severity === "error") || problems[0];
+          if (!problem) return false;
+          // A syntax error can come back with a line past the end; leave that one out.
+          const line = problem.line >= 1 && problem.line <= editor.value.split("\n").length ? problem.line : 0;
+          if (line) editor.setMarks("err", [line - 1]);
+          say(`${line ? `Line ${line}: ` : ""}${problem.message}`, problem.severity === "error");
+          return true;
+        };
+        if (!handle) return report();
+        try {
+          await handle.ready;
+        } catch {
+          return report();
+        }
+        // Give the game two frames to draw, then look at what it drew.
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (demoHandle !== handle) return;
+        if (!demoOnScreen) handle.pause();
+        if (report()) return;
+        const stars = countStars(handle);
+        say(`It runs! The sky has ${stars} star${stars === 1 ? "" : "s"}.`);
+        if (!solved && stars >= 4) {
+          solved = true;
+          showChallenge();
+          JGZT.celebrate(demoChallenge);
+        }
       }
 
+      new IntersectionObserver(([entry]) => {
+        demoOnScreen = entry.isIntersecting;
+        if (!demoHandle) return;
+        if (demoOnScreen) demoHandle.resume();
+        else demoHandle.pause();
+      }).observe(demoStage);
+
       demoSolve.addEventListener("click", () => {
-        solved = !solved;
-        showDemo();
+        if (solved) {
+          solved = false;
+          editor.value = STEP;
+        } else {
+          const lines = editor.value.split("\n");
+          const last = lines.findLastIndex((line) => /screen\.circle\([^)]*"white"\)/.test(line));
+          lines.splice(last + 1, 0, STAR);
+          editor.value = lines.join("\n");
+        }
+        markLines();
+        showChallenge();
+        runDemo();
+      });
+      document.querySelector("[data-demo-run]").addEventListener("click", () => runDemo());
+      document.querySelector("[data-demo-reset]").addEventListener("click", () => {
+        editor.value = STEP;
+        markLines();
+        runDemo();
       });
       demoHintToggle.addEventListener("click", () => {
         demoHint.hidden = !demoHint.hidden;
         demoHintToggle.setAttribute("aria-expanded", String(!demoHint.hidden));
       });
-      showDemo();
+      markLines();
+      showChallenge();
+      runDemo();
 
       // The builder, one step at a time.
       const buildSteps = [...document.querySelectorAll("[data-build] li")];
