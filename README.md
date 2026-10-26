@@ -1,8 +1,9 @@
-# jgz tutorials
+# Learn to code by making games
 
-Interactive, playful tutorials that teach a complete beginner to build a cute
-browser game from an empty screen, with [js-game-zero](../js-game-zero). Six
-are ready to play, and you can make one from your own game idea.
+Interactive tutorials that take a complete beginner from an empty screen to a
+finished, cute browser game, one runnable step at a time, with
+[js-game-zero](https://github.com/Leaf-Learning/js-game-zero). Six are ready
+to play, and your coding agent can make a new one from your own game idea.
 
 ## Make your own
 
