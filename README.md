@@ -41,9 +41,14 @@ skill's guides in `skills/new-game-tutorial/references/` describe the house styl
 
 ## Open the tutorials
 
-Open **`tutorials/index.html`** in a browser. That's it: no server, no
+Play them online at [leaflearning.org/jgz/tutor/](https://leaflearning.org/jgz/tutor/),
+or open **`tutorials/index.html`** in a browser. That's it: no server, no
 install. The pages run the real js-game-zero engine with editable code next
 to each game, and work straight from disk.
+
+The site serves a copy of `tutorials/`, made by the leaflearning.org repo's
+`scripts/update_tutor.sh`. `tutorials/lib/social.png` is the hub's link
+preview there.
 
 Each tutorial has:
 

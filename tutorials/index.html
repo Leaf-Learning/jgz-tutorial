@@ -3,42 +3,241 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Make Games</title>
-    <meta name="description" content="Playful, hands-on tutorials that teach total beginners to program by building real games with js-game-zero." />
+    <title>Make games · JS Game Zero tutorials</title>
+    <meta
+      name="description"
+      content="Six playful tutorials take a complete beginner from an empty screen to a finished, cute browser game, one step at a time. Your coding agent can turn your own game idea into the next one."
+    />
+    <meta name="theme-color" content="#FFFAF3" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Leaf Learning" />
+    <meta property="og:url" content="https://leaflearning.org/jgz/tutor/" />
+    <meta property="og:title" content="Make real games: JS Game Zero tutorials" />
+    <meta
+      property="og:description"
+      content="Six tutorials take a complete beginner from an empty screen to a finished game, and your coding agent can make the next one from your idea."
+    />
+    <meta property="og:image" content="https://leaflearning.org/jgz/tutor/lib/social.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Make real games, beside a penguin, an octopus, a bear and other characters from the tutorials" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="lib/jgz-logo.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="lib/tutorial.css" />
     <style>
+      .hub-wrap {
+        max-width: 1248px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ---------- Top bar ---------- */
+      .hub-bar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: var(--bar);
+        border-bottom: 1px solid var(--line);
+        backdrop-filter: blur(10px);
+      }
+      .hub-bar .hub-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0 24px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+      }
+      .hub-home {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 44px;
+        color: var(--ink) !important;
+        font: 600 1.3rem/1 var(--font-display);
+        text-decoration: none;
+      }
+      .hub-home img {
+        width: 32px;
+        height: 32px;
+      }
+      .hub-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 24px;
+      }
+      .hub-nav a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        color: var(--ink) !important;
+        font-weight: 800;
+        font-size: 1rem;
+        text-decoration: none;
+      }
+      .hub-nav a:hover {
+        color: var(--accent-text) !important;
+      }
+      /* On a phone the bar wraps to two lines, too tall to keep on screen. */
+      @media (max-width: 640px) {
+        .hub-bar {
+          position: static;
+        }
+      }
+
+      /* ---------- Hero ---------- */
       .hub-hero {
-        padding: 72px 0 36px;
+        padding-top: 72px;
         text-align: center;
       }
+      .hub-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+        padding: 7px 16px 7px 10px;
+        border-radius: 99px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        box-shadow: 0 6px 18px rgba(80, 50, 30, 0.08);
+        font: 600 1.05rem/1.2 var(--font-display);
+      }
+      .hub-kicker img {
+        width: 26px;
+        height: 26px;
+      }
       .hub-hero h1 {
-        font-size: clamp(2.8rem, 8vw, 5rem);
+        margin: 22px 0 0;
         font-weight: 700;
-        line-height: 1;
-        margin-bottom: 18px;
+        font-size: clamp(3.4rem, 9vw, 6.9rem);
+        line-height: 0.95;
       }
       .hub-hero h1 .pop {
-        color: var(--accent);
         display: inline-block;
-        transform: rotate(-3deg);
+        color: #e2560e;
+        transform: rotate(-4deg);
       }
-      .hub-hero .hero-lede {
-        margin: 0 auto;
+      .hub-lede {
+        max-width: 680px;
+        margin: 22px auto 0;
+        color: #4e4256;
+        font-size: 1.25rem;
+        line-height: 1.55;
+        text-wrap: pretty;
       }
-      .hub-hero .hero-meta {
+      .hub-meta {
+        display: flex;
+        flex-wrap: wrap;
         justify-content: center;
+        gap: 10px;
+        margin: 24px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .hub-meta li {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        padding: 8px 14px;
+        border-radius: 99px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        font-weight: 800;
+        font-size: 0.95rem;
+      }
+      .hub-meta svg {
+        flex: none;
+      }
+
+      /* The cast: one character from each game. Click one and it hops. */
+      .hub-cast {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 6px 18px;
+        max-width: 900px;
+        margin: 40px auto 0;
+      }
+      .hub-pal {
+        display: inline-flex;
+        align-items: flex-end;
+        justify-content: center;
+        height: 120px;
+        padding: 0;
+        border: 0;
+        border-radius: 16px;
+        background: none;
+        cursor: pointer;
+      }
+      .hub-pal img {
+        display: block;
+        width: 100%;
+        height: auto;
+        transform-origin: 50% 100%;
+        animation: hub-bob 3s ease-in-out infinite;
+      }
+      .hub-pal:nth-child(2) img {
+        animation-duration: 3.4s;
+        animation-delay: -1s;
+      }
+      .hub-pal:nth-child(3) img {
+        animation-duration: 2.6s;
+        animation-delay: -1.6s;
+      }
+      .hub-pal:nth-child(4) img {
+        animation-duration: 3.2s;
+        animation-delay: -0.4s;
+      }
+      .hub-pal:nth-child(5) img {
+        animation-duration: 2.8s;
+        animation-delay: -2.2s;
+      }
+      .hub-pal:nth-child(6) img {
+        animation-duration: 3.6s;
+        animation-delay: -1.2s;
+      }
+      .hub-pal.is-hopping img {
+        animation: hub-hop 0.7s cubic-bezier(0.3, 1.4, 0.5, 1);
+      }
+      .hub-cast-hint {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      @keyframes hub-bob {
+        50% {
+          transform: translateY(-8px) rotate(3deg);
+        }
+      }
+      @keyframes hub-hop {
+        20% {
+          transform: scale(1.12, 0.86);
+        }
+        55% {
+          transform: translateY(-46px) scale(0.92, 1.1) rotate(-8deg);
+        }
+        80% {
+          transform: scale(1.1, 0.9);
+        }
+      }
+
+      /* ---------- Tutorial cards ---------- */
+      .hub-tutorials {
+        padding-top: 72px;
       }
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 22px;
-        margin-top: 30px;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+        gap: 24px;
       }
       .card {
         display: flex;
         flex-direction: column;
-        border-radius: 26px;
         overflow: hidden;
+        border-radius: 26px;
         background: var(--card);
         border: 1px solid var(--line);
         box-shadow: var(--shadow);
@@ -54,30 +253,34 @@
       }
       .card-art img {
         position: absolute;
-        animation: bob 3s ease-in-out infinite;
-        filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
+        animation: hub-bob 3s ease-in-out infinite;
+        filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.22));
       }
-      .card-art img:nth-child(2) {
+      .card-art img:nth-of-type(2n) {
         animation-delay: -1s;
       }
-      .card-art img:nth-child(3) {
+      .card-art img:nth-of-type(3n) {
         animation-delay: -2s;
       }
-      @keyframes bob {
-        50% {
-          transform: translateY(-8px) rotate(3deg);
-        }
+      .card:hover .card-art img {
+        animation-duration: 1.4s;
       }
-      .card-number {
+      .card-pill {
         position: absolute;
         top: 14px;
-        left: 14px;
         z-index: 2;
         padding: 5px 12px;
         border-radius: 99px;
-        background: rgba(255, 255, 255, 0.92);
-        color: #2b2140;
-        font: 600 0.85rem/1 var(--font-display);
+        background: rgba(255, 255, 255, 0.94);
+        color: var(--ink);
+        font: 600 0.88rem/1 var(--font-display);
+      }
+      .card-number {
+        left: 14px;
+      }
+      .card-first {
+        right: 14px;
+        background: var(--accent-3);
       }
       .card-body {
         flex: 1;
@@ -86,13 +289,13 @@
         padding: 20px 22px 22px;
       }
       .card h2 {
+        margin: 0;
         font-size: 1.7rem;
-        margin-bottom: 4px;
       }
       .card-tag {
+        margin: 4px 0 12px;
         color: var(--muted);
         font-weight: 700;
-        margin-bottom: 12px;
       }
       .chips {
         display: flex;
@@ -104,84 +307,734 @@
       }
       .chips li {
         margin: 0;
-        padding: 4px 10px;
+        padding: 3px 10px;
         border-radius: 99px;
         background: var(--card-2);
-        border: 1px solid var(--line);
+        border: 1px solid #efe1cf;
+        color: #4e4256;
         font-size: 0.8rem;
-        font-weight: 700;
+        font-weight: 800;
       }
       .card-progress {
-        margin-top: auto;
-        margin-bottom: 14px;
-        font-size: 0.85rem;
-        font-weight: 700;
+        margin: auto 0 14px;
         color: var(--muted);
+        font-size: 0.875rem;
+        font-weight: 800;
       }
       .card-progress .progress-track {
-        margin-top: 6px;
         height: 10px;
+        margin-top: 6px;
+        border-radius: 99px;
+        background: #f3ebe2;
+        overflow: hidden;
+      }
+      .card-progress .progress-fill {
+        height: 100%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, #17a99a, #7fe3d6);
       }
       .card-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
       }
-      .how {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-        gap: 16px;
-        margin-top: 20px;
+      .hub-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 46px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 13px;
+        font: 600 1.05rem/1 var(--font-display);
+        text-decoration: none;
+        cursor: pointer;
+        transition:
+          transform 0.1s,
+          box-shadow 0.1s;
       }
-      .how .learn-card {
+      .hub-btn:hover {
+        transform: translateY(-1px);
+      }
+      .hub-btn:active {
+        transform: translateY(4px);
+        box-shadow: none !important;
+      }
+      .hub-btn-go {
+        background: var(--accent);
+        color: var(--accent-ink) !important;
+        box-shadow: 0 4px 0 #8f3505;
+      }
+      .hub-btn-soft {
+        background: var(--card);
+        color: var(--ink) !important;
+        border: 1.5px solid #d9ccbd;
+        box-shadow: 0 4px 0 #d9ccbd;
+      }
+      .hub-btn-sun {
+        background: #ffd166;
+        color: #2a1f00 !important;
+        box-shadow: 0 4px 0 #b08a12;
+      }
+      .hub-note {
+        max-width: 680px;
+        margin: 28px auto 0;
+        color: var(--muted);
+        font-size: 1rem;
+        text-align: center;
+      }
+
+      /* ---------- How a tutorial works ---------- */
+      .hub-section-head {
+        text-align: center;
+      }
+      .hub-section-head h2 {
+        margin: 0;
+        font-size: clamp(2.1rem, 4.4vw, 3.25rem);
+        line-height: 1.05;
+      }
+      .hub-section-head p {
+        max-width: 620px;
+        margin: 14px auto 0;
+        color: var(--muted);
+        font-size: 1.2rem;
+        text-wrap: pretty;
+      }
+      .hub-how {
+        padding-top: 120px;
+      }
+      .hub-how-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 44px;
+        margin-top: 44px;
+      }
+      .hub-demo {
+        flex: 1 1 640px;
+        min-width: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 18px;
+        border-radius: 26px;
+        background: radial-gradient(600px 300px at 90% -10%, rgba(255, 211, 77, 0.14), transparent 60%), #15122d;
+        box-shadow: 0 30px 70px rgba(21, 18, 45, 0.3);
+        color: #f5f2ff;
+      }
+      .hub-editor {
+        flex: 1 1 340px;
+        min-width: 0;
+        overflow: hidden;
+        border-radius: 16px;
+        background: var(--ed-bg);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .hub-editor-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px 8px 14px;
+        background: var(--ed-bar);
+        color: #b9b2e3;
+        font: 0.8rem/1.4 var(--font-code);
+      }
+      .hub-editor-bar span:last-child {
+        padding: 4px 10px;
+        border-radius: 8px;
+        background: rgba(124, 240, 197, 0.14);
+        color: var(--new-mark);
+        font: 700 0.8rem/1.4 var(--font-body);
+      }
+      .hub-code {
+        margin: 0;
+        padding: 10px 0 12px;
+        overflow-x: auto;
+        color: var(--ed-ink);
+        font: 0.78rem/22px var(--font-code);
+        white-space: pre;
+      }
+      .hub-code .ln {
+        display: flex;
+        min-height: 22px;
+      }
+      .hub-code .ln.is-new {
+        background: var(--new-line);
+        box-shadow: inset 3px 0 0 var(--new-mark);
+      }
+      .hub-code .ln.is-yours {
+        background: rgba(255, 211, 77, 0.2);
+        box-shadow: inset 3px 0 0 #ffd34d;
+      }
+      .hub-code .n {
+        flex: 0 0 38px;
+        padding-right: 12px;
+        color: var(--ed-gutter);
+        text-align: right;
+        user-select: none;
+      }
+      .hub-code .t {
+        padding-right: 16px;
+      }
+      .hub-code .com {
+        color: var(--t-com);
+      }
+      .hub-code .str {
+        color: var(--t-str);
+      }
+      .hub-code .num {
+        color: var(--t-num);
+      }
+      .hub-code .kw {
+        color: var(--t-kw);
+      }
+      .hub-code .eng {
+        color: var(--t-eng);
+      }
+      .hub-code .hook {
+        color: var(--t-hook);
+      }
+      .hub-side {
+        flex: 1 1 260px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .hub-stage {
+        aspect-ratio: 8 / 5;
+        overflow: hidden;
+        border-radius: 14px;
+        background: linear-gradient(#0d0a24, #3a2b6e);
+      }
+      .hub-stage canvas {
+        display: block;
+        width: 100% !important;
+        height: auto !important;
+      }
+      .hub-challenge {
+        padding: 16px;
+        border-radius: 16px;
+        background: #241f4a;
+        border: 1.5px solid rgba(255, 255, 255, 0.1);
+        transition: background-color 0.3s;
+      }
+      .hub-challenge.is-done {
+        background: rgba(124, 240, 197, 0.12);
+        border-color: rgba(124, 240, 197, 0.5);
+      }
+      .hub-challenge h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        color: #ffd34d;
+        font-size: 1.05rem;
+      }
+      .hub-challenge h3 svg {
+        display: none;
+      }
+      .hub-challenge.is-done h3 svg {
+        display: block;
+      }
+      .hub-challenge p {
+        margin: 6px 0 0;
+        color: #d6d0f5;
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+      .hub-challenge-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .hub-challenge .hub-btn {
+        min-height: 44px;
+        padding: 0 16px;
+        font-size: 0.95rem;
+      }
+      .hub-btn-ghost {
+        background: transparent;
+        color: #d6d0f5 !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.2);
+        font-family: var(--font-body) !important;
+        font-weight: 800 !important;
+      }
+      .hub-challenge-hint[hidden] {
+        display: none;
+      }
+      .hub-challenge code {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+      }
+      .hub-features {
+        flex: 1 1 340px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .hub-features li {
+        display: flex;
+        gap: 14px;
+        margin: 0;
+      }
+      .hub-features .icon {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+      }
+      .hub-features h3 {
+        margin: 0;
+        font-size: 1.3rem;
+      }
+      .hub-features p {
+        margin: 2px 0 0;
+        color: var(--muted);
         font-size: 1rem;
       }
-      .section-title {
-        margin-top: 80px;
-        text-align: center;
+
+      /* ---------- Make your own ---------- */
+      .hub-make {
+        margin-top: 120px;
+        background:
+          radial-gradient(700px 420px at 100% 0%, rgba(244, 106, 31, 0.22), transparent 60%),
+          radial-gradient(700px 500px at 0% 100%, rgba(23, 169, 154, 0.18), transparent 60%),
+          #2d2235;
+        color: #fffaf3;
+      }
+      .hub-make .hub-wrap {
+        padding-top: 104px;
+        padding-bottom: 104px;
+      }
+      .hub-make a {
+        color: #ffb07a !important;
+      }
+      .hub-make-head {
+        max-width: 760px;
+      }
+      .hub-eyebrow {
+        display: inline-flex;
+        margin: 0;
+        padding: 5px 12px;
+        border-radius: 99px;
+        background: rgba(255, 209, 102, 0.18);
+        color: #ffd166;
+        font-size: 0.9rem;
+        font-weight: 800;
+      }
+      .hub-make h2 {
+        margin: 16px 0 0;
+        font-size: clamp(2.25rem, 4.8vw, 3.6rem);
+        line-height: 1.02;
+      }
+      .hub-make-head p {
+        margin: 16px 0 0;
+        color: #d9cfe0;
+        font-size: 1.2rem;
+        text-wrap: pretty;
+      }
+      .hub-make-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 32px;
+        margin-top: 48px;
+      }
+      .hub-run {
+        flex: 1 1 560px;
+        min-width: 0;
+        padding: 24px;
+        border-radius: 22px;
+        background: #150f1c;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.35);
+      }
+      .hub-ask {
+        max-width: 440px;
+        margin: 0 0 0 auto;
+        padding: 14px 18px;
+        border-radius: 20px 20px 6px 20px;
+        background: #fffaf3;
+        color: var(--ink);
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1.45;
+      }
+      .hub-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 24px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .hub-steps li {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin: 0;
+        padding: 10px 12px;
+        border-radius: 14px;
+        opacity: 0.5;
+        transition:
+          background-color 0.3s,
+          opacity 0.3s;
+      }
+      .hub-steps .dot {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: #150f1c;
+      }
+      .hub-steps .dot svg,
+      .hub-steps .dot i {
+        display: none;
+      }
+      .hub-steps .is-done,
+      .hub-steps .is-active {
+        opacity: 1;
+      }
+      .hub-steps .is-done .dot {
+        background: #7fe3d6;
+        border-color: #7fe3d6;
+      }
+      .hub-steps .is-done .dot svg {
+        display: block;
+      }
+      .hub-steps .is-active {
+        background: rgba(255, 209, 102, 0.12);
+      }
+      .hub-steps .is-active .dot {
+        border-color: #ffd166;
+      }
+      .hub-steps .is-active .dot i {
+        display: block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ffd166;
+        animation: hub-pulse 1s ease-in-out infinite;
+      }
+      .hub-steps b {
+        display: block;
+        color: #ffffff;
+        font: 600 1.1rem/1.4 var(--font-display);
+      }
+      .hub-steps span span {
+        display: block;
+        color: #b8acc6;
+        font-size: 0.95rem;
+      }
+      @keyframes hub-pulse {
+        50% {
+          opacity: 0.35;
+        }
+      }
+      .hub-run-foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 16px;
+        color: #d9cfe0;
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+      .hub-setup {
+        flex: 1 1 400px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .hub-box {
+        padding: 24px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .hub-box h3 {
+        margin: 0;
+        font-size: 1.4rem;
+      }
+      .hub-box p {
+        margin: 6px 0 0;
+        color: #d9cfe0;
+        font-size: 1rem;
+      }
+      .hub-box :not(pre) > code {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        white-space: normal;
+      }
+      .hub-agents {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 10px 18px;
+        margin: 14px 0 0;
+        font-size: 1rem;
+      }
+      .hub-agents dt {
+        font-weight: 800;
+      }
+      .hub-agents dd {
+        margin: 0;
+        color: #d9cfe0;
+      }
+      .hub-shell {
+        margin: 14px 0 0;
+        padding: 14px 16px;
+        overflow-x: auto;
+        border-radius: 12px;
+        background: #150f1c;
+        color: var(--ed-ink);
+        font: 0.82rem/23px var(--font-code);
+      }
+
+      .hub-footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px 16px;
+        padding-top: 44px;
+        padding-bottom: 48px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .hub-footer p {
+        margin: 0;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hub-pal img,
+        .card-art img,
+        .hub-steps .is-active .dot i {
+          animation: none !important;
+        }
       }
     </style>
   </head>
   <body class="theme-hub">
-    <main class="page" style="padding-left: 24px">
-      <section class="hub-hero">
-        <div class="hero-kicker"><img src="lib/jgz-logo.svg" alt="" /> Learn to code by making games</div>
-        <h1>Make <span class="pop">real</span> games</h1>
-        <p class="hero-lede">
-          Playful tutorials for people who have never programmed before. Each one builds a complete, cute little game from
-          an empty screen, one small step at a time, right here in your browser.
+    <header class="hub-bar">
+      <div class="hub-wrap">
+        <a class="hub-home" href="#top"><img src="lib/jgz-logo.svg" alt="" />jgz tutorials</a>
+        <nav class="hub-nav" aria-label="Main">
+          <a href="#tutorials">Tutorials</a>
+          <a href="#make">Make your own</a>
+          <a href="https://leaflearning.org/jgz/">JS Game Zero</a>
+          <a href="https://github.com/Leaf-Learning/jgz-tutorial">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hub-hero hub-wrap" aria-labelledby="hub-title">
+        <p class="hub-kicker"><img src="lib/jgz-logo.svg" alt="" />Learn to code by making games</p>
+        <h1 id="hub-title">Make <span class="pop">real</span> games</h1>
+        <p class="hub-lede">
+          Six playful tutorials take someone who has never programmed from an empty screen to a finished, cute game, one
+          runnable step at a time. Have an idea of your own? Your coding agent can make it the seventh.
         </p>
-        <ul class="hero-meta">
-          <li>🌱 No experience needed</li>
-          <li>💻 Nothing to install</li>
-          <li>🎯 Challenges that check themselves</li>
+        <ul class="hub-meta">
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17a99a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8M12 13c0-4 3-7 8-7 0 5-3 7-8 7zM12 15c0-3-2.5-5.5-7-5.5 0 4 2.5 5.5 7 5.5z" /></svg>
+            No experience needed
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17a99a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M2 20h20" /></svg>
+            Nothing to install
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#17a99a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></svg>
+            Challenges that check themselves
+          </li>
         </ul>
+        <div class="hub-cast" data-cast></div>
+        <p class="hub-cast-hint">Click someone to say hi.</p>
       </section>
 
-      <div class="cards" data-cards></div>
+      <section class="hub-tutorials hub-wrap" id="tutorials" aria-label="The tutorials">
+        <div class="cards" data-cards></div>
+        <p class="hub-note">
+          New to coding? Start with Firefly Flash. Each tutorial takes about an hour and a half to two hours, and your
+          progress is saved in this browser.
+        </p>
+      </section>
 
-      <h2 class="section-title">How the tutorials work</h2>
-      <div class="how">
-        <div class="learn-card"><span class="emoji">✍️</span><b>Edit real code</b>Every step has the game's actual code. Change anything, and new lines glow so you can spot them.</div>
-        <div class="learn-card"><span class="emoji">⚡</span><b>See it instantly</b>Press Run and the game plays right next to your code, powered by the real js-game-zero engine.</div>
-        <div class="learn-card"><span class="emoji">🎯</span><b>Challenges check themselves</b>Little tasks watch your running game and cheer when you've done it. Hints are there if you're stuck.</div>
-        <div class="learn-card"><span class="emoji">⬇️</span><b>Keep what you make</b>Download your game as a folder that runs in the js-game-zero sandbox or with the <code>jgz</code> tool.</div>
-      </div>
-      <p class="muted" style="text-align: center; margin-top: 28px">
-        Start with Firefly Flash if you've never coded before. Each tutorial takes about one and a half to two hours, and your progress is
-        saved in this browser.
-      </p>
+      <section class="hub-how hub-wrap" id="how" aria-labelledby="how-title">
+        <div class="hub-section-head">
+          <h2 id="how-title">How a tutorial works</h2>
+          <p>Every step is a complete game you can run, change and break. Try the challenge below.</p>
+        </div>
+        <div class="hub-how-row">
+          <div class="hub-demo">
+            <div class="hub-editor">
+              <div class="hub-editor-bar"><span>Firefly Flash · Step 2</span><span>New lines glow</span></div>
+              <pre class="hub-code" data-demo-code></pre>
+            </div>
+            <div class="hub-side">
+              <div class="hub-stage" data-demo-stage role="img" aria-label="The game so far: a night sky with a moon, stars and two dark hills"></div>
+              <div class="hub-challenge" data-demo-challenge aria-live="polite">
+                <h3>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7cf0c5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" /></svg>
+                  <span data-demo-title>Challenge: add a fourth star</span>
+                </h3>
+                <p data-demo-text>
+                  Copy a star line and change its numbers. In a tutorial, the page watches your game and cheers when it
+                  spots the new star.
+                </p>
+                <p class="hub-challenge-hint" data-demo-hint hidden>
+                  Each star is one <code>screen.circle</code> line: x, y, size, then colour.
+                </p>
+                <div class="hub-challenge-actions">
+                  <button class="hub-btn hub-btn-sun" type="button" data-demo-solve>Show me</button>
+                  <button class="hub-btn hub-btn-ghost" type="button" data-demo-hint-toggle aria-expanded="false">Hint</button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <footer class="page-footer">
-        Built with <a href="https://github.com/Leaf-Learning/js-game-zero">js-game-zero</a>. Art drawn for these games; font: Fredoka
-        (SIL Open Font License).
-      </footer>
+          <ul class="hub-features">
+            <li>
+              <span class="icon" style="background: #ddf2ee" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0b6158" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5" /></svg></span>
+              <div>
+                <h3>Edit real code</h3>
+                <p>Every step is the game’s actual code. The lines that are new in a step glow, so you can spot them.</p>
+              </div>
+            </li>
+            <li>
+              <span class="icon" style="background: #f6ddcb" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="#a84209"><path d="M7 4.5v15l12-7.5z" /></svg></span>
+              <div>
+                <h3>See it right away</h3>
+                <p>Press Run and the game plays next to your code, on the real JS Game Zero engine.</p>
+              </div>
+            </li>
+            <li>
+              <span class="icon" style="background: #fdf0d5" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7a4b00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></svg></span>
+              <div>
+                <h3>Challenges check themselves</h3>
+                <p>Small tasks watch your running game and cheer when you’ve done it. Hints and a “Show me” are there if you’re stuck.</p>
+              </div>
+            </li>
+            <li>
+              <span class="icon" style="background: #e7e1f5" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5b3a8a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h10M18 8h2M4 16h4M12 16h8" /><circle cx="16" cy="8" r="2" /><circle cx="10" cy="16" r="2" /></svg></span>
+              <div>
+                <h3>Quizzes, sliders and toys</h3>
+                <p>Sliders wired to numbers in the code, live values, and little widgets that make an idea click.</p>
+              </div>
+            </li>
+            <li>
+              <span class="icon" style="background: #dbe8f7" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1f5fa8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 20h16" /></svg></span>
+              <div>
+                <h3>Keep what you make</h3>
+                <p>
+                  Download your game as a folder that keeps running in the
+                  <a href="https://leaflearning.org/jgz/">JS Game Zero</a> sandbox.
+                </p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="hub-make" id="make" aria-labelledby="make-title">
+        <div class="hub-wrap">
+          <div class="hub-make-head">
+            <p class="hub-eyebrow">The tutorial builder</p>
+            <h2 id="make-title">Got a game idea? Turn it into a tutorial.</h2>
+            <p>
+              Open the tutorials folder in your coding agent and describe your game. It follows the new-game-tutorial
+              skill from idea to finished page, and the new tutorial shows up on your hub next to these six.
+            </p>
+          </div>
+          <div class="hub-make-row">
+            <div class="hub-run">
+              <p class="hub-ask">Make a tutorial for my game idea: a frog that catches bugs with its tongue before the sun sets.</p>
+              <ol class="hub-steps" data-build>
+                <li>
+                  <span class="dot" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5" /></svg><i></i></span>
+                  <span><b>Shapes the idea with you</b><span>into a game a beginner can build in a couple of hours</span></span>
+                </li>
+                <li>
+                  <span class="dot" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5" /></svg><i></i></span>
+                  <span><b>Builds the game, with cute art</b><span>drawn as SVG, in a finished, playable main.js</span></span>
+                </li>
+                <li>
+                  <span class="dot" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5" /></svg><i></i></span>
+                  <span><b>Carves it into steps</b><span>each one a complete game that runs</span></span>
+                </li>
+                <li>
+                  <span class="dot" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5" /></svg><i></i></span>
+                  <span><b>Writes the tutorial page</b><span>with challenges, quizzes, sliders and widgets</span></span>
+                </li>
+                <li>
+                  <span class="dot" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5" /></svg><i></i></span>
+                  <span><b>Runs every check</b><span>plays the game, runs every step, solves every challenge</span></span>
+                </li>
+              </ol>
+              <div class="hub-run-foot">
+                <span data-build-status aria-live="polite"></span>
+                <button class="hub-btn hub-btn-sun" type="button" data-build-next>Next step</button>
+              </div>
+            </div>
+
+            <div class="hub-setup">
+              <div class="hub-box">
+                <h3>Works in your coding agent</h3>
+                <dl class="hub-agents">
+                  <dt>Claude Code</dt>
+                  <dd><code>/new-game-tutorial</code></dd>
+                  <dt>Codex</dt>
+                  <dd><code>$new-game-tutorial</code></dd>
+                  <dt>Pi, Antigravity</dt>
+                  <dd>Find the skill on their own</dd>
+                  <dt>Any other agent</dt>
+                  <dd>Ask it to follow <code>skills/new-game-tutorial/SKILL.md</code></dd>
+                </dl>
+              </div>
+              <div class="hub-box">
+                <h3>Set it up once</h3>
+                <p>You need <a href="https://bun.sh">Bun</a>. JS Game Zero and its <code>jgz</code> tool come from npm.</p>
+                <pre class="hub-shell">git clone https://github.com/Leaf-Learning/jgz-tutorial.git
+cd jgz-tutorial
+bun install
+bunx playwright install chromium</pre>
+                <p>Building one by hand? <code>bun run new frog_feast "Frog Feast"</code> sets up the files.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
+    <footer class="hub-footer hub-wrap">
+      <p>
+        A <a href="https://leaflearning.org/">Leaf Learning</a> project, built with
+        <a href="https://leaflearning.org/jgz/">JS Game Zero</a>.
+      </p>
+      <p>Art drawn for these games. Font: Fredoka (SIL Open Font License).</p>
+    </footer>
+
+    <script src="lib/jgz.js"></script>
     <script src="lib/data/games.js"></script>
     <script>
-      // One card per game in lib/data/games.js, which scripts/build.ts makes
-      // from each game's tutorial.json.
       function h(tag, attrs = {}, ...children) {
         const node = document.createElement(tag);
         for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
@@ -196,14 +1049,31 @@
           return fallback;
         }
       }
+      const playIcon = () => {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("width", "14");
+        svg.setAttribute("height", "14");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("fill", "currentColor");
+        svg.setAttribute("aria-hidden", "true");
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", "M7 4.5v15l12-7.5z");
+        svg.append(path);
+        return svg;
+      };
 
+      // One card per game in lib/data/games.js, which scripts/build.ts makes
+      // from each game's tutorial.json.
       const cards = document.querySelector("[data-cards]");
       const games = window.JGZT_GAMES || [];
       games.forEach((game, index) => {
-        const art = h("div", { class: "card-art" }, h("span", { class: "card-number" }, `Tutorial ${index + 1}`));
+        const art = h("div", { class: "card-art" }, h("span", { class: "card-pill card-number" }, `Tutorial ${index + 1}`));
+        if (index === 0) art.append(h("span", { class: "card-pill card-first" }, "Start here"));
         art.style.background = game.card?.background || "var(--card-2)";
-        const start = h("a", { class: "btn btn-primary", href: game.page }, "Start learning →");
+        const start = h("a", { class: "hub-btn hub-btn-go", href: game.page }, "Start learning →");
         const progressBox = h("div", { class: "card-progress" });
+        // The topics start with an emoji; the cards show the words.
+        const topics = (game.topics || []).map((topic) => topic.replace(/^[\p{Extended_Pictographic}\u{FE0F}\u{200D}]+\s*/u, ""));
         cards.append(
           h(
             "article",
@@ -213,14 +1083,14 @@
               "div",
               { class: "card-body" },
               h("h2", {}, game.title),
-              h("div", { class: "card-tag" }, game.tagline),
-              h("ul", { class: "chips" }, ...(game.topics || []).map((topic) => h("li", {}, topic))),
+              h("p", { class: "card-tag" }, game.tagline),
+              h("ul", { class: "chips" }, ...topics.map((topic) => h("li", {}, topic))),
               progressBox,
               h(
                 "div",
                 { class: "card-actions" },
                 start,
-                h("a", { class: "btn btn-soft", href: `play.html?game=${encodeURIComponent(game.id)}` }, "▶ Play"),
+                h("a", { class: "hub-btn hub-btn-soft", href: `play.html?game=${encodeURIComponent(game.id)}` }, playIcon(), "Play"),
               ),
             ),
           ),
@@ -234,7 +1104,7 @@
         } else {
           const percent = Math.round((items.filter((item) => done.has(item)).length / items.length) * 100);
           progressBox.append(
-            percent === 100 ? "Finished! 🎉" : `${percent}% done`,
+            percent === 100 ? "Finished!" : `${percent}% done`,
             h("div", { class: "progress-track" }, h("div", { class: "progress-fill", style: `width:${percent}%` })),
           );
           if (percent < 100) start.textContent = "Continue →";
@@ -246,8 +1116,33 @@
         document.body.append(script);
       });
 
+      // The cast in the hero: one character from each game, in a fixed order
+      // whichever data file arrives first.
+      const CAST = [
+        ["penguin_slide", "images/penguin_happy.svg", 92, "the penguin"],
+        ["octo_pop", "images/octopus_happy.svg", 112, "the octopus"],
+        ["firefly_flash", "images/firefly_lit_1.svg", 52, "the firefly"],
+        ["pancake_stack", "images/bear_happy.svg", 96, "the bear"],
+        ["planet_putt", "images/ball_happy.svg", 60, "the golf ball"],
+        ["tiny_garden", "images/sunflower.svg", 70, "the sunflower"],
+      ];
+      const cast = document.querySelector("[data-cast]");
+      const pals = CAST.map(([id, path, width, name]) => {
+        const img = h("img", { alt: "" });
+        const pal = h("button", { class: "hub-pal", type: "button", "aria-label": `Say hi to ${name}`, style: `width:${width}px` }, img);
+        pal.addEventListener("click", () => {
+          pal.classList.remove("is-hopping");
+          void pal.offsetWidth; // start the hop again on every click
+          pal.classList.add("is-hopping");
+        });
+        pal.addEventListener("animationend", () => pal.classList.remove("is-hopping"));
+        cast.append(pal);
+        return { id, path, img, pal };
+      });
+
       window.JGZT = {
         register(id, data) {
+          for (const pal of pals) if (pal.id === id && data.assets[pal.path]) pal.img.src = data.assets[pal.path];
           const game = games.find((entry) => entry.id === id);
           const art = document.querySelector(`.card[data-game="${id}"] .card-art`);
           if (!game || !art) return;
@@ -259,6 +1154,125 @@
           }
         },
       };
+      // Hide anyone whose game didn't load, rather than leave a gap.
+      window.addEventListener("load", () => {
+        for (const pal of pals) if (!pal.img.getAttribute("src")) pal.pal.hidden = true;
+      });
+
+      // How a tutorial works: a real step from Firefly Flash, run on the engine.
+      const STEP = [
+        ["WIDTH = 640;"],
+        ["HEIGHT = 400;"],
+        [""],
+        ["function draw() {"],
+        ['  screen.fill("#0d0a24", "#3a2b6e");'],
+        ['  screen.circle(446, 74, 40, "#fff4cf");'],
+        [""],
+        ["  // A few stars.", "is-new"],
+        ['  screen.circle(80, 60, 2, "white");', "is-new"],
+        ['  screen.circle(200, 110, 1.5, "white");', "is-new"],
+        ['  screen.circle(330, 40, 2, "white");', "is-new"],
+        [""],
+        ["  // Hills, and the ground in front."],
+        ['  screen.circle(120, 470, 160, "#231d57");'],
+        ['  screen.circle(520, 480, 190, "#231d57");'],
+        ['  screen.rect(0, 350, WIDTH, 50, "#1b1846");'],
+        ["}"],
+      ];
+      const STAR = ['  screen.circle(590, 170, 1.5, "white");', "is-yours"];
+      const TOKENS = /(\/\/.*$)|("[^"]*")|\b(function)\b|\b(screen|WIDTH|HEIGHT)\b|\b(draw)\b(?=\()|(\b\d+(?:\.\d+)?\b)/g;
+      const KINDS = ["com", "str", "kw", "eng", "hook", "num"];
+      function highlight(line) {
+        const out = [];
+        let last = 0;
+        for (const match of line.matchAll(TOKENS)) {
+          if (match.index > last) out.push(line.slice(last, match.index));
+          const kind = KINDS[match.slice(1).findIndex(Boolean)];
+          out.push(h("span", { class: kind }, match[0]));
+          last = match.index + match[0].length;
+        }
+        if (last < line.length) out.push(line.slice(last));
+        return out;
+      }
+
+      const demoCode = document.querySelector("[data-demo-code]");
+      const demoStage = document.querySelector("[data-demo-stage]");
+      const demoChallenge = document.querySelector("[data-demo-challenge]");
+      const demoSolve = document.querySelector("[data-demo-solve]");
+      const demoHint = document.querySelector("[data-demo-hint]");
+      const demoHintToggle = document.querySelector("[data-demo-hint-toggle]");
+      let solved = false;
+      let demoHandle = null;
+
+      function showDemo() {
+        const lines = solved ? [...STEP.slice(0, 11), STAR, ...STEP.slice(11)] : STEP;
+        demoCode.replaceChildren(
+          ...lines.map(([text, kind], i) =>
+            h("div", { class: `ln ${kind || ""}` }, h("span", { class: "n", "aria-hidden": "true" }, String(i + 1)), h("span", { class: "t" }, ...highlight(text))),
+          ),
+        );
+        demoChallenge.classList.toggle("is-done", solved);
+        document.querySelector("[data-demo-title]").textContent = solved ? "You did it! A fourth star." : "Challenge: add a fourth star";
+        document.querySelector("[data-demo-text]").textContent = solved
+          ? "Your line glows yellow. Try other numbers to move the star."
+          : "Copy a star line and change its numbers. In a tutorial, the page watches your game and cheers when it spots the new star.";
+        demoSolve.textContent = solved ? "Reset" : "Show me";
+        runDemo(lines.map(([text]) => text).join("\n"));
+      }
+
+      // The scene doesn't move, so one drawn frame is the whole game.
+      async function runDemo(source) {
+        if (!window.JGZ) return;
+        demoHandle?.stop();
+        const canvas = h("canvas");
+        demoStage.replaceChildren(canvas);
+        const title = document.title;
+        try {
+          const handle = JGZ.run(source, {
+            canvas,
+            autostart: false,
+            projectId: "jgzt-hub",
+            keyboardTarget: h("div"),
+            diagnostics: () => {},
+          });
+          demoHandle = handle;
+          await handle.ready;
+          if (demoHandle === handle) handle.step(0);
+        } catch {
+          /* a broken demo leaves the sky behind it */
+        }
+        document.title = title;
+      }
+
+      demoSolve.addEventListener("click", () => {
+        solved = !solved;
+        showDemo();
+      });
+      demoHintToggle.addEventListener("click", () => {
+        demoHint.hidden = !demoHint.hidden;
+        demoHintToggle.setAttribute("aria-expanded", String(!demoHint.hidden));
+      });
+      showDemo();
+
+      // The builder, one step at a time.
+      const buildSteps = [...document.querySelectorAll("[data-build] li")];
+      const buildStatus = document.querySelector("[data-build-status]");
+      const buildNext = document.querySelector("[data-build-next]");
+      let at = 3;
+      function showBuild() {
+        buildSteps.forEach((step, i) => {
+          step.classList.toggle("is-done", i < at);
+          step.classList.toggle("is-active", i === at);
+        });
+        const finished = at >= buildSteps.length;
+        buildStatus.textContent = finished ? "Done: Frog Feast is on your hub." : `Step ${at + 1} of ${buildSteps.length}`;
+        buildNext.textContent = finished ? "Start over" : "Next step";
+      }
+      buildNext.addEventListener("click", () => {
+        at = at >= buildSteps.length ? 0 : at + 1;
+        showBuild();
+      });
+      showBuild();
     </script>
   </body>
 </html>
