@@ -5,8 +5,7 @@ description: Turn someone's game idea into a finished, cute js-game-zero game pl
 
 # Make a game tutorial from an idea
 
-You're adding a fourth (fifth, …) tutorial to this repo. When you're done there
-must be:
+You're adding a new tutorial to this repo. When you're done there must be:
 
 - **A small, finished, cute game** in `games/<id>/`, a jgz project with hand-drawn SVG art.
 - **An interactive tutorial page** at `tutorials/<slug>.html` that takes someone who has
@@ -149,8 +148,10 @@ Then look at the page yourself in a real browser, using Playwright screenshots a
 - The hero game starts from its poster frame.
 - `play.html?game=<id>` plays the game, and the hub card looks right next to the others.
 
-Then get a fresh-eyes review. Ask a subagent that hasn't seen your work to read the page
-as a total beginner and list anything confusing, unexplained or out of order. Fix what's real.
+Then get a fresh-eyes review. If your agent can start another one (a subagent or a new session),
+ask one that hasn't seen your work to read the page as a total beginner and list anything
+confusing, unexplained or out of order. If it can't, do that read-through yourself, top to
+bottom, before fixing anything. Fix what's real.
 
 ## 7. Hand back
 

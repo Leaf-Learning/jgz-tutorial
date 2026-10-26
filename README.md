@@ -1,8 +1,33 @@
 # jgz tutorials
 
-Six cute browser games built with [js-game-zero](../js-game-zero), and six
-interactive, playful tutorials that teach a complete beginner to build each
-one from an empty screen.
+Interactive, playful tutorials that teach a complete beginner to build a cute
+browser game from an empty screen, with [js-game-zero](../js-game-zero). Six
+are ready to play, and you can make one from your own game idea.
+
+## Make your own
+
+Have a game idea? Open this folder in your favourite coding agent (Claude Code,
+Codex, Pi, Antigravity…) and say something like:
+
+> Make a tutorial for my game idea: a frog that catches bugs with its tongue before the sun sets.
+
+The agent follows the **new-game-tutorial** skill in `skills/new-game-tutorial/`. It shapes the
+idea into a beginner-sized game with you. Then it builds the game with cute art, carves it into
+steps, writes the tutorial page with challenges, quizzes and widgets, and runs every check. The
+new tutorial shows up on the hub next to the others.
+
+- **Agents that support skills** find it on their own: `.agents/skills/` (read by Codex, Pi and
+  Antigravity) and `.claude/skills/` (read by Claude Code) both link to `skills/`. To call it by
+  name, use `/new-game-tutorial` in Claude Code or `$new-game-tutorial` in Codex.
+- **Any other agent:** ask it to follow `skills/new-game-tutorial/SKILL.md`.
+
+The agent needs the same setup as the [commands](#commands) below: Bun, and js-game-zero built
+next to this folder.
+
+Building one by hand? `bun run new frog_feast "Frog Feast"` sets up all the files, and the
+skill's guides in `skills/new-game-tutorial/references/` describe the house style.
+
+## The tutorials
 
 | # | Game | Teaches |
 | - | ---- | ------- |
@@ -28,21 +53,6 @@ Each tutorial has:
 
 `tutorials/play.html?game=penguin_slide` plays any finished game full-size.
 
-## Make your own
-
-Have a game idea? Open this folder in [Claude Code](https://claude.com/claude-code) and say
-something like:
-
-> Make a tutorial for my game idea: a frog that catches bugs with its tongue before the sun sets.
-
-or run **`/new-game-tutorial`**. The skill (in `skills/new-game-tutorial/`) shapes the
-idea into a beginner-sized game with you. Then it builds the game with cute art, carves it into
-steps, writes the tutorial page with challenges, quizzes and widgets, and runs every check. The
-new tutorial shows up on the hub next to the others.
-
-Building one by hand? `bun run new frog_feast "Frog Feast"` sets up all the files, and the
-skill's guides in `skills/new-game-tutorial/references/` describe the house style.
-
 ## Layout
 
 ```
@@ -59,7 +69,7 @@ tests/                   play-through tests that drive each game with jgz
 tests/challenges/        a model solution for every challenge on every page
 scripts/                 build, checks, scaffolding, solvers and the Firefly tuner
 shared/fonts/            Fredoka (SIL OFL), used by all the games
-skills/                  the new-game-tutorial skill (.claude/skills links here)
+skills/                  the new-game-tutorial skill (.agents/skills and .claude/skills link here)
 ```
 
 The last step of each tutorial *is* `games/<game>/main.js`, so a tutorial
