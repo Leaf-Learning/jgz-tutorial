@@ -4,11 +4,12 @@
 // diagnostics) are collected on `events` for later assertions.
 
 import { fileURLToPath } from "node:url";
-import { join } from "node:path";
 
-const root = fileURLToPath(new URL("..", import.meta.url));
+// The CLI from the @js-game-zero/cli package. Set JGZ_CLI to try another one,
+// such as a js-game-zero checkout's packages/cli/src/cli.ts.
 export const JGZ_CLI =
-  process.env.JGZ_CLI ?? join(root, "../js-game-zero/packages/cli/src/cli.ts");
+  process.env.JGZ_CLI ??
+  fileURLToPath(import.meta.resolve("@js-game-zero/cli/dist/cli.js"));
 
 type Json = any;
 

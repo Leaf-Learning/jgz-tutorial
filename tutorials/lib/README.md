@@ -8,7 +8,7 @@ page. Pages open straight from disk; nothing needs a server.
 
 | File                     | What it is                                                             |
 | ------------------------ | ---------------------------------------------------------------------- |
-| `jgz.js`                 | The engine, copied from js-game-zero by `scripts/build.ts`.            |
+| `jgz.js`                 | The engine, from `@js-game-zero/browser-runtime`, copied by the build. |
 | `tutorial.js`            | The framework (`window.JGZT`).                                         |
 | `tutorial.css`           | Shared styles and the four themes.                                     |
 | `data/<game>.js`         | Generated: the game's images as data URLs + every step's code.         |

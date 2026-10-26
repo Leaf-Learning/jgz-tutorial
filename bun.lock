@@ -5,15 +5,27 @@
     "": {
       "name": "jgz-tutorial",
       "devDependencies": {
+        "@js-game-zero/browser-runtime": "0.2.1",
+        "@js-game-zero/cli": "0.2.1",
+        "@js-game-zero/core": "0.2.1",
         "playwright": "1.61.1",
+        "prettier": "3.9.1",
       },
     },
   },
   "packages": {
+    "@js-game-zero/browser-runtime": ["@js-game-zero/browser-runtime@0.2.1", "", { "dependencies": { "@js-game-zero/core": "0.2.1" } }, "sha512-65ZcXTdaOlkF4BmuTUUMQ1QKR4xss9EnxZsoipgJTDohP1BUgLjiUrXPzZkW2XM/QmiXX26ad25HHhrFUh3c7Q=="],
+
+    "@js-game-zero/cli": ["@js-game-zero/cli@0.2.1", "", { "peerDependencies": { "playwright": "^1.57.0" }, "bin": { "jgz": "dist/cli.js" } }, "sha512-APns89/mHtY4rB6HGeRJX5kolTbvIbH+SpP90KyxlNueJuF0+fJl3FZQiZu1EMw7uwTPxfLKefe5HSY47INgEQ=="],
+
+    "@js-game-zero/core": ["@js-game-zero/core@0.2.1", "", {}, "sha512-UAi9vDy41nqWnCwNA+zk6qPPdsba/OaTr2AzbBC9iq5YV0zbo+s+bD3jZMEGtDfclGpQF9Lm/zfzF6LHblotVA=="],
+
     "fsevents": ["fsevents@2.3.2", "", { "os": "darwin" }, "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA=="],
 
     "playwright": ["playwright@1.61.1", "", { "dependencies": { "playwright-core": "1.61.1" }, "optionalDependencies": { "fsevents": "2.3.2" }, "bin": { "playwright": "cli.js" } }, "sha512-DWnY5o3YbLWK4GovuAVwpqL+1VwGNdUGrRr++8j8PtQQzvAVZUIMjKQ90fY689sEJZJBbZVw1rXaOKSTitkzPQ=="],
 
     "playwright-core": ["playwright-core@1.61.1", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-h7Qlt6m4REp25qvIdvbDtVmD4LqVXfpRxhORv9L0jzETM05p4fuPJ3dKyuSXQxDSbXnmS79HAgi9589lGSpLkg=="],
+
+    "prettier": ["prettier@3.9.1", "", { "bin": { "prettier": "bin/prettier.cjs" } }, "sha512-ppiDo2CSwexck1eyZUwJHg/N3nf1+6IRCv7W/VJ5vaLnVCmB7+3CdRfMwoCHBBX6xTrREDTksZ4OZl5SSf4zXA=="],
   }
 }

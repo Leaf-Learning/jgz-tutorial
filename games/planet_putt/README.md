@@ -21,7 +21,7 @@ predicting the future by simulating it.
 ## Run it
 
 ```sh
-bun run jgz test games/planet_putt     # from this repo, with js-game-zero beside it
+bun run jgz -- test games/planet_putt     # from the jgz-tutorial folder
 ```
 
 Or open the tutorial: `tutorials/planet-putt.html`.

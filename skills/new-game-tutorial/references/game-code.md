@@ -53,8 +53,8 @@ startEvening(0);                          // any setup the title screen needs
 
 ## Engine notes (js-game-zero)
 
-Full reference: `../js-game-zero/docs/reference/*.md` (hooks, screen, actor, clock, audio,
-storage, runtime). Things worth knowing up front:
+Full reference: `node_modules/@js-game-zero/core/dist/reference/*.md` (hooks, screen, actor,
+clock, audio, storage, runtime). Things worth knowing up front:
 
 - **Hooks:** `draw()`, `update(dt)`, `onMouseDown(pos, button)`, `onMouseUp(pos, button)`,
   `onMouseMove(pos, rel, buttons)`, `onKeyDown(key)`, `onKeyUp(key)`. `keyboard.left` etc. for

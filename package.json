@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "jgz": "bun ../js-game-zero/packages/cli/src/cli.ts",
+    "jgz": "jgz",
     "new": "bun scripts/new-tutorial.ts",
     "build": "bun scripts/build.ts",
     "test:games": "bun test tests",
@@ -11,9 +11,13 @@
     "check:tutorials": "bun scripts/check-tutorials.ts",
     "check:challenges": "bun scripts/check-challenges.ts",
     "check": "bun scripts/build.ts && bun test tests && bun scripts/check-steps.ts && bun scripts/check-tutorials.ts && bun scripts/check-challenges.ts",
-    "format": "../js-game-zero/node_modules/.bin/prettier --write games tutorials/steps scripts tests"
+    "format": "prettier --write games tutorials/steps scripts tests"
   },
   "devDependencies": {
-    "playwright": "1.61.1"
+    "@js-game-zero/browser-runtime": "0.2.1",
+    "@js-game-zero/cli": "0.2.1",
+    "@js-game-zero/core": "0.2.1",
+    "playwright": "1.61.1",
+    "prettier": "3.9.1"
   }
 }

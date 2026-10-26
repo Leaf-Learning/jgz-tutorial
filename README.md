@@ -22,8 +22,8 @@ new tutorial shows up on the hub next to the others.
   name, use `/new-game-tutorial` in Claude Code or `$new-game-tutorial` in Codex.
 - **Any other agent:** ask it to follow `skills/new-game-tutorial/SKILL.md`.
 
-The agent needs the same setup as the [commands](#commands) below: Bun, and js-game-zero built
-next to this folder.
+The agent needs the same setup as the [commands](#commands) below: Bun, then `bun install` and
+`bunx playwright install chromium`.
 
 Building one by hand? `bun run new frog_feast "Frog Feast"` sets up all the files, and the
 skill's guides in `skills/new-game-tutorial/references/` describe the house style.
@@ -78,11 +78,12 @@ can't drift away from its game.
 
 ## Commands
 
-Needs [Bun](https://bun.sh) and a js-game-zero checkout next to this folder
-(`../js-game-zero`, built with `bun run build`).
+Needs [Bun](https://bun.sh). js-game-zero comes from npm: the engine, the `jgz`
+CLI and the API reference are the `@js-game-zero/*` packages in `package.json`.
 
 ```sh
-bun install                         # Playwright, for the checks
+bun install                         # js-game-zero, Playwright and Prettier
+bunx playwright install chromium    # the browser that jgz and the checks drive
 bun run build                       # copy the engine + bundle art and steps into tutorials/lib
 bun run jgz -- test games/planet_putt   # drive a game with the jgz CLI
 bun run new <game_id> "<Title>"     # set up a new game and tutorial
@@ -98,6 +99,9 @@ bun scripts/tune-firefly.ts         # re-measure Firefly Flash's night goals
 ```
 
 Run `bun run build` after changing any art, step or `main.js`.
+
+To move to a newer js-game-zero, raise all three `@js-game-zero/*` versions in
+`package.json` together, then run `bun install`, `bun run build` and `bun run check`.
 
 ## Credits
 

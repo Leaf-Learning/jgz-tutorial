@@ -21,14 +21,14 @@ not just in structure. Read the one closest to the new game before writing anyth
 ## 0. Check the setup
 
 ```sh
-ls ../js-game-zero/packages/browser-runtime/dist/browser/browser.js   # the engine, built
-bun install && bunx playwright install chromium                      # once
-bun run build && bun run test:games                                  # the repo is healthy
+bun install && bunx playwright install chromium   # once
+bun run build && bun run test:games               # the repo is healthy
 ```
 
-If js-game-zero is missing or unbuilt, stop and tell the user: it must sit next to this
-folder (`../js-game-zero`), built with `bun run build`. Engine docs are in
-`../js-game-zero/docs/` (`reference/*.md` for every API). Read
+If either fails, stop and tell the user what failed. js-game-zero comes from npm (the
+`@js-game-zero/*` packages). Its API reference, for the installed version, is in
+`node_modules/@js-game-zero/core/dist/reference/*.md`, one file per area; the guides are at
+https://github.com/Leaf-Learning/js-game-zero/tree/main/docs. Read
 `tutorials/lib/README.md` for the page framework.
 
 ## 1. Shape the idea (with the user)

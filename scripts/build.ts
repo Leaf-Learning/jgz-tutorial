@@ -1,7 +1,8 @@
 // Bundles everything the tutorial pages need into plain script files, so the
 // pages work when opened straight from disk (file://) with no server:
 //
-//   tutorials/lib/jgz.js               the js-game-zero engine (script-tag build)
+//   tutorials/lib/jgz.js               the js-game-zero engine (the script-tag
+//                                      build in @js-game-zero/browser-runtime)
 //   tutorials/lib/data/<game>.js       a game's images (as data URLs) and the
 //                                      code for every tutorial step
 //   tutorials/lib/data/games.js        the list of tutorials, from each game's
@@ -25,9 +26,8 @@ import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const engineSource = join(
-  root,
-  "../js-game-zero/packages/browser-runtime/dist/browser/browser.js",
+const engineSource = fileURLToPath(
+  import.meta.resolve("@js-game-zero/browser-runtime/iife"),
 );
 const libDir = join(root, "tutorials/lib");
 
@@ -50,14 +50,8 @@ const MIME: Record<string, string> = {
 
 const ASSET_FOLDERS = ["images", "sounds", "music", "fonts"];
 
-if (existsSync(engineSource)) {
-  await copyFile(engineSource, join(libDir, "jgz.js"));
-  console.log("engine  → tutorials/lib/jgz.js");
-} else if (!existsSync(join(libDir, "jgz.js"))) {
-  throw new Error(
-    `No engine build found at ${engineSource}. Run \`bun run build\` in js-game-zero first.`,
-  );
-}
+await copyFile(engineSource, join(libDir, "jgz.js"));
+console.log("engine  → tutorials/lib/jgz.js");
 
 await mkdir(join(libDir, "data"), { recursive: true });
 

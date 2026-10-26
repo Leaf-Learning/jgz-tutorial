@@ -1,5 +1,5 @@
 /*!
- * @js-game-zero/browser-runtime 0.2.0
+ * @js-game-zero/browser-runtime 0.2.1
  * https://github.com/Leaf-Learning/js-game-zero
  *
  * MIT License
