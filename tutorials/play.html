@@ -40,6 +40,20 @@
         background: #0e0d1c;
         outline: none;
       }
+      /* A phone on its side: a slim header, so the game can be as tall as the screen. */
+      @media (max-height: 500px) and (orientation: landscape) {
+        .play-page {
+          gap: 10px;
+          padding: 10px 16px 16px;
+        }
+        .play-head h1 {
+          font-size: 1.5rem;
+        }
+        .play-stage {
+          width: min(100%, 960px, calc((100vh - 90px) * var(--aspect, 1.6)));
+          width: min(100%, 960px, calc((100svh - 90px) * var(--aspect, 1.6)));
+        }
+      }
       .play-stage:focus-visible {
         box-shadow:
           0 0 0 3px var(--accent),
@@ -93,6 +107,7 @@
       <p class="play-help" data-help></p>
     </main>
     <script src="lib/jgz.js"></script>
+    <script src="lib/tutorial.js"></script>
     <script src="lib/data/games.js"></script>
     <script>
       // Which game to play comes from the address: play.html?game=penguin_slide.
@@ -109,11 +124,11 @@
       document.querySelector("[data-tutorial-link]").href = info.page;
 
       // The game's data file calls JGZT.register(...) with its art and code.
-      window.JGZT = {
+      Object.assign(window.JGZT, {
         register(name, data) {
           if (name === gameKey) start(data);
         },
-      };
+      });
       const script = document.createElement("script");
       script.src = `lib/data/${gameKey}.js`;
       script.onerror = () => fail("Couldn't load the game. Run `bun scripts/build.ts` first.");
@@ -172,6 +187,8 @@
           });
           document.title = info.title;
           stage.focus();
+          // A typing game gets letter keys on a touch screen (see tutorial.js).
+          if (JGZT.touch && JGZT.typesLetters(data.steps.final)) stage.after(JGZT.touchKeyboard(stage));
         });
         stage.addEventListener("keydown", (event) => {
           if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(event.key)) event.preventDefault();

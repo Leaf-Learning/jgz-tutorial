@@ -1820,6 +1820,100 @@ code.ref:focus {
     margin-right: -8px;
     border-radius: 16px;
   }
+  /* Live values, slider code and captions are read on a small screen too. */
+  .watch-row {
+    font-size: 14px;
+  }
+  .watch-row code {
+    font-size: 1em;
+  }
+  .tweak-code {
+    font-size: 0.9rem;
+  }
+  .art figcaption {
+    font-size: 0.86rem;
+  }
+}
+
+/* ---------- Touch screens ---------- */
+
+/* Fingers need bigger targets than a mouse pointer. */
+@media (pointer: coarse) {
+  .btn-small,
+  .btn-run,
+  .cell-bar .btn-ghost,
+  .finale-actions .btn,
+  .widget-controls .btn {
+    min-height: 40px;
+  }
+  .topbar-home {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .tweak input[type="range"],
+  .widget-controls input[type="range"] {
+    height: 36px;
+  }
+  /* "Click the game to use the keyboard" means nothing without one. */
+  .stage-tip {
+    display: none;
+  }
+}
+
+/* A phone on its side is short: each game fits the height under the bar.
+   Games are 1.5 to 1.6 times as wide as they are tall. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .stage {
+    width: min(100%, calc((100vh - 100px) * 1.5));
+    width: min(100%, calc((100svh - 100px) * 1.5));
+    margin-inline: auto;
+  }
+}
+
+/* Letter keys under a game that reads typed letters (see JGZT.touchKeyboard). */
+.touch-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.touch-keys[hidden] {
+  display: none;
+}
+
+.touch-row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.touch-key {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 44px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--card-2);
+  color: var(--ink);
+  font: 700 1.1rem/1 var(--font-body);
+  box-shadow: 0 2px 0 var(--line);
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.touch-key--wide {
+  flex-grow: 1.5;
+  max-width: 66px;
+}
+
+.touch-key:active {
+  transform: translateY(2px);
+  box-shadow: none;
 }
 
 /* Beginners should see every character they'd type: no "!==" ligatures in

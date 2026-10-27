@@ -132,7 +132,7 @@ About one per step, testing the concept, not trivia.
   <button data-choice="c">The bottom-left corner, like in maths class</button>
   <div class="explain" data-for="b">x counts from the left and y counts down from the top…</div>
   <div class="explain" data-for="c">That's how graphs work in maths, but screens count y downwards.</div>
-  <div class="explain" data-for="wrong">Hover over the game above and watch the numbers.</div>
+  <div class="explain" data-for="wrong">Hover over (or tap) the game above and watch the numbers.</div>
 </div>
 ```
 
@@ -166,6 +166,9 @@ playground, gravity explorer, bounce visualiser).
   - `JGZT.games.<id>.assets["images/frog.svg"]` is the game's art, ready for an `<img>`.
 
   See `tutorials/lib/README.md`. Fit the canvas to the width on phones.
+- Anything you hover must work with a tap too: listen for `pointermove` and `pointerdown`, not
+  mouse events (a running game stops a finger's mouse events), and give a hint that says click or
+  hover a `data-touch="Tap …"` version.
 - A widget can write into the code. Firefly's scale keys rewrite `NOTES` with
   `JGZT.cell("10-music").setCode(…)`.
 - Put page-only CSS in the `<style>` block at the top.

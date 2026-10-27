@@ -85,6 +85,11 @@
           position: static;
         }
       }
+      @media (pointer: coarse) {
+        .hub-mini {
+          min-height: 40px;
+        }
+      }
 
       /* ---------- Hero ---------- */
       .hub-hero {
@@ -796,6 +801,23 @@
         margin: 0;
         color: #d9cfe0;
       }
+      /* On a phone each agent sits above its command, and no command breaks mid-word. */
+      @media (max-width: 640px) {
+        .hub-agents {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 2px;
+        }
+        .hub-agents dd + dt {
+          margin-top: 10px;
+        }
+        .hub-agents code {
+          overflow-wrap: normal;
+        }
+        .hub-shell {
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+        }
+      }
       .hub-shell {
         margin: 14px 0 0;
         padding: 14px 16px;
@@ -866,7 +888,7 @@
           </li>
         </ul>
         <div class="hub-cast" data-cast></div>
-        <p class="hub-cast-hint">Click someone to say hi.</p>
+        <p class="hub-cast-hint" data-touch="Tap someone to say hi.">Click someone to say hi.</p>
       </section>
 
       <section class="hub-tutorials hub-wrap" id="tutorials" aria-label="The tutorials">
@@ -1012,7 +1034,7 @@
                   <dt>Pi, Antigravity</dt>
                   <dd>Find the skill on their own</dd>
                   <dt>Any other agent</dt>
-                  <dd>Ask it to follow <code>skills/new-game-tutorial/SKILL.md</code></dd>
+                  <dd>Ask it to follow <code>skills/<wbr />new-game-tutorial/<wbr />SKILL.md</code></dd>
                 </dl>
               </div>
               <div class="hub-box">

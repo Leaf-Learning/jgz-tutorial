@@ -30,6 +30,8 @@
   let pageGame = null;
   let pageKey = "";
   const pageTitle = document.title;
+  // Touch screens get tap, not click or hover, and letter keys of their own.
+  const TOUCH = matchMedia("(hover: none) and (pointer: coarse)").matches;
 
   JGZT.register = (key, data) => {
     games[key] = data;
@@ -392,6 +394,51 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * Touch screens
+   * ------------------------------------------------------------------ */
+
+  JGZT.touch = TOUCH;
+
+  // iOS zooms the page into any text box under 16px, like a code editor, and
+  // leaves it zoomed. maximum-scale stops that; iOS still lets you pinch to zoom.
+  if (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+    const viewport = $('meta[name="viewport"]');
+    if (viewport && !/maximum-scale/.test(viewport.content)) viewport.content += ", maximum-scale=1";
+  }
+
+  // A hint with data-touch="Tap …" says that on a touch screen.
+  const touchHints = () => {
+    for (const hint of $$("[data-touch]")) hint.textContent = hint.dataset.touch;
+  };
+  if (TOUCH) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", touchHints);
+    else touchHints();
+  }
+
+  /** Whether a game reads typed letters: an onKeyDown that takes unicode. */
+  JGZT.typesLetters = (code) => /\bonKeyDown\s*\([^)]*\bunicode\b/.test(code);
+
+  /**
+   * Letter keys for a touch screen, for a game that reads typed letters. A
+   * phone's own keyboard would cover the game, and its word suggestions get in
+   * the way of typing one letter at a time. Each key presses its key on
+   * `target`, the game's keyboard target.
+   */
+  JGZT.touchKeyboard = (target) => {
+    const press = (key, code) => {
+      for (const type of ["keydown", "keyup"]) target.dispatchEvent(new KeyboardEvent(type, { key, code, bubbles: true }));
+    };
+    const button = (label, key, code, name = label, wide = false) =>
+      h("button", { class: wide ? "touch-key touch-key--wide" : "touch-key", type: "button", "aria-label": name, onclick: () => press(key, code) }, label);
+    const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"].map((letters) =>
+      h("div", { class: "touch-row" }, [...letters].map((letter) => button(letter, letter, `Key${letter.toUpperCase()}`))),
+    );
+    rows[2].prepend(button("⏎", "Enter", "Enter", "Enter", true));
+    rows[2].append(button("⌫", "Backspace", "Backspace", "Backspace", true));
+    return h("div", { class: "touch-keys", role: "group", "aria-label": "Letter keys for the game" }, rows);
+  };
+
+  /* ------------------------------------------------------------------ *
    * Console capture: console.log from the running game shows in its cell.
    * ------------------------------------------------------------------ */
 
@@ -472,6 +519,12 @@
 
       this.output = h("div", { class: "output", "aria-live": "polite" });
       stageBox.append(this.stage);
+      if (TOUCH) {
+        // Shown while the running code reads typed letters.
+        this.touchKeys = JGZT.touchKeyboard(this.stage);
+        this.touchKeys.hidden = true;
+        stageBox.append(this.touchKeys);
+      }
 
       const watch = this.root.dataset.watch;
       if (watch) {
@@ -698,6 +751,7 @@
       }
       this.handle = handle;
       this.root.classList.toggle("uses-keys", /\bkeyboard\.|\bonKeyDown\b|\bonKeyUp\b/.test(code));
+      if (this.touchKeys) this.touchKeys.hidden = !JGZT.typesLetters(code);
       this.root.classList.add("is-running");
       this.root.classList.remove("is-stale");
       if (this.editor) this.editor.setMarks("err", []);

@@ -396,7 +396,7 @@
           <div>
             <span class="callout-title">How this page works</span>
             <p>
-              Each step has <strong>code on the left</strong> and <strong>the game on the right</strong>. Change anything you
+              Each step pairs <strong>its code</strong> with <strong>the game it makes</strong>. Change anything you
               like, then press <strong>▶ Run</strong> (or <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>). Lines that are
               new in a step glow green, and hovering a dotted code word in the text lights up the matching lines.
               <strong>🎯 Challenges check themselves</strong> while your game runs. You can't break anything:
@@ -469,7 +469,7 @@
               The computer paints in the order you write the lines, like painting on a canvas. Things painted <strong>later</strong>
               cover things painted <strong>earlier</strong>. That's why the sea comes first and the word comes last.
             </p>
-            <p>👉 <strong>Hover over the game above</strong> to see the x and y of any spot.</p>
+            <p>👉 <strong>Hover over the game above</strong>, or tap it, to see the x and y of any spot.</p>
           </div>
         </div>
 
@@ -1754,7 +1754,7 @@
         const vertical = el("div", "coord-line v");
         const horizontal = el("div", "coord-line h");
         stage.append(vertical, horizontal, label);
-        stage.addEventListener("mousemove", (event) => {
+        const showCoords = (event) => {
           const canvas = stage.querySelector("canvas");
           if (!canvas) return;
           const box = canvas.getBoundingClientRect();
@@ -1770,8 +1770,11 @@
           vertical.style.left = `${left}px`;
           horizontal.style.top = `${top}px`;
           stage.classList.add("show-coords");
-        });
-        stage.addEventListener("mouseleave", () => stage.classList.remove("show-coords"));
+        };
+        stage.addEventListener("pointermove", showCoords);
+        stage.addEventListener("pointerdown", showCoords);
+        // A finger leaves as it lifts, so a tap's x and y stay until the next tap.
+        stage.addEventListener("pointerleave", (event) => event.pointerType === "mouse" && stage.classList.remove("show-coords"));
       }
       coordinateReadout("01-sea");
       coordinateReadout("02-octopus");

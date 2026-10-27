@@ -141,6 +141,11 @@ frog.onload = draw;
 `JGZT.games[<game>].assets` (asset path → data URL), and the widget helpers
 `JGZT.setupCanvas`, `JGZT.pointerAt`, `JGZT.onDrag`, `JGZT.themeColor`.
 
+On a touch screen (`JGZT.touch`), buttons and sliders grow, and a hint with
+`data-touch="Tap …"` swaps its text for that one. A cell running a game that
+reads typed letters (`JGZT.typesLetters(code)`: an `onKeyDown` that takes
+`unicode`) shows letter keys under it, from `JGZT.touchKeyboard(target)`.
+
 ## Checks
 
 - `bun scripts/check-steps.ts [game]` — runs every step through `jgz test`.

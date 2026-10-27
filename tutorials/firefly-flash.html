@@ -185,7 +185,7 @@
           <div>
             <span class="callout-title">How this page works</span>
             <p>
-              Each step has <strong>code on the left</strong> and <strong>the game on the right</strong>. Change anything you
+              Each step pairs <strong>its code</strong> with <strong>the game it makes</strong>. Change anything you
               like, then press <strong>▶ Run</strong> (or <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>). Lines that are
               new in a step glow green. Your edits are saved in your browser, and <strong>↺ Reset</strong> brings back
               the original. <strong>🎯 Challenges check themselves</strong> while your game runs. You can't break anything!
@@ -235,7 +235,7 @@
               <strong>y</strong> says how far <em>down</em> from the top. So <code>(0, 0)</code> is the top-left corner, and
               y gets <em>bigger</em> as you go <em>down</em>. That surprises everyone at first!
             </p>
-            <p>👉 <strong>Hover over the game above</strong> to see the x and y of any spot.</p>
+            <p>👉 <strong>Hover over the game above</strong>, or tap it, to see the x and y of any spot.</p>
           </div>
         </div>
 
@@ -1131,7 +1131,7 @@ const MAX_SPEED = 20;</pre>
         const horizontal = document.createElement("div");
         horizontal.className = "coord-line h";
         stage.append(vertical, horizontal, label);
-        stage.addEventListener("mousemove", (event) => {
+        const showCoords = (event) => {
           const canvas = stage.querySelector("canvas");
           if (!canvas) return;
           const box = canvas.getBoundingClientRect();
@@ -1147,8 +1147,11 @@ const MAX_SPEED = 20;</pre>
           vertical.style.left = `${left}px`;
           horizontal.style.top = `${top}px`;
           stage.classList.add("show-coords");
-        });
-        stage.addEventListener("mouseleave", () => stage.classList.remove("show-coords"));
+        };
+        stage.addEventListener("pointermove", showCoords);
+        stage.addEventListener("pointerdown", showCoords);
+        // A finger leaves as it lifts, so a tap's x and y stay until the next tap.
+        stage.addEventListener("pointerleave", (event) => event.pointerType === "mouse" && stage.classList.remove("show-coords"));
       }
       coordinateReadout("01-window");
       coordinateReadout("02-meadow");

@@ -63,7 +63,9 @@ clock, audio, storage, runtime). Things worth knowing up front:
   click games, start `onMouseDown` with `if (button !== mouse.LEFT) return;`. Touch taps and drags
   arrive as left-button mouse events, so mouse games work on phones for free.
 - **Keys on phones:** add swipe support (as Penguin Slide does: press, then compare where
-  `onMouseUp` lands). `TOUCH_CONTROLS` exists but is untested inside tutorial cells.
+  `onMouseUp` lands). `TOUCH_CONTROLS` exists but is untested inside tutorial cells. A typing
+  game (an `onKeyDown(key, unicode)` that reads letters, like Octo Pop) gets on-screen letter keys
+  on touch screens for free.
 - **Drawing short forms** (easiest for beginners): `screen.fill(top, bottom?)`,
   `screen.circle(x, y, r, color)`, `screen.rect(x, y, w, h, color)`, `screen.triangle(…)`,
   `screen.line(x1, y1, x2, y2, color, width)`, `screen.text(text, x, y, color, size)`,

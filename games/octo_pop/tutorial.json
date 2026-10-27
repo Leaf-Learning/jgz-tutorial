@@ -5,7 +5,7 @@
   "after": [],
   "theme": "theme-octo-pop",
   "tagline": "Type the word, pop the bubble, before it floats away.",
-  "help": "Type the word inside a bubble to pop it before it reaches the surface. Letters you've typed turn pink, Backspace erases one, and a wrong letter makes Octo wince. Lose all three hearts and the level is lost. Enter or Space starts and continues. Needs a keyboard.",
+  "help": "Type the word inside a bubble to pop it before it reaches the surface. Letters you've typed turn pink, Backspace erases one, and a wrong letter makes Octo wince. Lose all three hearts and the level is lost. Enter or Space starts and continues. On a phone or tablet, type on the keys under the game.",
   "topics": [
     "🔤 Strings",
     "⌨️ Typing & keys",
