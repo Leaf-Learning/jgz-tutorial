@@ -55,7 +55,7 @@ Each tutorial has:
 - **Live code cells.** Edit the code and press ▶ Run (or Ctrl/⌘ + Enter). Lines new in each step glow green. Edits are saved in the browser; ↺ Reset restores them.
 - **Challenges that check themselves** by watching the running game, with hints and a "Show me" answer.
 - **Quizzes, sliders bound to constants in the code, live-value panels**, and custom widgets (a dt race, a circle-touch toy, a level painter, a gravity explorer…).
-- **A download button** that zips the learner's game (`main.js`, art, font, README) to keep playing in the js-game-zero sandbox or with `jgz`.
+- **A download button** that zips the learner's game (`main.js`, art, font, README) to keep playing in the js-game-zero sandbox, or to test with `jgz`. Its README says how to set up both.
 
 `tutorials/play.html?game=penguin_slide` plays any finished game full-size.
 

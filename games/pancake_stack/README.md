@@ -26,13 +26,20 @@ each one. Miss three pancakes and the game is over.
 
 ## Run it
 
+Play it from the hub: open [`tutorials/index.html`](../../tutorials/index.html) and press
+**Play** on its card.
+
+To test it, the jgz CLI runs it in headless Chromium. From the jgz-tutorial folder:
+
 ```sh
-bun run jgz -- test games/pancake_stack          # from the jgz-tutorial folder
+bun run jgz -- test games/pancake_stack
 ```
 
-Or make a blank game in the js-game-zero sandbox, paste `main.js` into the
-editor, and add `images/*.svg` and `fonts/fredoka.ttf` from the Images and
-Fonts panels on the left.
+To keep building it outside this repo, use the js-game-zero sandbox, which runs from a
+clone of its repository
+([Getting started](https://github.com/Leaf-Learning/js-game-zero/blob/main/docs/getting-started.md)
+says how). Make a blank game, paste `main.js` into the editor, and add `images/` and
+`fonts/` from the Images and Fonts panels on the left.
 
 The tutorial that builds this game step by step is
 [`tutorials/pancake-stack.html`](../../tutorials/pancake-stack.html).

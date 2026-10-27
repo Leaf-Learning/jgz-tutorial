@@ -1436,10 +1436,41 @@
     const name = pageKey;
     const files = [{ name: `${name}/main.js`, data: code }];
     for (const [path, url] of Object.entries(pageGame.assets)) files.push({ name: `${name}/${path}`, data: dataUrlBytes(url) });
-    files.push({
-      name: `${name}/README.txt`,
-      data: `${document.body.dataset.tutorial || name} — a js-game-zero game\n\nmain.js is the game. The images/ folder holds its art.\n\nTo play or keep building it:\n\n  * In the js-game-zero sandbox: make a new blank game, paste main.js\n    into the editor, and add everything in images/ from the Images panel\n    on the left.\n\n  * With the jgz command-line tool. It needs Bun (https://bun.sh), and\n    installs once with:\n\n      bun add --global @js-game-zero/cli\n      jgz install-chromium\n\n    Then, in this folder:  jgz test .\n\nHave fun!\n`,
-    });
+    // The zip's asset folders (images/, fonts/…), each added to the sandbox
+    // from the panel of the same name.
+    const folders = [...new Set(Object.keys(pageGame.assets).map((path) => path.split("/")[0]))];
+    const list = (words) => (words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words.at(-1)}` : words.join(""));
+    const panels = `${list(folders.map((folder) => folder[0].toUpperCase() + folder.slice(1)))} panel${folders.length > 1 ? "s" : ""}`;
+    const readme = [
+      `${document.body.dataset.tutorial || name} — a js-game-zero game`,
+      "",
+      folders.length ? `main.js is the game. The files it uses are in ${list(folders.map((folder) => `${folder}/`))}.` : "main.js is the game.",
+      "",
+      "To keep playing it and building it, use the js-game-zero sandbox. It runs",
+      "on your computer and needs Bun (https://bun.sh). Set it up once:",
+      "",
+      "    git clone https://github.com/Leaf-Learning/js-game-zero.git",
+      "    cd js-game-zero",
+      "    bun install",
+      "",
+      "Then, in that js-game-zero folder, start it with  bun run dev:sandbox  and",
+      "open the address it prints (http://127.0.0.1:4173). Make a blank game and",
+      "put everything in main.js into its editor, in place of the code there.",
+      ...(folders.length ? [`Then add the files in ${list(folders.map((folder) => `${folder}/`))}`, `from the ${panels} on the left.`] : []),
+      "",
+      "To test it from a terminal, there's the jgz tool. It runs the game in a",
+      "browser you can't see, where you press keys, step through frames, read",
+      "values and take screenshots. Install it once with:",
+      "",
+      "    bun add --global @js-game-zero/cli",
+      "    jgz install-chromium",
+      "",
+      "Then, in this folder:  jgz test .",
+      "",
+      "Have fun!",
+      "",
+    ];
+    files.push({ name: `${name}/README.txt`, data: readme.join("\n") });
     const link = h("a", { href: URL.createObjectURL(makeZip(files)), download: `${name}.zip` });
     document.body.append(link);
     link.click();

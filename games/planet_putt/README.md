@@ -20,11 +20,23 @@ predicting the future by simulating it.
 
 ## Run it
 
+Play it from the hub: open [`tutorials/index.html`](../../tutorials/index.html) and press
+**Play** on its card.
+
+To test it, the jgz CLI runs it in headless Chromium. From the jgz-tutorial folder:
+
 ```sh
-bun run jgz -- test games/planet_putt     # from the jgz-tutorial folder
+bun run jgz -- test games/planet_putt
 ```
 
-Or open the tutorial: `tutorials/planet-putt.html`.
+To keep building it outside this repo, use the js-game-zero sandbox, which runs from a
+clone of its repository
+([Getting started](https://github.com/Leaf-Learning/js-game-zero/blob/main/docs/getting-started.md)
+says how). Make a blank game, paste `main.js` into the editor, and add `images/` and
+`fonts/` from the Images and Fonts panels on the left.
+
+The tutorial that builds this game step by step is
+[`tutorials/planet-putt.html`](../../tutorials/planet-putt.html).
 
 The font is Fredoka (SIL Open Font License, see `FONT-LICENSE-OFL.txt`).
 Every hole is checked to be makeable within par by `scripts/solve-planet.ts`.
